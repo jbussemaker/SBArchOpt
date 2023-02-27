@@ -21,3 +21,52 @@ The library provides:
   - Implementation of a basic SBO algorithm
   - Connectors to various external SBO libraries
 - Analytical and realistic test problems that exhibit one or more of the architecture optimization challenges
+
+## Architecture Optimization Measures
+
+To increase the efficiency (and in some cases make it possible at all) of architecture optimization problems, several
+measures have been identified. Each of these measures can be implemented independently, however the more, the better.
+Architecture optimization aspects and mitigation measures:
+
+| Aspect                  | Problem-level                                   | MOEA                                       | SBO                                                                                |
+|-------------------------|-------------------------------------------------|--------------------------------------------|------------------------------------------------------------------------------------|
+| Mixed-discrete (MD)     | Convert float to int; high distance correlation | Support discrete operations                | Cont. relaxation; specific kernels; dummy coding; force new infill point selection |
+| Multi-objective (MO)    |                                                 | Prioritize w.r.t. distance to Pareto front | Multi-objective infill criteria                                                    |
+| Hierarchical (HIER)     | Imputation; activeness; low imputation ratio    | Impute after sampling, evaluation          | Impute after sampling, evaluation, during infill search; hierarchical kernels      |
+| Hidden constraints (HC) | Catch errors and return NaN                     | Extreme barrier approach                   | Predict hidden constraints area                                                    |
+| Expensive (EXP)         |                                                 | Use SBO to reduce function evaluations     | Intermediary results storage; resuming optimizations                               |
+
+For MOEA's all measure are already implemented for most algorithms (incl NSGA2).
+Only care should be taken to select a repaired sampler so that the initial population is sampled correctly.
+
+SBO measure implementation status
+(Lib = yes, in the library; SBArchOpt = yes, in SBArchOpt; N = not implemented; empty = unknown):
+
+| Aspect: measure                       | SBArchOpt SBO | SEGOMOE | pysamoo | BoTorch | Trieste |
+|---------------------------------------|---------------|---------|---------|---------|---------|
+| MD: continuous relaxation             | SBArchOpt     | Lib     |         |         |         |
+| MD: kernels                           | N             | Lib     |         |         |         |
+| MD: dummy coding                      | N             | Lib     |         |         |         |
+| MD: force new infill point selection  | SBArchOpt     | N       |         |         |         |
+| MO: multi-objective infill            | SBArchOpt     | Lib     |         |         |         |
+| HIER: imputation during sampling      | SBArchOpt     | N       |         |         |         |
+| HIER: imputation after evaluation     | SBArchOpt     | N       |         |         |         |
+| HIER: imputation during infill search | SBArchOpt     | N       |         |         |         |
+| HIER: kernels                         | N             | N       | N       | N       | N       |
+| HC: predict area                      | N             | N       |         |         | Lib     |
+| EXP: intermediary result storage      | N             | N       |         |         |         |
+| EXP: resuming optimizations           | N             | N       |         |         |         |
+
+## Installation
+
+First, create a conda environment (skip if you already have one):
+```
+conda create --name opt python=3.9
+conda activate opt
+```
+
+Then install the package:
+```
+conda install numpy
+python setup.py install
+```
