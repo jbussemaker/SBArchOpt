@@ -38,11 +38,11 @@ class ArchOptProblemBase(Problem):
     - Discrete: integer or categorical
     - Integer: integer between 0 and some upper bound (inclusive); ordering and distance matters
       --> for example [0, 2]: 0, 1, 2
-    - Categorical: one of n options; ordering and distance are not defined
+    - Categorical: one of n options, encoded as integers; ordering and distance are not defined
       --> for example [red, blue, yellow]: red, blue
 
-    Note that objectives (F) are always defined as minimization, equality constraints (H) are satisfied when equal to 0,
-    and inequality constraints (G) are satisfied when equal or lower than 0.
+    Note that objectives (F) are always defined as minimization, inequality constraints (G) are satisfied when equal or
+    lower than 0, and equality constraints (H) are satisfied when equal to 0.
     Conversion and normalization should be implemented in the evaluation function.
     """
 
@@ -54,6 +54,8 @@ class ArchOptProblemBase(Problem):
         xu = np.empty((n_var,))
         self._is_int_mask = is_int_mask = np.zeros((n_var,), dtype=bool)
         self._is_cat_mask = is_cat_mask = np.zeros((n_var,), dtype=bool)
+        self._choice_value_map = {}
+        corr_var_types = []
         for i_var, var_type in enumerate(var_types):
             if isinstance(var_type, Real):
                 xl[i_var], xu[i_var] = var_type.bounds
@@ -69,14 +71,17 @@ class ArchOptProblemBase(Problem):
             elif isinstance(var_type, Choice):
                 is_cat_mask[i_var] = True
                 xu[i_var] = len(var_type.options)-1
+                self._choice_value_map[i_var] = var_type.options
+                var_type = Choice(options=list(range(len(var_type.options))))
 
             else:
                 raise RuntimeError(f'Unsupported variable type: {var_type!r}')
+            corr_var_types.append(var_type)
 
         self._is_discrete_mask = is_int_mask | is_cat_mask
         self._is_cont_mask = ~self._is_discrete_mask
 
-        super().__init__(n_var=n_var, xl=xl, xu=xu, vars=var_types,
+        super().__init__(n_var=n_var, xl=xl, xu=xu, vars=corr_var_types,
                          n_obj=n_obj, n_ieq_constr=n_ieq_constr, n_eq_constr=n_eq_constr, **kwargs)
 
     @property
@@ -99,6 +104,16 @@ class ArchOptProblemBase(Problem):
     def is_cont_mask(self):
         """Boolean mask specifying for each design variable whether it is a continues (i.e. not discrete) variable"""
         return self._is_cont_mask
+
+    def get_categorical_values(self, i_dv, x_i: np.ndarray) -> np.ndarray:
+        """Gets the associated categorical variable values for some design variable"""
+        if i_dv not in self._choice_value_map:
+            raise ValueError(f'Design variable is not categorical: {i_dv}')
+
+        values = x_i.astype(np.str)
+        for i_cat, value in enumerate(self._choice_value_map[i_dv]):
+            values[x_i == i_cat] = value
+        return values
 
     def correct_x(self, x: np.ndarray):
         """Imputes design vectors and returns activeness vectors"""
