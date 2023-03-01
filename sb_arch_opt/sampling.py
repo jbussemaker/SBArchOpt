@@ -94,6 +94,9 @@ class RepairedExhaustiveSampling(Sampling):
             pop = DefaultDuplicateElimination().do(pop)
         return pop
 
+    def __repr__(self):
+        return f'{self.__class__.__name__}()'
+
 
 class RepairedLatinHypercubeSampling(LatinHypercubeSampling):
     """Latin hypercube sampling only returning repaired samples."""
@@ -133,6 +136,9 @@ class RepairedLatinHypercubeSampling(LatinHypercubeSampling):
         x_abs = x*(xu-xl)+xl
         x_abs = self._repair.do(problem, Population.new(X=x_abs)).get("X")
         return (x_abs-xl)/(xu-xl)
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}()'
 
 
 class RepairedRandomSampling(FloatRandomSampling):
@@ -182,3 +188,6 @@ class RepairedRandomSampling(FloatRandomSampling):
         # Repair
         x = self._repair.do(problem, Population.new(X=x)).get("X")
         return x
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}()'

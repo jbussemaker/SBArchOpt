@@ -6,7 +6,6 @@ from sb_arch_opt.pareto_front import *
 from pymoo.core.evaluator import Evaluator
 from pymoo.core.population import Population
 from pymoo.core.variable import Real, Integer, Binary, Choice
-from pymoo.problems.multi.zdt import ZDT1
 
 
 def test_init_no_vars():
@@ -34,46 +33,7 @@ def test_init_vars():
     assert np.all(problem.is_cont_mask == [True, False, False, False])
 
 
-class DummyProblem(CachedParetoFrontMixin, ArchOptProblemBase):
-
-    def __init__(self, only_discrete=False):
-        self._problem = problem = ZDT1(n_var=2 if only_discrete else 5)
-        if only_discrete:
-            var_types = [Choice(options=[str(9-j) for j in range(10)]) if i == 0 else Integer(bounds=(0, 9))
-                         for i in range(problem.n_var)]
-        else:
-            var_types = [Real(bounds=(0, 1)) if i % 2 == 0 else (
-                Choice(options=[str(9-j) for j in range(10)]) if i == 1 else Integer(bounds=(0, 9)))
-                         for i in range(problem.n_var)]
-        self.only_discrete = only_discrete
-        super().__init__(var_types, n_obj=problem.n_obj)
-
-    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
-                       h_out: np.ndarray, *args, **kwargs):
-        self._correct_x(x, is_active_out)
-
-        i_dv = np.where(self.is_cat_mask)[0][0]
-        cat_idx = x[:, i_dv]
-        cat_values = self.get_categorical_values(i_dv, cat_idx)
-        assert np.all(cat_idx == [9-int(val) for val in cat_values])
-        assert np.all((cat_idx == 0) == (cat_values == '9'))
-
-        x_eval = x.copy()
-        x_eval[:, self.is_discrete_mask] /= 9
-        out = self._problem.evaluate(x_eval, return_as_dictionary=True)
-        f_out[:, :] = out['F']
-
-    def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
-        values = x[:, 0 if self.only_discrete else 1]
-        is_active[:, -1] = values < 5
-        x[~is_active] = 0
-
-    def __repr__(self):
-        return f'{self.__class__.__name__}(only_discrete={self.only_discrete})'
-
-
-def test_correct_x():
-    problem = DummyProblem()
+def test_correct_x(problem: ArchOptProblemBase):
     assert problem.n_var == 5
     assert np.all(problem.is_discrete_mask == [False, True, False, True, False])
     assert np.all(problem.is_int_mask == [False, False, False, True, False])
@@ -97,8 +57,7 @@ def test_correct_x():
     ])
 
 
-def test_repair():
-    problem = DummyProblem()
+def test_repair(problem: ArchOptProblemBase):
     assert isinstance(problem.get_repair(), ArchOptRepair)
 
     for as_pop in [False, True]:
@@ -124,8 +83,7 @@ def test_repair():
         ])
 
 
-def test_evaluate():
-    problem = DummyProblem()
+def test_evaluate(problem: ArchOptProblemBase):
     assert problem.n_var == 5
 
     assert problem.is_cat_mask[1]
@@ -163,8 +121,7 @@ def test_evaluate():
         ])
 
 
-def test_repaired_exhaustive_sampling():
-    problem = DummyProblem()
+def test_repaired_exhaustive_sampling(problem: ArchOptProblemBase):
 
     sampling_values = RepairedExhaustiveSampling.get_exhaustive_sample_values(problem)
     assert len(sampling_values) == 5
@@ -178,8 +135,7 @@ def test_repaired_exhaustive_sampling():
     problem.evaluate(x)
 
 
-def test_repaired_lhs_sampling():
-    problem = DummyProblem()
+def test_repaired_lhs_sampling(problem: ArchOptProblemBase):
 
     sampling = RepairedLatinHypercubeSampling()
     assert isinstance(sampling._repair, ArchOptRepair)
@@ -193,8 +149,7 @@ def test_repaired_lhs_sampling():
     assert x.shape == (1000, 5)
 
 
-def test_repaired_random_sampling():
-    problem = DummyProblem()
+def test_repaired_random_sampling(problem: ArchOptProblemBase):
 
     sampling_values = RepairedExhaustiveSampling.get_exhaustive_sample_values(problem)
     assert len(sampling_values) == 5
@@ -208,8 +163,7 @@ def test_repaired_random_sampling():
     problem.evaluate(x)
 
 
-def test_repaired_random_sampling_non_exhaustive():
-    problem = DummyProblem()
+def test_repaired_random_sampling_non_exhaustive(problem: ArchOptProblemBase):
 
     sampling_values = RepairedExhaustiveSampling.get_exhaustive_sample_values(problem)
     assert len(sampling_values) == 5
@@ -228,8 +182,7 @@ def test_repaired_random_sampling_non_exhaustive():
     RepairedRandomSampling._n_comb_gen_all_max = limit
 
 
-def test_cached_pareto_front_mixin():
-    problem = DummyProblem()
+def test_cached_pareto_front_mixin(problem: ArchOptTestProblemBase, discrete_problem: ArchOptTestProblemBase):
     problem.reset_pf_cache()
     assert not os.path.exists(problem._pf_cache_path())
 
@@ -238,11 +191,10 @@ def test_cached_pareto_front_mixin():
         assert pf.shape[1] == 2
         assert os.path.exists(problem._pf_cache_path())
 
-    problem_discrete = DummyProblem(only_discrete=True)
-    problem_discrete.reset_pf_cache()
-    assert not os.path.exists(problem_discrete._pf_cache_path())
+    discrete_problem.reset_pf_cache()
+    assert not os.path.exists(discrete_problem._pf_cache_path())
 
     for _ in range(2):
-        pf = problem_discrete.pareto_front()
+        pf = discrete_problem.pareto_front()
         assert pf.shape == (10, 2)
-        assert os.path.exists(problem_discrete._pf_cache_path())
+        assert os.path.exists(discrete_problem._pf_cache_path())

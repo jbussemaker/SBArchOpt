@@ -200,3 +200,6 @@ class ArchOptRepair(Repair):
             return x
         pop.set('X', x)
         return pop
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}()'
