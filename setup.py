@@ -33,6 +33,8 @@ if __name__ == '__main__':
         ],
         license='GPLv3',
         install_requires=[
+            'pytest',
+            'numpy',
             'pymoo==0.6.0',
         ],
         extras_require={
