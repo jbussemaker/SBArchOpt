@@ -73,6 +73,14 @@ python setup.py install
 
 ## Usage
 
+### Connecting to Optimization Frameworks
+
+Interfaces to optimization frameworks are located in the `sb_arch_opt.algo` module.
+Each framework has a dedicated readme file with instructions on how to use and how to install the framework.
+
+Optimization frameworks (except pymoo) are always optional! Therefore, when installing SBArchOpt, the interfaces to
+optimization frameworks are probably not working yet.
+
 ### Implementing an Architecture Optimization Problem
 
 To implement an architecture optimization problem, create a new class extending the `ArchOptProblemBase` class.
