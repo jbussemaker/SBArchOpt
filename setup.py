@@ -38,7 +38,9 @@ if __name__ == '__main__':
             'pymoo==0.6.0',
         ],
         extras_require={
-
+            'simple_sbo': [
+                'smt==1.3.0',
+            ],
         },
         python_requires='>=3.7',
         packages=['sb_arch_opt'],

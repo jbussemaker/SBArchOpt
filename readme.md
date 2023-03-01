@@ -1,7 +1,7 @@
 # SBArchOpt: Surrogate-Based Architecture Optimization
 
 This library provides a set of classes and interfaces for applying Surrogate-Based Optimization (SBO)
-for architecture optimization problems:
+for system architecture optimization problems:
 - Expensive black-box problems: evaluating one candidate architecture might computationally expensive
 - Mixed-discrete design variables: categorical architectural decisions mixed with continuous sizing variables
 - Hierarchical design variables: decisions can deactivate/activate (parts of) downstream decisions
