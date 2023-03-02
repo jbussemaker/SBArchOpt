@@ -22,7 +22,8 @@ from typing import *
 from scipy.stats import norm
 from sb_arch_opt.sampling import *
 from sb_arch_opt.util import capture_log
-from sb_arch_opt.problem import ArchOptRepair
+from sb_arch_opt.algo.pymoo_interface import *
+from sb_arch_opt.problem import ArchOptRepair, ArchOptProblemBase
 
 from pymoo.core.repair import Repair
 from pymoo.core.result import Result
@@ -145,6 +146,14 @@ class InfillAlgorithm(Algorithm):
         self.pop = Population.merge(self.pop, infills)
         if self.survival is not None:
             self.pop = self.survival.do(self.problem, self.pop, self.init_size, algorithm=self)
+
+    def store_intermediate_results(self, results_folder: str):
+        """Enable intermediate results storage to support restarting"""
+        self.callback = ResultsStorageCallback(results_folder, callback=self.callback)
+
+    def initialize_from_previous_results(self, problem: ArchOptProblemBase, result_folder: str) -> bool:
+        """Initialize the SBO algorithm from previously stored results"""
+        return initialize_from_previous_results(self, problem, result_folder)
 
 
 class SurrogateInfill:

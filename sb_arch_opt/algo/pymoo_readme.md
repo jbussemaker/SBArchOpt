@@ -23,7 +23,7 @@ from sb_arch_opt.algo.pymoo_interface import provision_pymoo
 problem = ...  # Subclass of ArchOptProblemBase
 
 ga_algorithm = GA(pop_size=100)
-provision_pymoo(ga_algorithm)
+provision_pymoo(ga_algorithm)  # See intermediate results storage below
 result = minimize(problem, ga_algorithm, termination=('n_gen', 10))
 ```
 
@@ -32,4 +32,34 @@ Or to simply get a ready-to-use NSGA2:
 from sb_arch_opt.algo.pymoo_interface import get_nsga2
 
 nsga2 = get_nsga2(pop_size=100)
+```
+
+### Intermediate Results Storage and Restarting
+
+Storing intermediate results can be useful in case of a problem during optimization. Similarly, restarting can be useful
+for continuing a previously failed optimization, or for adding more generations to a previous optimization run.
+
+To enable intermediate results storage, provide a path to a folder where results can be stored to `provision_pymoo` or
+`get_nsga2`.
+
+To restart an optimization from a previous run, intermediate results storage must have been used in that previous run.
+To then initialize an algorithm, use the `initialize_from_previous_results` function.
+
+```python
+from pymoo.optimize import minimize
+from pymoo.algorithms.soo.nonconvex.ga import GA
+from sb_arch_opt.algo.pymoo_interface import provision_pymoo, initialize_from_previous_results
+
+problem = ...  # Subclass of ArchOptProblemBase
+
+results_folder_path = 'path/to/results/folder'
+ga_algorithm = GA(pop_size=100)
+
+# Enable intermediate results storage
+provision_pymoo(ga_algorithm, results_folder=results_folder_path)
+
+# Start from previous results (skipped if no previous results are available)
+initialize_from_previous_results(ga_algorithm, problem, results_folder_path)
+
+result = minimize(problem, ga_algorithm, termination=('n_gen', 10))
 ```

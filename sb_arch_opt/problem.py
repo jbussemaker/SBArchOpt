@@ -15,7 +15,7 @@ Copyright: (c) 2023, Deutsches Zentrum fuer Luft- und Raumfahrt e.V.
 Contact: jasper.bussemaker@dlr.de
 """
 import numpy as np
-from typing import List
+from typing import List, Optional
 from pymoo.core.repair import Repair
 from pymoo.core.problem import Problem
 from pymoo.core.population import Population
@@ -154,6 +154,12 @@ class ArchOptProblemBase(Problem):
     def get_repair():
         """Get the repair operator for architecture optimization problems"""
         return ArchOptRepair()
+
+    def store_results(self, results_folder, final=False):
+        """Callback function to store intermediate or final results in some results folder"""
+
+    def load_previous_results(self, results_folder) -> Optional[Population]:
+        """Return a Population (with X and F (optionally G and H) defined) created from previous results"""
 
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):

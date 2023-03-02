@@ -1,4 +1,5 @@
 import os
+import tempfile
 import numpy as np
 from sb_arch_opt.problem import *
 from sb_arch_opt.sampling import *

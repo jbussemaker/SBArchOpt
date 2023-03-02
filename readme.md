@@ -32,30 +32,27 @@ Architecture optimization aspects and mitigation measures:
 |-------------------------|-------------------------------------------------|--------------------------------------------|------------------------------------------------------------------------------------|
 | Mixed-discrete (MD)     | Convert float to int; high distance correlation | Support discrete operations                | Cont. relaxation; specific kernels; dummy coding; force new infill point selection |
 | Multi-objective (MO)    |                                                 | Prioritize w.r.t. distance to Pareto front | Multi-objective infill criteria                                                    |
-| Hierarchical (HIER)     | Imputation; activeness; low imputation ratio    | Impute after sampling, evaluation          | Impute after sampling, evaluation, during infill search; hierarchical kernels      |
+| Hierarchical (HIER)     | Imputation; activeness; low imputation ratio    | Impute during sampling, evaluation         | Impute during sampling, evaluation, infill search; hierarchical kernels            |
 | Hidden constraints (HC) | Catch errors and return NaN                     | Extreme barrier approach                   | Predict hidden constraints area                                                    |
-| Expensive (EXP)         |                                                 | Use SBO to reduce function evaluations     | Intermediary results storage; resuming optimizations                               |
+| Expensive (EXP)         |                                                 | Use SBO to reduce function evaluations     | Intermediate results storage; resuming optimizations                               |
 
-For MOEA's all measure are already implemented for most algorithms (incl NSGA2).
-Only care should be taken to select a repaired sampler so that the initial population is sampled correctly.
+Architecture optimization measure implementation status
+(Lib = yes, in the library; SBArchOpt = yes, in SBArchOpt; N = not implemented; empty = unknown or not relevant):
 
-SBO measure implementation status
-(Lib = yes, in the library; SBArchOpt = yes, in SBArchOpt; N = not implemented; empty = unknown):
-
-| Aspect: measure                       | SBArchOpt SBO | SEGOMOE | pysamoo | BoTorch | Trieste |
-|---------------------------------------|---------------|---------|---------|---------|---------|
-| MD: continuous relaxation             | SBArchOpt     | Lib     |         |         |         |
-| MD: kernels                           | N             | Lib     |         |         |         |
-| MD: dummy coding                      | N             | Lib     |         |         |         |
-| MD: force new infill point selection  | SBArchOpt     | N       |         |         |         |
-| MO: multi-objective infill            | SBArchOpt     | Lib     |         |         |         |
-| HIER: imputation during sampling      | SBArchOpt     | N       |         |         |         |
-| HIER: imputation after evaluation     | SBArchOpt     | N       |         |         |         |
-| HIER: imputation during infill search | SBArchOpt     | N       |         |         |         |
-| HIER: kernels                         | N             | N       | N       | N       | N       |
-| HC: predict area                      | N             | N       |         |         | Lib     |
-| EXP: intermediary result storage      | N             | N       |         |         |         |
-| EXP: resuming optimizations           | N             | N       |         |         |         |
+| Aspect: measure                       | pymoo     | SBArchOpt SBO | SEGOMOE | pysamoo | BoTorch | Trieste |
+|---------------------------------------|-----------|---------------|---------|---------|---------|---------|
+| MD: continuous relaxation             |           | SBArchOpt     | Lib     |         |         |         |
+| MD: kernels                           |           | N             | Lib     |         |         |         |
+| MD: dummy coding                      |           | N             | Lib     |         |         |         |
+| MD: force new infill point selection  |           | SBArchOpt     | N       |         |         |         |
+| MO: multi-objective infill            |           | SBArchOpt     | Lib     |         |         |         |
+| HIER: imputation during sampling      | SBArchOpt | SBArchOpt     | N       |         |         |         |
+| HIER: imputation during evaluation    | SBArchOpt | SBArchOpt     | N       |         |         |         |
+| HIER: imputation during infill search |           | SBArchOpt     | N       |         |         |         |
+| HIER: kernels                         |           | N             | N       | N       | N       | N       |
+| HC: predict area                      |           | N             | N       |         |         | Lib     |
+| EXP: intermediate result storage      | SBArchOpt | SBArchOpt     | N       |         |         |         |
+| EXP: resuming optimizations           | SBArchOpt | SBArchOpt     | N       |         |         |         |
 
 ## Installation
 
@@ -88,6 +85,8 @@ You then need to implement the following functionality:
 - Design variable definition in the `__init__` function using `Variable` classes (in `pymoo.core.variable`)
 - Evaluation of a design vector in `_arch_evaluate`
 - Correction (imputation/repair) of a design vector in `_correct_x`
+- An interface for implementing intermediate storage of problem-specific results (`store_results`), and restarting an
+  optimization from these previous results (`load_previous_results`)
 - A unique class representation in `__repr__`
 
 Design variables of different types are defined as follows:
@@ -150,6 +149,12 @@ class DemoArchOptProblem(ArchOptProblemBase):
         # Set second design variable inactive if value is other than A
         is_active[:, 1] = categorical_values != 'A'
         x[~is_active] = 0
+        
+    def store_results(self, results_folder, final=False):
+      """Implement this function to enable problem-specific intermediate results storage"""
+    
+    def load_previous_results(self, results_folder):
+      """Implement this function to enable problem-specific results loading for algorithm restart"""
 
     def __repr__(self):
         """repr() of the class, should be unique for unique Pareto fronts"""

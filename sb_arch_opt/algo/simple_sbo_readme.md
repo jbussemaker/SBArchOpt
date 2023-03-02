@@ -20,8 +20,8 @@ python setup.py install[simple_sbo]
 
 ## Usage
 
-The algorithm is implemented as a [pymoo](https://pymoo.org/) algorithm and therefore can be used directly with pymoo's
-interface:
+The algorithm is implemented as a [pymoo](https://pymoo.org/) algorithm and already includes all relevant architecture
+optimization measures. It can be used directly with pymoo's interface:
 
 ```python
 from pymoo.optimize import minimize
@@ -30,8 +30,19 @@ from sb_arch_opt.algo.simple_sbo import get_simple_sbo_krg, get_simple_sbo_rbf
 problem = ...  # Subclass of ArchOptProblemBase
 
 # Get Kriging or RBF algorithm
-simple_krg_sbo_algo = get_simple_sbo_krg(init_size=100, use_mvpf=True, use_ei=False, min_pof=.95)
-simple_rbf_sbo_algo = get_simple_sbo_rbf(init_size=100)
+n_init = 100
+simple_krg_sbo_algo = get_simple_sbo_krg(init_size=n_init, use_mvpf=True, use_ei=False, min_pof=.95)
+simple_rbf_sbo_algo = get_simple_sbo_rbf(init_size=n_init)
 
-result = minimize(problem, simple_krg_sbo_algo, termination=('n_gen', 10))
+# Enable intermediate results storage
+results_folder_path = 'path/to/results/folder'
+simple_krg_sbo_algo.store_intermediate_results(results_folder_path)
+
+# Start from previous results (skipped if no previous results are available)
+if simple_krg_sbo_algo.initialize_from_previous_results(problem, results_folder_path):
+    # No need to evaluate any initial points, as they have been previously evaluated
+    n_init = 0
+
+n_infill = 10
+result = minimize(problem, simple_krg_sbo_algo, termination=('n_eval', n_init+n_infill))
 ```
