@@ -19,6 +19,11 @@ class DummyProblem(ArchOptTestProblemBase):
         self.only_discrete = only_discrete
         super().__init__(var_types, n_obj=problem.n_obj)
 
+    def get_n_valid_discrete(self) -> int:
+        if self.only_discrete:
+            return 10*5 + 5
+        return 10*10
+
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
         self._correct_x(x, is_active_out)

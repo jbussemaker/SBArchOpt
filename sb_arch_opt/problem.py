@@ -155,6 +155,60 @@ class ArchOptProblemBase(Problem):
         """Get the repair operator for architecture optimization problems"""
         return ArchOptRepair()
 
+    def print_stats(self):
+        n_discr = np.sum(self.is_discrete_mask)
+        n_cont = np.sum(self.is_cont_mask)
+        imp_ratio = self.get_imputation_ratio()
+        print(f'problem: {self!r}')
+        print(f'n_discr: {n_discr}')
+        print(f'n_cont : {n_cont}')
+        print(f'n_obj  : {self.n_obj}')
+        print(f'n_con  : {self.n_ieq_constr}')
+        print(f'MD     : {n_discr > 0 and n_cont > 0}')
+        print(f'MO     : {self.n_obj > 1}')
+        if not np.isnan(imp_ratio):
+            print(f'HIER         : {imp_ratio > 1}')
+            print(f'n_valid_discr: {self.get_n_valid_discrete()}')
+            print(f'imp_ratio    : {imp_ratio:.2f}')
+
+    def get_imputation_ratio(self) -> float:
+        """
+        Returns the ratio between declared and valid design points; gives an estimate on how much design variable
+        hierarchy plays a role for this problem. A value of 1 means there is no hierarchy, any value higher than 1
+        means there is hierarchy. The higher the value, the more difficult it is to "randomly" sample a valid design
+        vector (e.g. imputation ratio = 10 means that 1/10th of declared design vectors is valid).
+        """
+
+        # Get valid design points
+        n_valid = self.get_n_valid_discrete()
+        if n_valid is None:
+            return np.nan
+        if n_valid == 0:
+            return 1.
+
+        n_declared = self.get_n_declared_discrete()
+        imp_ratio = n_declared/n_valid
+        return imp_ratio
+
+    def get_n_declared_discrete(self) -> int:
+        """Returns the number of declared discrete design points (ignoring continuous dimensions), calculated from the
+        cartesian product of discrete design variables"""
+
+        # Get number of discrete options for each discrete design variable
+        n_opts_discrete = self.xu[self._is_discrete_mask]+1
+        if len(n_opts_discrete) == 0:
+            return 1
+
+        return int(np.prod(n_opts_discrete, dtype=np.float))
+
+    """##############################
+    ### IMPLEMENT FUNCTIONS BELOW ###
+    ##############################"""
+
+    def get_n_valid_discrete(self) -> int:
+        """Return the number of valid discrete design points (ignoring continuous dimensions); enables calculation of
+        the imputation ratio"""
+
     def store_results(self, results_folder, final=False):
         """Callback function to store intermediate or final results in some results folder"""
 

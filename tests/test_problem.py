@@ -1,5 +1,4 @@
 import os
-import tempfile
 import numpy as np
 from sb_arch_opt.problem import *
 from sb_arch_opt.sampling import *
@@ -14,6 +13,10 @@ def test_init_no_vars():
     assert problem.n_var == 0
     assert problem.n_obj == 2
     assert problem.n_ieq_constr == 2
+
+    assert problem.get_n_declared_discrete() == 1
+    assert np.isnan(problem.get_imputation_ratio())
+    problem.print_stats()
 
 
 def test_init_vars():
@@ -32,6 +35,8 @@ def test_init_vars():
     assert np.all(problem.is_int_mask == [False, True, True, False])
     assert np.all(problem.is_discrete_mask == [False, True, True, True])
     assert np.all(problem.is_cont_mask == [True, False, False, False])
+
+    assert problem.get_n_declared_discrete() == 4*2*3
 
 
 def test_correct_x(problem: ArchOptProblemBase):
@@ -84,6 +89,18 @@ def test_repair(problem: ArchOptProblemBase):
         ])
 
 
+def test_imputation_ratio(problem: ArchOptProblemBase, discrete_problem: ArchOptProblemBase):
+    assert problem.get_n_declared_discrete() == 10*10
+    assert problem.get_n_valid_discrete() == 10*10
+    assert problem.get_imputation_ratio() == 1
+    problem.print_stats()
+
+    assert discrete_problem.get_n_declared_discrete() == 10*10
+    assert discrete_problem.get_n_valid_discrete() == 10*5+5
+    assert discrete_problem.get_imputation_ratio() == 1/.55
+    discrete_problem.print_stats()
+
+
 def test_evaluate(problem: ArchOptProblemBase):
     assert problem.n_var == 5
 
@@ -127,6 +144,7 @@ def test_repaired_exhaustive_sampling(problem: ArchOptProblemBase):
     sampling_values = RepairedExhaustiveSampling.get_exhaustive_sample_values(problem)
     assert len(sampling_values) == 5
     assert np.prod([len(values) for values in sampling_values]) == 12500
+    assert RepairedExhaustiveSampling.get_n_sample_exhaustive(problem) == 12500
 
     sampling = RepairedExhaustiveSampling()
     assert isinstance(sampling._repair, ArchOptRepair)

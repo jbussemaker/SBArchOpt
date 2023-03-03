@@ -78,6 +78,11 @@ Each framework has a dedicated readme file with instructions on how to use and h
 Optimization frameworks (except pymoo) are always optional! Therefore, when installing SBArchOpt, the interfaces to
 optimization frameworks are probably not working yet.
 
+### Test Problems
+
+For an overview of the available test problems and how to use them, see the `readme_problems.md` in
+`sb_arch_opt.problems`.
+
 ### Implementing an Architecture Optimization Problem
 
 To implement an architecture optimization problem, create a new class extending the `ArchOptProblemBase` class.

@@ -35,7 +35,7 @@ from pymoo.algorithms.moo.nsga2 import NSGA2, calc_crowding_distance
 from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
 
 from sb_arch_opt.problem import ArchOptProblemBase
-from sb_arch_opt.sampling import RepairedExhaustiveSampling
+from sb_arch_opt.sampling import RepairedExhaustiveSampling, RepairedRandomSampling
 
 __all__ = ['CachedParetoFrontMixin', 'ArchOptTestProblemBase']
 
@@ -49,7 +49,7 @@ class CachedParetoFrontMixin(Problem):
         if os.path.exists(cache_path):
             os.remove(cache_path)
 
-    def _calc_pareto_front(self, *_, pop_size=200, n_gen=20, n_repeat=10, n_pts_keep=100, **__):
+    def _calc_pareto_front(self, *_, pop_size=200, n_gen=20, n_repeat=12, n_pts_keep=100, **__):
         # Check if Pareto front has already been cached
         cache_path = self._pf_cache_path()
         if os.path.exists(cache_path):
@@ -109,7 +109,7 @@ class CachedParetoFrontMixin(Problem):
         print(f'Running Pareto front discovery {i+1}/{n} ({pop_size} pop, {n_gen} gen): {self.name()}')
         return minimize(self, NSGA2(pop_size=pop_size), termination=('n_gen', n_gen))
 
-    def plot_pf(self: Union[Problem, 'CachedParetoFrontMixin'], show_approx_f_range=False, n_sample=1000,
+    def plot_pf(self: Union[Problem, 'CachedParetoFrontMixin'], show_approx_f_range=True, n_sample=100,
                 filename=None, show=True, **kwargs):
         """Plot the Pareto front, optionally including randomly sampled points from the design space"""
         pf = self.pareto_front(**kwargs)
@@ -117,7 +117,7 @@ class CachedParetoFrontMixin(Problem):
         if show_approx_f_range:
             scatter.add(self.get_approx_f_range(), s=.1, color='white')
 
-            pop = Initialization(LatinHypercubeSampling()).do(self, n_sample)
+            pop = Initialization(RepairedRandomSampling()).do(self, n_sample)
             Evaluator().eval(self, pop)
             scatter.add(pop.get('F'), s=5)
 
@@ -128,8 +128,8 @@ class CachedParetoFrontMixin(Problem):
             scatter.show()
         plt.close(scatter.fig)
 
-    def get_approx_f_range(self, n_sample=1000):
-        pop = Initialization(LatinHypercubeSampling()).do(self, n_sample)
+    def get_approx_f_range(self, n_sample=100):
+        pop = Initialization(RepairedRandomSampling()).do(self, n_sample)
         Evaluator().eval(self, pop)
         f = pop.get('F')
         f_max = np.max(f, axis=0)

@@ -87,6 +87,11 @@ class RepairedExhaustiveSampling(Sampling):
         # Get values to be sampled for each design variable
         return [np.linspace(xl[i], xu[i], n_cont) if is_cont[i] else np.arange(xl[i], xu[i]+1) for i in range(len(xl))]
 
+    @classmethod
+    def get_n_sample_exhaustive(cls, problem: Problem, n_cont=5):
+        values = cls.get_exhaustive_sample_values(problem, n_cont=n_cont)
+        return int(np.prod([len(opts) for opts in values], dtype=np.float))
+
     @staticmethod
     def safe_remove_duplicates(pop: Population) -> Population:
         gb_needed = ((len(pop)**2)*8)/(1024**3)
