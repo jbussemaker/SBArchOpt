@@ -19,7 +19,7 @@ from pymoo.core.problem import Problem
 from pymoo.core.variable import Real, Integer
 from sb_arch_opt.pareto_front import ArchOptTestProblemBase
 
-__all__ = ['NoHierarchyProblemBase', 'MixedDiscretizerProblemBase']
+__all__ = ['NoHierarchyProblemBase', 'NoHierarchyWrappedProblem', 'MixedDiscretizerProblemBase']
 
 
 class NoHierarchyProblemBase(ArchOptTestProblemBase):
@@ -38,6 +38,22 @@ class NoHierarchyProblemBase(ArchOptTestProblemBase):
 
     def __repr__(self):
         return f'{self.__class__.__name__}()'
+
+
+class NoHierarchyWrappedProblem(NoHierarchyProblemBase):
+    """Base class for non-hierarchical test problems that wrap an existing Problem class (to add SBArchOpt features)"""
+
+    def __init__(self, problem: Problem):
+        self._problem = problem
+        var_types = [Real(bounds=(problem.xl[i], problem.xu[i])) for i in range(problem.n_var)]
+        super().__init__(var_types, n_obj=problem.n_obj, n_ieq_constr=problem.n_ieq_constr)
+
+    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
+                       h_out: np.ndarray, *args, **kwargs):
+        out = self._problem.evaluate(x, return_as_dictionary=True)
+        f_out[:, :] = out['F']
+        if self.n_ieq_constr > 0:
+            g_out[:, :] = out['G']
 
 
 class MixedDiscretizerProblemBase(NoHierarchyProblemBase):

@@ -18,7 +18,7 @@ import numpy as np
 from pymoo.core.variable import Real
 from pymoo.problems.multi.zdt import ZDT1
 from pymoo.problems.single.himmelblau import Himmelblau
-from sb_arch_opt.problems.md_base import *
+from sb_arch_opt.problems.problems_base import *
 
 __all__ = ['MOHimmelblau', 'MDMOHimmelblau', 'DMOHimmelblau', 'Goldstein', 'MOGoldstein', 'MDMOGoldstein',
            'DMOGoldstein', 'MOZDT1', 'MDZDT1', 'DZDT1']
@@ -99,17 +99,11 @@ class DMOGoldstein(MixedDiscretizerProblemBase):
         super().__init__(MOGoldstein())
 
 
-class MOZDT1(NoHierarchyProblemBase):
-    """Wrapped for ZDT1 test problem"""
+class MOZDT1(NoHierarchyWrappedProblem):
+    """Wrapper for ZDT1 test problem"""
 
     def __init__(self):
-        self._problem = problem = ZDT1()
-        var_types = [Real(bounds=(problem.xl[i], problem.xu[i])) for i in range(problem.n_var)]
-        super().__init__(var_types, n_obj=problem.n_obj)
-
-    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
-                       h_out: np.ndarray, *args, **kwargs):
-        f_out[:, :] = self._problem.evaluate(x, return_as_dictionary=True)['F']
+        super().__init__(ZDT1())
 
 
 class MDZDT1(MixedDiscretizerProblemBase):

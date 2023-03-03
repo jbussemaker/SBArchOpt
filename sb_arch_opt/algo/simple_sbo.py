@@ -21,8 +21,8 @@ import numpy as np
 from typing import *
 from scipy.stats import norm
 from sb_arch_opt.sampling import *
-from sb_arch_opt.util import capture_log
 from sb_arch_opt.algo.pymoo_interface import *
+from sb_arch_opt.util import capture_log, patch_ftol_bug
 from sb_arch_opt.problem import ArchOptRepair, ArchOptProblemBase
 
 from pymoo.core.repair import Repair
@@ -697,24 +697,6 @@ class SBOInfill(InfillCriterion):
         if self.repair is None:
             return None
         return NormalizedRepair(self.problem, self.repair)
-
-
-def patch_ftol_bug(term):  # Already fixed in upcoming release: https://github.com/anyoptimization/pymoo/issues/325
-    from pymoo.termination.default import DefaultMultiObjectiveTermination
-    from pymoo.termination.ftol import MultiObjectiveSpaceTermination
-    data_func = None
-
-    def _wrap_data(algorithm):
-        data = data_func(algorithm)
-        if data['ideal'] is None:
-            data['feas'] = False
-        return data
-
-    if isinstance(term, DefaultMultiObjectiveTermination):
-        ftol_term = term.criteria[2].termination
-        if isinstance(ftol_term, MultiObjectiveSpaceTermination):
-            data_func = ftol_term._data
-            ftol_term._data = _wrap_data
 
 
 class SurrogateInfillCallback(Callback):

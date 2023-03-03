@@ -30,10 +30,11 @@ from pymoo.core.problem import Problem
 from pymoo.core.evaluator import Evaluator
 from pymoo.visualization.scatter import Scatter
 from pymoo.core.initialization import Initialization
-from pymoo.operators.sampling.lhs import LatinHypercubeSampling
 from pymoo.algorithms.moo.nsga2 import NSGA2, calc_crowding_distance
 from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
+from pymoo.termination.default import DefaultMultiObjectiveTermination, DefaultSingleObjectiveTermination
 
+from sb_arch_opt.util import patch_ftol_bug
 from sb_arch_opt.problem import ArchOptProblemBase
 from sb_arch_opt.sampling import RepairedExhaustiveSampling, RepairedRandomSampling
 
@@ -49,7 +50,7 @@ class CachedParetoFrontMixin(Problem):
         if os.path.exists(cache_path):
             os.remove(cache_path)
 
-    def _calc_pareto_front(self, *_, pop_size=200, n_gen=20, n_repeat=12, n_pts_keep=100, **__):
+    def _calc_pareto_front(self, *_, pop_size=200, n_gen_min=10, n_repeat=12, n_pts_keep=100, **__):
         # Check if Pareto front has already been cached
         cache_path = self._pf_cache_path()
         if os.path.exists(cache_path):
@@ -66,7 +67,7 @@ class CachedParetoFrontMixin(Problem):
             n *= int(xu[i]-xl[i]+1)
 
         # If the design space is smaller than the number of requested evaluations, simply evaluate all points
-        if n is not None and n < pop_size*n_gen*n_repeat:
+        if n is not None and n < pop_size*n_gen_min*n_repeat:
             pop = RepairedExhaustiveSampling().do(self, n)
             Evaluator().eval(self, pop)
 
@@ -77,13 +78,15 @@ class CachedParetoFrontMixin(Problem):
         # Otherwise, execute NSGA2 in parallel and merge resulting Pareto fronts
         else:
             with concurrent.futures.ProcessPoolExecutor() as executor:
-                futures = [executor.submit(self._run_minimize, pop_size, n_gen, i, n_repeat)
+                futures = [executor.submit(self._run_minimize, pop_size, n_gen_min, i, n_repeat)
                            for i in range(n_repeat)]
                 concurrent.futures.wait(futures)
 
                 pf = None
                 for i in range(n_repeat):
                     res = futures[i].result()
+                    if res.F is None:
+                        continue
                     if pf is None:
                         pf = res.F
                     else:
@@ -92,6 +95,8 @@ class CachedParetoFrontMixin(Problem):
                         pf = pf_merged[i_non_dom, :]
 
         # Reduce size of Pareto front to a predetermined amount to ease Pareto-front-related calculations
+        if pf is None or pf.shape[0] == 0:
+            raise RuntimeError('Could not find Pareto front')
         pf = np.unique(pf, axis=0)
         if n_pts_keep is not None and pf.shape[0] > n_pts_keep:
             for _ in range(pf.shape[0]-n_pts_keep):
@@ -107,7 +112,23 @@ class CachedParetoFrontMixin(Problem):
 
     def _run_minimize(self, pop_size, n_gen, i, n):
         print(f'Running Pareto front discovery {i+1}/{n} ({pop_size} pop, {n_gen} gen): {self.name()}')
-        return minimize(self, NSGA2(pop_size=pop_size), termination=('n_gen', n_gen))
+
+        robust_period = n_gen
+        n_max_gen = n_gen*10
+        n_max_eval = n_max_gen*pop_size
+        if self.n_obj > 1:
+            termination = DefaultMultiObjectiveTermination(
+                xtol=5e-4, cvtol=1e-8, ftol=5e-3, n_skip=5, period=robust_period, n_max_gen=n_max_gen,
+                n_max_evals=n_max_eval)
+        else:
+            termination = DefaultSingleObjectiveTermination(
+                xtol=1e-8, cvtol=1e-8, ftol=1e-6, period=robust_period, n_max_gen=n_max_gen, n_max_evals=n_max_eval)
+
+        patch_ftol_bug(termination)
+        result = minimize(self, NSGA2(pop_size=pop_size), termination=termination, copy_termination=False)
+        result.history = None
+        result.algorithm = None
+        return result
 
     def plot_pf(self: Union[Problem, 'CachedParetoFrontMixin'], show_approx_f_range=True, n_sample=100,
                 filename=None, show=True, **kwargs):

@@ -206,7 +206,7 @@ def test_cached_pareto_front_mixin(problem: ArchOptTestProblemBase, discrete_pro
     assert not os.path.exists(problem._pf_cache_path())
 
     for _ in range(2):
-        pf = problem.pareto_front(pop_size=200, n_gen=3, n_repeat=4)
+        pf = problem.pareto_front(pop_size=200, n_gen_min=3, n_repeat=4)
         assert pf.shape[1] == 2
         assert os.path.exists(problem._pf_cache_path())
 

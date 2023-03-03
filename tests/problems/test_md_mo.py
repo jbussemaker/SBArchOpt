@@ -1,6 +1,6 @@
 from sb_arch_opt.sampling import *
 from sb_arch_opt.problems.md_mo import *
-from sb_arch_opt.problems.md_base import MixedDiscretizerProblemBase
+from sb_arch_opt.problems.problems_base import MixedDiscretizerProblemBase
 from pymoo.problems.multi.zdt import ZDT1
 from pymoo.core.evaluator import Evaluator
 

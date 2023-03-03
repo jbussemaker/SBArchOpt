@@ -159,7 +159,10 @@ class ArchOptProblemBase(Problem):
         n_discr = np.sum(self.is_discrete_mask)
         n_cont = np.sum(self.is_cont_mask)
         imp_ratio = self.get_imputation_ratio()
-        print(f'problem: {self!r}')
+        try:
+            print(f'problem: {self!r}')
+        except NotImplementedError:
+            pass
         print(f'n_discr: {n_discr}')
         print(f'n_cont : {n_cont}')
         print(f'n_obj  : {self.n_obj}')

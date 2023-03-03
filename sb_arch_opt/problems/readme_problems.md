@@ -13,6 +13,14 @@ An overview of available test problems in `sb_arch_opt.problems`:
 | `MOZDT1`         |         | 30     | 2     |       |     |     | Y   |      |     |               |           |        |
 | `MDZDT1`         | 15      | 15     | 2     |       | Y   | Y   | Y   |      |     | ~30.5e9       |           |        |
 | `DZDT1`          | 30      |        | 2     |       | Y   |     | Y   |      |     | ~931e18       |           |        |
+| `ArchWeldedBeam` |         | 4      | 2     | 4     |     |     | Y   |      |     |               |           |        |
+| `MDWeldedBeam`   | 2       | 2      | 2     | 4     | Y   | Y   | Y   |      |     | 100           |           |        |
+| `ArchCarside`    |         | 7      | 3     | 10    |     |     | Y   |      |     |               |           |        |
+| `MDCarside`      | 4       | 3      | 3     | 10    | Y   | Y   | Y   |      |     | 100000        |           |        |
+| `ArchOSY`        |         | 6      | 2     | 6     |     |     | Y   |      |     |               |           |        |
+| `MDOSY`          | 3       | 3      | 2     | 6     | Y   | Y   | Y   |      |     | 1000          |           |        |
+| `MODASCMOP`      |         | 30     | 3     | 7     |     |     | Y   |      |     |               |           |        |
+| `MDDASCMOP`      | 15      | 15     | 3     | 7     | Y   | Y   | Y   |      |     | ~14.3e6       |           |        |
 
 Nomenclature:
 - n_discr: number of discrete (integer or categorical) design variables
