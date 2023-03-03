@@ -16,7 +16,7 @@ def test_md_base():
     Evaluator().eval(problem, pop)
 
 
-def _test_no_hierarchy(problem):
+def run_test_no_hierarchy(problem):
     assert problem.get_imputation_ratio() == 1
     problem.print_stats()
 
@@ -29,39 +29,39 @@ def _test_no_hierarchy(problem):
 
 
 def test_mo_himmelblau():
-    pop = _test_no_hierarchy(MOHimmelblau())
+    pop = run_test_no_hierarchy(MOHimmelblau())
     assert len(pop) == 3**2
 
 
 def test_md_mo_himmelblau():
-    pop = _test_no_hierarchy(MDMOHimmelblau())
+    pop = run_test_no_hierarchy(MDMOHimmelblau())
     assert len(pop) == 10*3
 
 
 def test_discrete_mo_himmelblau():
-    pop = _test_no_hierarchy(DMOHimmelblau())
+    pop = run_test_no_hierarchy(DMOHimmelblau())
     assert len(pop) == 10*10
 
 
 def test_mo_goldstein():
-    _test_no_hierarchy(MOGoldstein())
+    run_test_no_hierarchy(MOGoldstein())
 
 
 def test_md_mo_goldstein():
-    _test_no_hierarchy(MDMOGoldstein())
+    run_test_no_hierarchy(MDMOGoldstein())
 
 
 def test_discrete_mo_goldstein():
-    _test_no_hierarchy(DMOGoldstein())
+    run_test_no_hierarchy(DMOGoldstein())
 
 
 def test_mo_zdt1():
-    _test_no_hierarchy(MOZDT1())
+    run_test_no_hierarchy(MOZDT1())
 
 
 def test_md_mo_zdt1():
-    _test_no_hierarchy(MDZDT1())
+    run_test_no_hierarchy(MDZDT1())
 
 
 def test_discrete_mo_zdt1():
-    _test_no_hierarchy(DZDT1())
+    run_test_no_hierarchy(DZDT1())
