@@ -80,6 +80,7 @@ class ArchOptProblemBase(Problem):
 
         self._is_discrete_mask = is_int_mask | is_cat_mask
         self._is_cont_mask = ~self._is_discrete_mask
+        self._x_cont_mid = .5*(xl[self._is_cont_mask]+xu[self._is_cont_mask])
 
         super().__init__(n_var=n_var, xl=xl, xu=xu, vars=corr_var_types,
                          n_obj=n_obj, n_ieq_constr=n_ieq_constr, n_eq_constr=n_eq_constr, **kwargs)
@@ -121,12 +122,31 @@ class ArchOptProblemBase(Problem):
         self._correct_x_discrete(x_imputed)
         is_active = np.ones(x.shape, dtype=bool)
 
-        self._correct_x(x_imputed, is_active)
+        self._correct_x_impute(x_imputed, is_active)
         return x_imputed, is_active
+
+    def _correct_x_impute(self, x: np.ndarray, is_active: np.ndarray):
+        self._correct_x(x, is_active)
+        self._impute_x(x, is_active)
 
     def _correct_x_discrete(self, x: np.ndarray):
         """Ensures that discrete design variables take up integer values"""
         x[:, self._is_discrete_mask] = np.round(x[:, self._is_discrete_mask].astype(np.float64)).astype(np.int)
+
+    def _impute_x(self, x: np.ndarray, is_active: np.ndarray):
+        """
+        Applies the default imputation to design vectors:
+        - Sets inactive discrete design variables to 0
+        - Sets inactive continuous design variables to the mid of their bounds
+        """
+
+        # Impute inactive discrete design variables
+        for i_dv in np.where(self.is_discrete_mask)[0]:
+            x[~is_active[:, i_dv], i_dv] = 0
+
+        # Impute inactive continuous design variables
+        for i_cont, i_dv in enumerate(np.where(self.is_cont_mask)[0]):
+            x[~is_active[:, i_dv], i_dv] = self._x_cont_mid[i_cont]
 
     def _evaluate(self, x, out, *args, **kwargs):
         # Prepare output matrices for evaluation
@@ -231,8 +251,8 @@ class ArchOptProblemBase(Problem):
         raise NotImplementedError
 
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
-        """Impute the design vectors (discrete variables already have integer values),
-        writing the imputed design vectors and the activeness matrix to the provided matrices"""
+        """Fill the activeness matrix and impute any design variables that are partially inactive.
+        Imputation of inactive design variables is applied after this function."""
         raise NotImplementedError
 
     def __repr__(self):

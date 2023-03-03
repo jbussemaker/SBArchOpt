@@ -17,10 +17,12 @@ Contact: jasper.bussemaker@dlr.de
 import os
 import pickle
 import logging
+import numpy as np
 from typing import Optional
 from pymoo.core.result import Result
 from pymoo.core.callback import Callback
 from pymoo.core.algorithm import Algorithm
+from pymoo.core.evaluator import Evaluator
 from pymoo.core.population import Population
 from pymoo.algorithms.moo.nsga2 import NSGA2
 from pymoo.core.initialization import Initialization
@@ -29,7 +31,8 @@ from sb_arch_opt.util import capture_log
 from sb_arch_opt.sampling import get_init_sampler
 from sb_arch_opt.problem import ArchOptRepair, ArchOptProblemBase
 
-__all__ = ['get_repair', 'provision_pymoo', 'get_nsga2', 'initialize_from_previous_results', 'ResultsStorageCallback']
+__all__ = ['get_repair', 'provision_pymoo', 'get_nsga2', 'initialize_from_previous_results', 'ResultsStorageCallback',
+           'ExtremeBarrierEvaluator']
 
 log = logging.getLogger('sb_arch_opt.pymoo')
 
@@ -39,12 +42,14 @@ def get_repair() -> ArchOptRepair:
     return ArchOptRepair()
 
 
-def provision_pymoo(algorithm: Algorithm, init_use_lhs=True, set_init=True, results_folder=None):
+def provision_pymoo(algorithm: Algorithm, init_use_lhs=True, set_init=True, results_folder=None,
+                    enable_extreme_barrier=True):
     """
     Provisions a pymoo Algorithm to work correctly for architecture optimization:
     - Sets initializer using a repaired sampler (if `set_init = True`)
     - Sets a repair operator
     - Optionally stores intermediate and final results in some results folder
+    - Optionally enables extreme-barrier for dealing with hidden constraints (replace NaN with Inf)
     """
     capture_log()
 
@@ -56,6 +61,9 @@ def provision_pymoo(algorithm: Algorithm, init_use_lhs=True, set_init=True, resu
 
     if results_folder is not None:
         algorithm.callback = ResultsStorageCallback(results_folder, callback=algorithm.callback)
+
+    if enable_extreme_barrier:
+        algorithm.evaluator = ExtremeBarrierEvaluator()
 
     return algorithm
 
@@ -183,3 +191,17 @@ class ResultsStorageCallback(Callback):
         super().__call__(*args, **kwargs)
         if self.callback is not None:
             self.callback(*args, **kwargs)
+
+
+class ExtremeBarrierEvaluator(Evaluator):
+    """Evaluator that applies the extreme barrier approach for dealing with hidden constraints: replace NaN with Inf"""
+
+    def _eval(self, problem, pop, evaluate_values_of, **kwargs):
+        super()._eval(problem, pop, evaluate_values_of, **kwargs)
+
+        for key in ['F', 'G', 'H']:
+            values = pop.get(key)
+            values[np.isnan(values)] = np.inf
+            pop.set(key, values)
+
+        return pop

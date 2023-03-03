@@ -55,7 +55,7 @@ class DummyResultSavingProblem(ArchOptProblemBase):
 
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
         is_active[:, -1] = x[:, 1] < 5
-        x[~is_active] = 0
+        self._impute_x(x, is_active)
 
     def store_results(self, results_folder, final=False):
         if final:

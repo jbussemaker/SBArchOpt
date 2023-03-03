@@ -54,7 +54,7 @@ def test_correct_x(problem: ArchOptProblemBase):
     assert np.all(x == [
         [0, 0, 0, 0, 0],
         [0, 0, 0, 0, 1],
-        [0, 7, 0, 0, 0],
+        [0, 7, 0, 0, .5],
     ])
     assert np.all(is_active == [
         [True, True, True, True, True],
@@ -80,7 +80,7 @@ def test_repair(problem: ArchOptProblemBase):
         assert np.all(x == [
             [0, 0, 0, 0, 0],
             [0, 0, 0, 0, 1],
-            [0, 7, 0, 0, 0],
+            [0, 7, 0, 0, .5],
         ])
         assert np.all(repair.latest_is_active == [
             [True, True, True, True, True],
@@ -125,7 +125,7 @@ def test_evaluate(problem: ArchOptProblemBase):
         assert np.all(x_out == [
             [0, 0, 0, 0, 0],
             [0, 0, 0, 0, 1],
-            [0, 7, 0, 0, 0],
+            [0, 7, 0, 0, .5],
         ])
         assert np.all(is_active == [
             [True, True, True, True, True],
@@ -135,7 +135,7 @@ def test_evaluate(problem: ArchOptProblemBase):
         assert np.all(f == [
             [0, 1],
             [0, 3.25],
-            [0, 2.75],
+            [0, 3.875],
         ])
 
 

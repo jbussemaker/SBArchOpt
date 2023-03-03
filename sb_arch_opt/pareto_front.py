@@ -111,6 +111,7 @@ class CachedParetoFrontMixin(Problem):
         return pf
 
     def _run_minimize(self, pop_size, n_gen, i, n):
+        from sb_arch_opt.algo.pymoo_interface import get_nsga2
         print(f'Running Pareto front discovery {i+1}/{n} ({pop_size} pop, {n_gen} gen): {self.name()}')
 
         robust_period = n_gen
@@ -125,7 +126,7 @@ class CachedParetoFrontMixin(Problem):
                 xtol=1e-8, cvtol=1e-8, ftol=1e-6, period=robust_period, n_max_gen=n_max_gen, n_max_evals=n_max_eval)
 
         patch_ftol_bug(termination)
-        result = minimize(self, NSGA2(pop_size=pop_size), termination=termination, copy_termination=False)
+        result = minimize(self, get_nsga2(pop_size=pop_size), termination=termination, copy_termination=False)
         result.history = None
         result.algorithm = None
         return result

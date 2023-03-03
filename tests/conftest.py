@@ -42,7 +42,7 @@ class DummyProblem(ArchOptTestProblemBase):
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
         values = x[:, 0 if self.only_discrete else 1]
         is_active[:, -1] = values < 5
-        x[~is_active] = 0
+        self._impute_x(x, is_active)
 
     def __repr__(self):
         return f'{self.__class__.__name__}(only_discrete={self.only_discrete})'

@@ -32,10 +32,6 @@ class NoHierarchyProblemBase(ArchOptTestProblemBase):
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
         pass  # No need to correct anything
 
-    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
-                       h_out: np.ndarray, *args, **kwargs):
-        raise NotImplementedError
-
     def __repr__(self):
         return f'{self.__class__.__name__}()'
 
