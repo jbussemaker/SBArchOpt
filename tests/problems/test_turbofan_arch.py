@@ -13,7 +13,7 @@ check_dependency = lambda: pytest.mark.skipif(not HAS_OPEN_TURB_ARCH, reason='Tu
 
 @check_dependency()
 def test_simple_problem():
-    problem = SimpleTurbofanArchProblem()
+    problem = SimpleTurbofanArch()
     problem.print_stats()
 
     assert len(RepairedExhaustiveSampling(n_cont=1).do(problem, 0)) == problem.get_n_valid_discrete()
@@ -23,7 +23,7 @@ def test_simple_problem():
 @check_dependency()
 def test_simple_problem_eval():
     with tempfile.TemporaryDirectory() as tmp_folder:
-        problem = SimpleTurbofanArchProblem(n_parallel=2)
+        problem = SimpleTurbofanArch(n_parallel=2)
         algo = get_nsga2(pop_size=2, results_folder=tmp_folder)
 
         algo.initialization = Initialization(Population.new(X=np.array([
@@ -47,7 +47,7 @@ def test_simple_problem_eval():
 
 @check_dependency()
 def test_realistic_problem():
-    problem = RealisticTurbofanArchProblem()
+    problem = RealisticTurbofanArch()
     problem.print_stats()
 
     assert problem.get_n_valid_discrete() == 1163

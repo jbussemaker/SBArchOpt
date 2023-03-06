@@ -29,7 +29,7 @@ try:
 except ImportError:
     HAS_OPEN_TURB_ARCH = False
 
-__all__ = ['HAS_OPEN_TURB_ARCH', 'SimpleTurbofanArchProblem', 'RealisticTurbofanArchProblem']
+__all__ = ['HAS_OPEN_TURB_ARCH', 'SimpleTurbofanArch', 'RealisticTurbofanArch']
 
 
 class OpenTurbArchProblemWrapper(HierarchyProblemBase):
@@ -112,7 +112,7 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
         return [int(value) if mask[i] else float(value) for i, value in enumerate(x)]
 
 
-class SimpleTurbofanArchProblem(OpenTurbArchProblemWrapper):
+class SimpleTurbofanArch(OpenTurbArchProblemWrapper):
     """
     Instantiation of the simple jet engine architecting problem:
     https://github.com/jbussemaker/OpenTurbofanArchitecting#simple-architecting-problem
@@ -149,7 +149,7 @@ class SimpleTurbofanArchProblem(OpenTurbArchProblemWrapper):
         return int(sum(n_valid_no_fan)+sum(n_valid_fan))
 
 
-class RealisticTurbofanArchProblem(OpenTurbArchProblemWrapper):
+class RealisticTurbofanArch(OpenTurbArchProblemWrapper):
     """
     Instantiation of the realistic jet engine architecting problem:
     https://github.com/jbussemaker/OpenTurbofanArchitecting#realistic-architecting-problem
@@ -196,12 +196,12 @@ class RealisticTurbofanArchProblem(OpenTurbArchProblemWrapper):
 
 
 if __name__ == '__main__':
-    SimpleTurbofanArchProblem().print_stats()
-    RealisticTurbofanArchProblem().print_stats()
+    SimpleTurbofanArch().print_stats()
+    RealisticTurbofanArch().print_stats()
 
     from pymoo.optimize import minimize
     from sb_arch_opt.algo.pymoo_interface import get_nsga2
-    problem = SimpleTurbofanArchProblem(n_parallel=4)
+    problem = SimpleTurbofanArch(n_parallel=4)
     algo = get_nsga2(pop_size=2)
     result = minimize(problem, algo, termination=('n_eval', 2))
     print(result.pop.get('X'))
