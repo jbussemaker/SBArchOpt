@@ -41,6 +41,9 @@ if __name__ == '__main__':
             'simple_sbo': [
                 'smt==1.3.0',
             ],
+            'ota': [
+                'open_turb_arch @ git+https://github.com/jbussemaker/OpenTurbofanArchitecting@pymoo_optional#egg=open_turb_arch',
+            ],
         },
         python_requires='>=3.7',
         packages=['sb_arch_opt'],
