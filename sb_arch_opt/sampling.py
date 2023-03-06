@@ -80,7 +80,7 @@ class RepairedExhaustiveSampling(Sampling):
         xl, xu = problem.bounds()
         is_cont = np.ones((len(xl),), dtype=bool)
         if problem.vars is not None:
-            for i, var in enumerate(problem.vars):
+            for i, var in enumerate(problem.vars.values()):
                 if not isinstance(var, Real):
                     is_cont[i] = False
 

@@ -54,7 +54,7 @@ class HierarchicalGoldstein(HierarchyProblemBase):
     _mo = False
 
     def __init__(self):
-        var_types = [
+        des_vars = [
             Real(bounds=(0, 100)), Real(bounds=(0, 100)), Real(bounds=(0, 100)), Real(bounds=(0, 100)),
             Real(bounds=(0, 100)),
             Integer(bounds=(0, 2)), Integer(bounds=(0, 2)), Integer(bounds=(0, 2)), Integer(bounds=(0, 2)),
@@ -62,7 +62,7 @@ class HierarchicalGoldstein(HierarchyProblemBase):
         ]
 
         n_obj = 2 if self._mo else 1
-        super().__init__(var_types, n_obj=n_obj, n_ieq_constr=1)
+        super().__init__(des_vars, n_obj=n_obj, n_ieq_constr=1)
 
     def get_n_valid_discrete(self) -> int:
         # w1 and w2 determine activeness, and we can ignore continuous dimensions
@@ -242,7 +242,7 @@ class HierarchicalRosenbrock(HierarchyProblemBase):
     _mo = False  # Multi-objective
 
     def __init__(self):
-        var_types = [
+        des_vars = [
             Real(bounds=(-1, .5)), Real(bounds=(0, 1.5)),
             Real(bounds=(-1, .5)), Real(bounds=(0, 1.5)),
             Real(bounds=(-1, .5)), Real(bounds=(0, 1.5)),
@@ -252,7 +252,7 @@ class HierarchicalRosenbrock(HierarchyProblemBase):
         ]
 
         n_obj = 2 if self._mo else 1
-        super().__init__(var_types, n_obj=n_obj, n_constr=2)
+        super().__init__(des_vars, n_obj=n_obj, n_constr=2)
 
     def get_n_valid_discrete(self) -> int:
         n_valid = np.ones((2, 2), dtype=int)*2*2  # w1, w2 for DV 8 and 9
@@ -399,8 +399,8 @@ class ZaeffererHierarchical(HierarchyProblemBase):
         self.c = c
         self.d = d
 
-        var_types = [Real(bounds=(0, 1)), Real(bounds=(0, 1))]
-        super().__init__(var_types, n_obj=1)
+        des_vars = [Real(bounds=(0, 1)), Real(bounds=(0, 1))]
+        super().__init__(des_vars, n_obj=1)
 
     def get_n_valid_discrete(self) -> int:
         return 1
@@ -455,11 +455,11 @@ class HierarchicalMetaProblemBase(HierarchyProblemBase):
         self._problem = problem
 
         # Create design vector: 1 selection variables and n_rep repetitions of underlying design variables
-        var_types = [Choice(options=list(range(n_maps)))]
+        des_vars = [Choice(options=list(range(n_maps)))]
         for i in range(n_rep):
-            var_types += problem.vars
+            des_vars += problem.des_vars
 
-        super().__init__(var_types, n_obj=problem.n_obj, n_ieq_constr=problem.n_ieq_constr)
+        super().__init__(des_vars, n_obj=problem.n_obj, n_ieq_constr=problem.n_ieq_constr)
 
         self.n_maps = n_maps
         self.n_rep = n_rep

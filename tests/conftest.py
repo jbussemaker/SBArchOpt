@@ -10,14 +10,14 @@ class DummyProblem(ArchOptTestProblemBase):
     def __init__(self, only_discrete=False):
         self._problem = problem = ZDT1(n_var=2 if only_discrete else 5)
         if only_discrete:
-            var_types = [Choice(options=[str(9-j) for j in range(10)]) if i == 0 else Integer(bounds=(0, 9))
-                         for i in range(problem.n_var)]
+            des_vars = [Choice(options=[str(9-j) for j in range(10)]) if i == 0 else Integer(bounds=(0, 9))
+                        for i in range(problem.n_var)]
         else:
-            var_types = [Real(bounds=(0, 1)) if i % 2 == 0 else (
+            des_vars = [Real(bounds=(0, 1)) if i % 2 == 0 else (
                 Choice(options=[str(9-j) for j in range(10)]) if i == 1 else Integer(bounds=(0, 9)))
                          for i in range(problem.n_var)]
         self.only_discrete = only_discrete
-        super().__init__(var_types, n_obj=problem.n_obj)
+        super().__init__(des_vars, n_obj=problem.n_obj)
 
     def get_n_valid_discrete(self) -> int:
         if self.only_discrete:

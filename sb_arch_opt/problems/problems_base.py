@@ -41,8 +41,8 @@ class NoHierarchyWrappedProblem(NoHierarchyProblemBase):
 
     def __init__(self, problem: Problem):
         self._problem = problem
-        var_types = [Real(bounds=(problem.xl[i], problem.xu[i])) for i in range(problem.n_var)]
-        super().__init__(var_types, n_obj=problem.n_obj, n_ieq_constr=problem.n_ieq_constr)
+        des_vars = [Real(bounds=(problem.xl[i], problem.xu[i])) for i in range(problem.n_var)]
+        super().__init__(des_vars, n_obj=problem.n_obj, n_ieq_constr=problem.n_ieq_constr)
 
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
@@ -68,9 +68,9 @@ class MixedDiscretizerProblemBase(NoHierarchyProblemBase):
         self._xl_orig = problem.xl
         self._xu_orig = problem.xu
 
-        var_types = [Integer(bounds=(0, n_opts-1)) if i < n_vars_int else Real(bounds=(problem.xl[i], problem.xu[i]))
-                     for i in range(problem.n_var)]
-        super().__init__(var_types, n_obj=problem.n_obj, n_ieq_constr=problem.n_ieq_constr)
+        des_vars = [Integer(bounds=(0, n_opts-1)) if i < n_vars_int else Real(bounds=(problem.xl[i], problem.xu[i]))
+                    for i in range(problem.n_var)]
+        super().__init__(des_vars, n_obj=problem.n_obj, n_ieq_constr=problem.n_ieq_constr)
         self.callback = problem.callback
 
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,

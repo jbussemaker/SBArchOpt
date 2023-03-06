@@ -29,8 +29,8 @@ class MOHimmelblau(NoHierarchyProblemBase):
 
     def __init__(self):
         self._problem = problem = Himmelblau()
-        var_types = [Real(bounds=(problem.xl[i], problem.xu[i])) for i in range(problem.n_var)]
-        super().__init__(var_types, n_obj=2)
+        des_vars = [Real(bounds=(problem.xl[i], problem.xu[i])) for i in range(problem.n_var)]
+        super().__init__(des_vars, n_obj=2)
 
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
@@ -58,8 +58,8 @@ class Goldstein(NoHierarchyProblemBase):
     https://github.com/scipy/scipy/blob/main/benchmarks/benchmarks/go_benchmark_functions/go_funcs_G.py#L88"""
 
     def __init__(self):
-        var_types = [Real(bounds=(-2, 2)) for _ in range(2)]
-        super().__init__(var_types)
+        des_vars = [Real(bounds=(-2, 2)) for _ in range(2)]
+        super().__init__(des_vars)
 
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
@@ -77,7 +77,7 @@ class MOGoldstein(NoHierarchyProblemBase):
 
     def __init__(self):
         self._problem = problem = Goldstein()
-        super().__init__(problem.vars, n_obj=2)
+        super().__init__(problem.des_vars, n_obj=2)
 
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):

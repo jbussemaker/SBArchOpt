@@ -33,13 +33,13 @@ class MDBranin(NoHierarchyProblemBase):
     Discrete Variables", section 4.1
     """
 
-    _var_types = [
+    _des_vars = [
         Real(bounds=(0, 1)), Real(bounds=(0, 1)),
         Choice(options=[0, 1]), Choice(options=[0, 1]),
     ]
 
     def __init__(self):
-        super().__init__(self._var_types)
+        super().__init__(self._des_vars)
 
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
@@ -85,7 +85,7 @@ class AugmentedMDBranin(MDBranin):
     Discrete Variables", section 4.2
     """
 
-    _var_types = [Real(bounds=(0, 1)) if i < 10 else Choice(options=[0, 1]) for i in range(12)]
+    _des_vars = [Real(bounds=(0, 1)) if i < 10 else Choice(options=[0, 1]) for i in range(12)]
 
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
@@ -110,11 +110,11 @@ class MDGoldstein(NoHierarchyProblemBase):
     """
 
     def __init__(self):
-        var_types = [
+        des_vars = [
             Real(bounds=(0, 100)), Real(bounds=(0, 100)),
             Integer(bounds=(0, 2)), Integer(bounds=(0, 2)),
         ]
-        super().__init__(var_types)
+        super().__init__(des_vars)
 
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
@@ -176,8 +176,8 @@ class MunozZunigaToy(NoHierarchyProblemBase):
     """
 
     def __init__(self):
-        var_types = [Real(bounds=(0, 1)), Integer(bounds=(0, 9))]
-        super().__init__(var_types)
+        des_vars = [Real(bounds=(0, 1)), Integer(bounds=(0, 9))]
+        super().__init__(des_vars)
 
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
@@ -245,11 +245,11 @@ class Halstrup04(NoHierarchyProblemBase):
     ]
 
     def __init__(self):
-        var_types = [
+        des_vars = [
             Real(bounds=(0, 1)), Real(bounds=(0, 1)), Real(bounds=(0, 1)), Real(bounds=(0, 1)), Real(bounds=(0, 1)),
             Choice(options=[0, 1, 2]), Choice(options=[0, 1]), Choice(options=[0, 1]),
         ]
-        super().__init__(var_types)
+        super().__init__(des_vars)
 
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):

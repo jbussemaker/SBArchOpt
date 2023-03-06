@@ -44,19 +44,24 @@ class ArchOptProblemBase(Problem):
     Note that objectives (F) are always defined as minimization, inequality constraints (G) are satisfied when equal or
     lower than 0, and equality constraints (H) are satisfied when equal to 0.
     Conversion and normalization should be implemented in the evaluation function.
+
+    Also note that we are not exactly following the mixed-variable approach
+    [suggested by pymoo](https://pymoo.org/customization/mixed.html), but rather keeping the design vectors in a matrix
+    with all different variable types in there. To facilitate this, categorical variables are encoded as integers, and
+    the mixed-variable operators have been rewritten in SBArchOpt.
     """
 
-    def __init__(self, var_types: List[Variable], n_obj=1, n_ieq_constr=0, n_eq_constr=0, **kwargs):
+    def __init__(self, des_vars: List[Variable], n_obj=1, n_ieq_constr=0, n_eq_constr=0, **kwargs):
 
         # Harmonize the pymoo variable definition interface
-        n_var = len(var_types)
+        n_var = len(des_vars)
         xl = np.zeros((n_var,))
         xu = np.empty((n_var,))
         self._is_int_mask = is_int_mask = np.zeros((n_var,), dtype=bool)
         self._is_cat_mask = is_cat_mask = np.zeros((n_var,), dtype=bool)
         self._choice_value_map = {}
-        corr_var_types = []
-        for i_var, var_type in enumerate(var_types):
+        corr_des_vars = []
+        for i_var, var_type in enumerate(des_vars):
             if isinstance(var_type, Real):
                 xl[i_var], xu[i_var] = var_type.bounds
 
@@ -76,13 +81,16 @@ class ArchOptProblemBase(Problem):
 
             else:
                 raise RuntimeError(f'Unsupported variable type: {var_type!r}')
-            corr_var_types.append(var_type)
+            corr_des_vars.append(var_type)
+
+        self.des_vars = corr_des_vars
+        var_types = {f'DV{i}': des_var for i, des_var in enumerate(corr_des_vars)}
 
         self._is_discrete_mask = is_int_mask | is_cat_mask
         self._is_cont_mask = ~self._is_discrete_mask
         self._x_cont_mid = .5*(xl[self._is_cont_mask]+xu[self._is_cont_mask])
 
-        super().__init__(n_var=n_var, xl=xl, xu=xu, vars=corr_var_types,
+        super().__init__(n_var=n_var, xl=xl, xu=xu, vars=var_types,
                          n_obj=n_obj, n_ieq_constr=n_ieq_constr, n_eq_constr=n_eq_constr, **kwargs)
 
     @property

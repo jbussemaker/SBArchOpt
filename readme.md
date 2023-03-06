@@ -113,55 +113,57 @@ may also extend the `sb_arch_opt.pareto_front.ArchOptTestProblemBase` class. Thi
 other base class, however enables the use of the `pareto_front()` function to get a reference Pareto front for testing.
 
 Example:
+
 ```python
 import numpy as np
 from sb_arch_opt.problem import ArchOptProblemBase
 from pymoo.core.variable import Real, Integer, Choice
 
+
 class DemoArchOptProblem(ArchOptProblemBase):
-  
-    def __init__(self):
-        super().__init__(var_types=[
-            Real(bounds=(0, 1)),
-            Integer(bounds=(0, 3)),  # [0, 1, 2, 3]
-            Choice(options=['A', 'B', 'C']),
-        ], n_obj=1)
 
-    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
-                       h_out: np.ndarray, *args, **kwargs):
-        """
-        Implement evaluation and write results in the provided output matrices:
-        - x (design vectors): discrete variables have integer values, imputed design vectors can be output here
-        - is_active (activeness): vector specifying for each design variable whether it was active or not
-        - f (objectives): written as a minimization
-        - g (inequality constraints): written as "<= 0"
-        - h (equality constraints): written as "= 0"
-        """
-        
-        # Correct the input design vectors (if not too expensive)
-        self._correct_x(x, is_active_out)
-        
-        # Example of how to set objective values
-        f_out[:, 0] = np.sum(x**2, axis=1)
+  def __init__(self):
+    super().__init__(des_vars=[
+      Real(bounds=(0, 1)),
+      Integer(bounds=(0, 3)),  # [0, 1, 2, 3]
+      Choice(options=['A', 'B', 'C']),
+    ], n_obj=1)
 
-    def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
-        """Impute the design vectors (discrete variables already have integer values),
-        writing the imputed design vectors and the activeness matrix to the provided matrices"""
-        
-        # Get categorical values associated to the third design variables (i_dv = 2)
-        categorical_values = self.get_categorical_values(i_dv=2, x_i=x[:, 2])
-        
-        # Set second design variable inactive if value is other than A
-        is_active[:, 1] = categorical_values != 'A'
-        x[~is_active] = 0
-        
-    def store_results(self, results_folder, final=False):
-      """Implement this function to enable problem-specific intermediate results storage"""
-    
-    def load_previous_results(self, results_folder):
-      """Implement this function to enable problem-specific results loading for algorithm restart"""
+  def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
+                     h_out: np.ndarray, *args, **kwargs):
+    """
+    Implement evaluation and write results in the provided output matrices:
+    - x (design vectors): discrete variables have integer values, imputed design vectors can be output here
+    - is_active (activeness): vector specifying for each design variable whether it was active or not
+    - f (objectives): written as a minimization
+    - g (inequality constraints): written as "<= 0"
+    - h (equality constraints): written as "= 0"
+    """
 
-    def __repr__(self):
-        """repr() of the class, should be unique for unique Pareto fronts"""
-        return f'{self.__class__.__name__}()'
+    # Correct the input design vectors (if not too expensive)
+    self._correct_x(x, is_active_out)
+
+    # Example of how to set objective values
+    f_out[:, 0] = np.sum(x ** 2, axis=1)
+
+  def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
+    """Impute the design vectors (discrete variables already have integer values),
+    writing the imputed design vectors and the activeness matrix to the provided matrices"""
+
+    # Get categorical values associated to the third design variables (i_dv = 2)
+    categorical_values = self.get_categorical_values(i_dv=2, x_i=x[:, 2])
+
+    # Set second design variable inactive if value is other than A
+    is_active[:, 1] = categorical_values != 'A'
+    x[~is_active] = 0
+
+  def store_results(self, results_folder, final=False):
+    """Implement this function to enable problem-specific intermediate results storage"""
+
+  def load_previous_results(self, results_folder):
+    """Implement this function to enable problem-specific results loading for algorithm restart"""
+
+  def __repr__(self):
+    """repr() of the class, should be unique for unique Pareto fronts"""
+    return f'{self.__class__.__name__}()'
 ```
