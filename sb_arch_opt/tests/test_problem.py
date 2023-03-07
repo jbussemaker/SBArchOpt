@@ -22,15 +22,15 @@ def test_init_no_vars():
 def test_init_vars():
     problem = ArchOptProblemBase([
         Real(bounds=(1, 5)),
-        Integer(bounds=(0, 3)),
+        Integer(bounds=(1, 4)),
         Binary(),
         Choice(options=['A', 'B', 'C']),
     ])
     assert problem.n_var == 4
     assert problem.n_obj == 1
 
-    assert np.all(problem.xl == [1, 0, 0, 0])
-    assert np.all(problem.xu == [5, 3, 1, 2])
+    assert np.all(problem.xl == [1, 1, 0, 0])
+    assert np.all(problem.xu == [5, 4, 1, 2])
     assert np.all(problem.is_cat_mask == [False, False, False, True])
     assert np.all(problem.is_int_mask == [False, True, True, False])
     assert np.all(problem.is_discrete_mask == [False, True, True, True])
@@ -105,10 +105,11 @@ def test_evaluate(problem: ArchOptProblemBase):
     assert problem.n_var == 5
 
     assert problem.is_cat_mask[1]
-    x_i = np.array([0, 1, 2, 3])
-    cat_values = problem.get_categorical_values(1, x_i)
+    x = np.zeros((4, 2))
+    x[:, 1] = np.array([0, 1, 2, 3])
+    cat_values = problem.get_categorical_values(x, 1)
     assert np.all(cat_values == ['9', '8', '7', '6'])
-    assert np.all((cat_values == '9') == (x_i == 0))
+    assert np.all((cat_values == '9') == (x[:, 1] == 0))
 
     for use_evaluator in [False, True]:
         x = np.array([

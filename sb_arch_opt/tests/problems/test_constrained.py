@@ -1,5 +1,5 @@
 from sb_arch_opt.problems.constrained import *
-from tests.problems.test_md_mo import run_test_no_hierarchy
+from sb_arch_opt.tests.problems.test_md_mo import run_test_no_hierarchy
 
 
 def test_welded_beam():

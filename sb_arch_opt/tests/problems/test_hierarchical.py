@@ -9,7 +9,7 @@ def run_test_hierarchy(problem, imp_ratio, check_n_valid=True):
         pop = RepairedExhaustiveSampling(n_cont=1).do(problem, 0)
         assert len(pop) == problem.get_n_valid_discrete()
 
-    assert problem.get_imputation_ratio() == pytest.approx(imp_ratio, abs=.1)
+    assert problem.get_imputation_ratio() == pytest.approx(imp_ratio, rel=.02)
     problem.print_stats()
 
     if RepairedExhaustiveSampling.get_n_sample_exhaustive(problem, n_cont=3) < 1e3:

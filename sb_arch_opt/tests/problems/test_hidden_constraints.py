@@ -1,5 +1,5 @@
 from sb_arch_opt.problems.hidden_constraints import *
-from tests.problems.test_hierarchical import run_test_hierarchy
+from sb_arch_opt.tests.problems.test_hierarchical import run_test_hierarchy
 
 
 def test_hier_rosenbrock_hc():
