@@ -67,7 +67,7 @@ class ArchOptProblemBase(Problem):
 
             elif isinstance(var_type, Integer):
                 is_int_mask[i_var] = True
-                xu[i_var] = var_type.bounds[1]
+                xl[i_var], xu[i_var] = var_type.bounds
 
             elif isinstance(var_type, Binary):
                 is_int_mask[i_var] = True
@@ -114,14 +114,15 @@ class ArchOptProblemBase(Problem):
         """Boolean mask specifying for each design variable whether it is a continues (i.e. not discrete) variable"""
         return self._is_cont_mask
 
-    def get_categorical_values(self, i_dv, x_i: np.ndarray) -> np.ndarray:
+    def get_categorical_values(self, x: np.ndarray, i_dv) -> np.ndarray:
         """Gets the associated categorical variable values for some design variable"""
         if i_dv not in self._choice_value_map:
             raise ValueError(f'Design variable is not categorical: {i_dv}')
 
-        values = x_i.astype(np.str)
+        x_values = x[:, i_dv]
+        values = x_values.astype(np.str)
         for i_cat, value in enumerate(self._choice_value_map[i_dv]):
-            values[x_i == i_cat] = value
+            values[x_values == i_cat] = value
         return values
 
     def correct_x(self, x: np.ndarray):
@@ -150,7 +151,7 @@ class ArchOptProblemBase(Problem):
 
         # Impute inactive discrete design variables
         for i_dv in np.where(self.is_discrete_mask)[0]:
-            x[~is_active[:, i_dv], i_dv] = 0
+            x[~is_active[:, i_dv], i_dv] = self.xl[i_dv]
 
         # Impute inactive continuous design variables
         for i_cont, i_dv in enumerate(np.where(self.is_cont_mask)[0]):
@@ -226,7 +227,7 @@ class ArchOptProblemBase(Problem):
         cartesian product of discrete design variables"""
 
         # Get number of discrete options for each discrete design variable
-        n_opts_discrete = self.xu[self._is_discrete_mask]+1
+        n_opts_discrete = self.xu[self._is_discrete_mask]-self.xl[self._is_discrete_mask]+1
         if len(n_opts_discrete) == 0:
             return 1
 

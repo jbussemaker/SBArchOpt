@@ -34,6 +34,14 @@ An overview of available test problems in `sb_arch_opt.problems`:
 | `MOHierarchicalTestProblem`   | 11      | 16     | 2     | 2     |     | Y   | Y   | Y    |     | 64            | 72        |         |              |
 | `MOHierarchicalRosenbrockHC`  | 5       | 8      | 2     | 1     |     | Y   | Y   | Y    | Y   | 32            | 1.5       |         |              |
 | `HCMOHierarchicalTestProblem` | 11      | 16     | 2     | 1     |     | Y   | Y   | Y    | Y   | 64            | 72        |         |              |
+| `GNCNoActNrType`              | 18      |        | 1     |       | Y   |     |     | Y    |     | 265           | 989       |         |              |
+| `GNCNoActType`                | 20      |        | 2     |       | Y   |     | Y   | Y    |     | 327           | 7.2e3     |         |              |
+| `GNCNoActNr`                  | 24      |        | 2     |       | Y   |     | Y   | Y    |     | 26500         | 7.2e3     |         |              |
+| `GNCNoAct`                    | 26      |        | 2     |       | Y   |     | Y   | Y    |     | 29857         | 57.6e3    |         |              |
+| `GNCNoNrType`                 | 27      |        | 1     |       | Y   |     |     | Y    |     | 70225         | 1911      |         |              |
+| `GNCNoType`                   | 30      |        | 2     |       | Y   |     | Y   | Y    |     | 85779         | 42.2e3    |         |              |
+| `GNCNoNr`                     | 36      |        | 2     |       | Y   |     | Y   | Y    |     | 70225000      | 37.6e3    |         |              |
+| `GNC`                         | 39      |        | 2     |       | Y   |     | Y   | Y    |     | 79091323      | 901e3     |         |              |
 | `SimpleTurbofanArch`          | 6       | 9      | 1     | 5     |     | Y   |     | Y    | Y   | 70            | 3.1       | 1-5 min | ota          |
 | `RealisticTurbofanArch`       | 11      | 30     | 3     | 15    |     | Y   | Y   | Y    | Y   | 1163          | 1114      | 1-5 min | ota          |
 
