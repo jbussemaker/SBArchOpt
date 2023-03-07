@@ -13,6 +13,8 @@ limitations under the License.
 
 Copyright: (c) 2023, Deutsches Zentrum fuer Luft- und Raumfahrt e.V.
 Contact: jasper.bussemaker@dlr.de
+
+This test suite contains a set of mixed-discrete multi-objective problems.
 """
 import numpy as np
 from pymoo.core.variable import Real

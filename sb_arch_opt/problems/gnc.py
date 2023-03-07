@@ -13,6 +13,8 @@ limitations under the License.
 
 Copyright: (c) 2023, Deutsches Zentrum fuer Luft- und Raumfahrt e.V.
 Contact: jasper.bussemaker@dlr.de
+
+This test suite contains the discrete, hierarchical, multi-objective Guidance, Navigation & Control test problem.
 """
 import itertools
 import numpy as np

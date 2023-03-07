@@ -13,6 +13,8 @@ limitations under the License.
 
 Copyright: (c) 2023, Deutsches Zentrum fuer Luft- und Raumfahrt e.V.
 Contact: jasper.bussemaker@dlr.de
+
+This test suite contains a set of continuous and mixed-discrete, multi-objective, constrained problems.
 """
 from pymoo.problems.multi.osy import OSY
 from pymoo.problems.multi.carside import Carside

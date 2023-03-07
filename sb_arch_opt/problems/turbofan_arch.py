@@ -13,6 +13,10 @@ limitations under the License.
 
 Copyright: (c) 2023, Deutsches Zentrum fuer Luft- und Raumfahrt e.V.
 Contact: jasper.bussemaker@dlr.de
+
+This test suite contains the mixed-discrete, hierarchical, multi-objective turbofan architecture test problem
+(subject to hidden constraints).
+More information: https://github.com/jbussemaker/OpenTurbofanArchitecting
 """
 import numpy as np
 from typing import *
