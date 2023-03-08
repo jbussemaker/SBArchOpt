@@ -202,6 +202,10 @@ class ArchOptProblemBase(Problem):
             print(f'HIER         : {imp_ratio > 1}')
             print(f'n_valid_discr: {self.get_n_valid_discrete()}')
             print(f'imp_ratio    : {imp_ratio:.2f}')
+        self._print_extra_stats()
+
+    def _print_extra_stats(self):
+        pass
 
     def get_imputation_ratio(self) -> float:
         """

@@ -16,6 +16,7 @@ Contact: jasper.bussemaker@dlr.de
 """
 import itertools
 import numpy as np
+from scipy.spatial import distance
 
 from pymoo.core.repair import Repair
 from pymoo.core.variable import Real
@@ -23,13 +24,14 @@ from pymoo.core.problem import Problem
 from pymoo.core.sampling import Sampling
 from pymoo.core.population import Population
 from pymoo.core.initialization import Initialization
-from pymoo.core.duplicate import DefaultDuplicateElimination
 from pymoo.operators.sampling.rnd import FloatRandomSampling
+from pymoo.core.duplicate import DefaultDuplicateElimination
 from pymoo.operators.sampling.lhs import LatinHypercubeSampling, sampling_lhs_unit
 
 from sb_arch_opt.problem import ArchOptRepair
 
-__all__ = ['RepairedExhaustiveSampling', 'RepairedLatinHypercubeSampling', 'RepairedRandomSampling', 'get_init_sampler']
+__all__ = ['RepairedExhaustiveSampling', 'RepairedLatinHypercubeSampling', 'RepairedRandomSampling', 'get_init_sampler',
+           'LargeDuplicateElimination']
 
 
 def get_init_sampler(repair: Repair = None, lhs=True, remove_duplicates=True, **kwargs):
@@ -42,7 +44,7 @@ def get_init_sampler(repair: Repair = None, lhs=True, remove_duplicates=True, **
         if lhs else RepairedExhaustiveSampling(repair=repair, **kwargs)
 
     # Samples are already repaired because we're using the repaired samplers
-    eliminate_duplicates = DefaultDuplicateElimination() if remove_duplicates else None
+    eliminate_duplicates = LargeDuplicateElimination() if remove_duplicates else None
     return Initialization(sampling, eliminate_duplicates=eliminate_duplicates)
 
 
@@ -94,10 +96,7 @@ class RepairedExhaustiveSampling(Sampling):
 
     @staticmethod
     def safe_remove_duplicates(pop: Population) -> Population:
-        gb_needed = ((len(pop)**2)*8)/(1024**3)
-        if gb_needed < 2:
-            pop = DefaultDuplicateElimination().do(pop)
-        return pop
+        return LargeDuplicateElimination().do(pop)
 
     def __repr__(self):
         return f'{self.__class__.__name__}()'
@@ -196,3 +195,71 @@ class RepairedRandomSampling(FloatRandomSampling):
 
     def __repr__(self):
         return f'{self.__class__.__name__}()'
+
+
+class LargeDuplicateElimination(DefaultDuplicateElimination):
+    """
+    Duplicate elimination that can deal with a large amount of individuals in a population: instead of creating one big
+    n_pop x n_pop cdist matrix, it does so in batches, thereby staying fast and saving in memory at the same time.
+    """
+
+    def __init__(self, *args, n_per_batch=200, **kwargs):
+        self.n_per_batch = n_per_batch
+        super().__init__(*args, **kwargs)
+
+    def _do(self, pop, other, is_duplicate):
+        # Either compare x to itself or to another x
+        x = self.func(pop)
+        x = x.copy().astype(float)
+
+        to_itself = False
+        if other is None:
+            x_ = x
+            to_itself = True
+        else:
+            x_ = self.func(other).copy().astype(float)
+
+        # Determine how many batches we need
+        n_per_batch = self.n_per_batch
+        nx = x.shape[0]
+        n = (x_.shape[0] - 1) if to_itself else x_.shape[0]
+        if n == 0:
+            return is_duplicate
+        n_batches = int(np.ceil(n / n_per_batch))
+        n_in_batch = np.ones((n_batches,), dtype=np.int16)*n_per_batch
+        n_in_batch[-1] = n - (n_batches-1)*n_per_batch
+
+        for ib, n_batch in enumerate(n_in_batch):
+            i_compare_to = np.arange(n_batch)+ib*n_per_batch
+            i = i_compare_to[0]
+
+            # Only compare points in the population to other points that are not already marked as duplicate
+            non_dup = ~is_duplicate
+            x_check = x[i+1:, ][non_dup[i+1:], :] if to_itself else x[non_dup, :]
+            if x_check.shape[0] == 0:
+                break
+
+            # Do the comparison: the result is an n_x_check x n_i_compare_to boolean matrix
+            i_is_dup = distance.cdist(x_check, x_[i_compare_to, :], metric='cityblock') < self.epsilon
+
+            if to_itself:
+                # Expand to all indices from non-duplicate indices
+                i_is_dup_expanded = np.zeros((nx-i-1, n_batch), dtype=bool)
+                i_is_dup_expanded[non_dup[i+1:], :] = i_is_dup
+
+                # If we compare to ourselves, we will have a diagonal that is always true, and we should ignore anything
+                # above the triangle, otherwise the indices are off
+                i_is_dup_expanded[np.triu_indices(n_batch, k=1)] = False
+
+                # Mark as duplicate rows where any of the columns is true
+                is_duplicate[i+1:][np.any(i_is_dup_expanded, axis=1)] = True
+
+            else:
+                # Expand to all indices from non-duplicate indices
+                i_is_dup_expanded = np.zeros((nx, n_batch), dtype=bool)
+                i_is_dup_expanded[non_dup, :] = i_is_dup
+
+                # Mark as duplicate rows where any of the columns is true
+                is_duplicate[np.any(i_is_dup_expanded, axis=1)] = True
+
+        return is_duplicate

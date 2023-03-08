@@ -18,12 +18,11 @@ import logging
 import numpy as np
 from pymoo.core.algorithm import Algorithm
 from pymoo.core.evaluator import Evaluator
-from pymoo.core.duplicate import DefaultDuplicateElimination
 from pymoo.algorithms.moo.nsga2 import NSGA2, RankAndCrowdingSurvival, MultiObjectiveOutput
 
+from sb_arch_opt.sampling import *
 from sb_arch_opt.util import capture_log
 from sb_arch_opt.problem import ArchOptRepair
-from sb_arch_opt.sampling import get_init_sampler, RepairedLatinHypercubeSampling
 from sb_arch_opt.algo.pymoo_interface.md_mating import *
 from sb_arch_opt.algo.pymoo_interface.storage_restart import *
 
@@ -66,8 +65,8 @@ class ArchOptNSGA2(NSGA2):
                  pop_size=100,
                  sampling=RepairedLatinHypercubeSampling(),
                  repair=ArchOptRepair(),
-                 mating=MixedDiscreteMating(repair=ArchOptRepair(), eliminate_duplicates=DefaultDuplicateElimination()),
-                 eliminate_duplicates=DefaultDuplicateElimination(),
+                 mating=MixedDiscreteMating(repair=ArchOptRepair(), eliminate_duplicates=LargeDuplicateElimination()),
+                 eliminate_duplicates=LargeDuplicateElimination(),
                  survival=RankAndCrowdingSurvival(),
                  output=MultiObjectiveOutput(),
                  results_folder=None,

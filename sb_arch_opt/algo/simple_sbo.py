@@ -35,8 +35,8 @@ from pymoo.core.population import Population
 from pymoo.core.infill import InfillCriterion
 from pymoo.core.termination import Termination
 from pymoo.core.initialization import Initialization
+from pymoo.core.duplicate import DuplicateElimination
 from pymoo.core.algorithm import Algorithm, filter_optimum
-from pymoo.core.duplicate import DuplicateElimination, DefaultDuplicateElimination
 from pymoo.algorithms.moo.nsga2 import NSGA2, RankAndCrowdingSurvival
 from pymoo.operators.sampling.lhs import LatinHypercubeSampling
 from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
@@ -463,7 +463,7 @@ class SBOInfill(InfillCriterion):
                  eliminate_duplicates: DuplicateElimination = None, force_new_points: bool = True, **kwargs):
 
         if eliminate_duplicates is None:
-            eliminate_duplicates = DefaultDuplicateElimination()
+            eliminate_duplicates = LargeDuplicateElimination()
         super(SBOInfill, self).__init__(repair=repair, eliminate_duplicates=eliminate_duplicates, **kwargs)
 
         self._is_init = None
@@ -729,7 +729,7 @@ class SurrogateInfillOptimizationProblem(Problem):
         self.force_new_points = x_exist_norm is not None
         if self.force_new_points:
             n_constr += 1
-        self.eliminate_duplicates = DefaultDuplicateElimination()
+        self.eliminate_duplicates = LargeDuplicateElimination()
 
         super(SurrogateInfillOptimizationProblem, self).__init__(
             n_var=n_var, n_obj=n_obj, n_constr=n_constr, xl=xl, xu=xu)

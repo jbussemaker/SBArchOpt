@@ -1,4 +1,5 @@
 import os
+import itertools
 import numpy as np
 from sb_arch_opt.problem import *
 from sb_arch_opt.sampling import *
@@ -138,6 +139,35 @@ def test_evaluate(problem: ArchOptProblemBase):
             [0, 3.25],
             [0, 3.875],
         ])
+
+
+def test_large_duplicate_elimination():
+    x = np.array([
+        [0, 0, 0],
+        [0, 0, 1],
+        [0, 0, 0],
+        [0, 0, .1],
+        [0, 2, 0],
+        [0, 2, 0],
+        [1, 0, 0],
+        [1, 0, 0],
+    ])
+    pop = LargeDuplicateElimination().do(Population.new(X=x))
+    assert len(pop) == 5
+
+    pop = LargeDuplicateElimination().do(Population.new(X=x[:2, :]), Population.new(X=x[2:, :]), to_itself=False)
+    assert len(pop) == 1
+
+    pop = LargeDuplicateElimination().do(Population.new(X=x[:5, :]), Population.new(X=x[5:, :]))
+    assert len(pop) == 3
+
+    n, m = 4, 7
+    x = np.array(list(itertools.product(*[list(range(n)) for _ in range(m)])))
+    x = np.repeat(x, 2, axis=0)
+    x = x[np.random.permutation(np.arange(x.shape[0])), :]
+    assert x.shape == (2*n**m, m)
+    pop = LargeDuplicateElimination().do(Population.new(X=x))
+    assert len(pop) == n**m
 
 
 def test_repaired_exhaustive_sampling(problem: ArchOptProblemBase):

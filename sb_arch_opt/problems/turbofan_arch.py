@@ -36,6 +36,11 @@ except ImportError:
 __all__ = ['HAS_OPEN_TURB_ARCH', 'SimpleTurbofanArch', 'RealisticTurbofanArch']
 
 
+def check_dependency():
+    if not HAS_OPEN_TURB_ARCH:
+        raise RuntimeError('OpenTurbArch not installed: python setup.py install[ota]')
+
+
 class OpenTurbArchProblemWrapper(HierarchyProblemBase):
     """
     Wrapper for an OpenTurbArch architecting problem: https://github.com/jbussemaker/OpenTurbofanArchitecting
@@ -48,9 +53,7 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
     """
 
     def __init__(self, open_turb_arch_problem: 'ArchitectingProblem', n_parallel=None):
-        if not HAS_OPEN_TURB_ARCH:
-            raise RuntimeError('OpenTurbArch not installed: python setup.py install[ota]')
-
+        check_dependency()
         self._problem = open_turb_arch_problem
         open_turb_arch_problem.max_iter = 10
         self._n_parallel = n_parallel
@@ -129,8 +132,7 @@ class SimpleTurbofanArch(OpenTurbArchProblemWrapper):
     """
 
     def __init__(self, n_parallel=None):
-        if not HAS_OPEN_TURB_ARCH:
-            raise RuntimeError('OpenTurbArch not installed: python setup.py install[ota]')
+        check_dependency()
         super().__init__(get_simple_architecting_problem(), n_parallel=n_parallel)
 
     def get_n_valid_discrete(self) -> int:
@@ -166,8 +168,7 @@ class RealisticTurbofanArch(OpenTurbArchProblemWrapper):
     """
 
     def __init__(self, n_parallel=None):
-        if not HAS_OPEN_TURB_ARCH:
-            raise RuntimeError('OpenTurbArch not installed: python setup.py install[ota]')
+        check_dependency()
         super().__init__(get_architecting_problem(), n_parallel=n_parallel)
 
     def get_n_valid_discrete(self) -> int:

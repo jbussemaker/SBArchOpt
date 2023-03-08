@@ -36,6 +36,7 @@ if __name__ == '__main__':
             'pytest',
             'numpy',
             'pymoo==0.6.0',
+            'scipy',
         ],
         extras_require={
             'simple_sbo': [
@@ -43,6 +44,9 @@ if __name__ == '__main__':
             ],
             'ota': [
                 'open_turb_arch @ git+https://github.com/jbussemaker/OpenTurbofanArchitecting@pymoo_optional#egg=open_turb_arch',
+            ],
+            'assignment': [
+                'assign_enc @ git+https://github.com/jbussemaker/AssignmentEncoding#egg=assign_enc',
             ],
         },
         python_requires='>=3.7',
