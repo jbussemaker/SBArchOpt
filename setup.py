@@ -48,6 +48,10 @@ if __name__ == '__main__':
             'assignment': [
                 'assign_enc @ git+https://github.com/jbussemaker/AssignmentEncoding#egg=assign_enc',
             ],
+            'botorch': [
+                'ax-platform~=0.3.0',
+                'botorch~=0.8.2',
+            ],
         },
         python_requires='>=3.7',
         packages=['sb_arch_opt'],

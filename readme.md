@@ -39,20 +39,20 @@ Architecture optimization aspects and mitigation measures:
 Architecture optimization measure implementation status
 (Lib = yes, in the library; SBArchOpt = yes, in SBArchOpt; N = not implemented; empty = unknown or not relevant):
 
-| Aspect: measure                       | pymoo     | SBArchOpt SBO | SEGOMOE | pysamoo | BoTorch | Trieste |
-|---------------------------------------|-----------|---------------|---------|---------|---------|---------|
-| MD: continuous relaxation             |           | SBArchOpt     | Lib     |         |         |         |
-| MD: kernels                           |           | N             | Lib     |         |         |         |
-| MD: dummy coding                      |           | N             | Lib     |         |         |         |
-| MD: force new infill point selection  |           | SBArchOpt     | N       |         |         |         |
-| MO: multi-objective infill            |           | SBArchOpt     | Lib     |         |         |         |
-| HIER: imputation during sampling      | SBArchOpt | SBArchOpt     | N       |         |         |         |
-| HIER: imputation during evaluation    | SBArchOpt | SBArchOpt     | N       |         |         |         |
-| HIER: imputation during infill search |           | SBArchOpt     | N       |         |         |         |
-| HIER: kernels                         |           | N             | N       | N       | N       | N       |
-| HC: predict area                      |           | N             | N       |         |         | Lib     |
-| EXP: intermediate result storage      | SBArchOpt | SBArchOpt     | N       |         |         |         |
-| EXP: resuming optimizations           | SBArchOpt | SBArchOpt     | N       |         |         |         |
+| Aspect: measure                       | pymoo     | SBArchOpt SBO | BoTorch (Ax) | Trieste |
+|---------------------------------------|-----------|---------------|--------------|---------|
+| MD: continuous relaxation             |           | SBArchOpt     | Lib          |         |
+| MD: kernels                           |           | N             | Lib          |         |
+| MD: dummy coding                      |           | N             | Lib          |         |
+| MD: force new infill point selection  |           | SBArchOpt     |              |         |
+| MO: multi-objective infill            |           | SBArchOpt     | Lib          |         |
+| HIER: imputation during sampling      | SBArchOpt | SBArchOpt     |              |         |
+| HIER: imputation during evaluation    | SBArchOpt | SBArchOpt     | SBArchOpt    |         |
+| HIER: imputation during infill search |           | SBArchOpt     |              |         |
+| HIER: kernels                         |           | N             |              |         |
+| HC: predict area                      |           | N             |              |         |
+| EXP: intermediate result storage      | SBArchOpt | SBArchOpt     |              |         |
+| EXP: resuming optimizations           | SBArchOpt | SBArchOpt     |              |         |
 
 ## Installation
 
