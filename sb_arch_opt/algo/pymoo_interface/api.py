@@ -18,16 +18,17 @@ import logging
 import numpy as np
 from pymoo.core.algorithm import Algorithm
 from pymoo.core.evaluator import Evaluator
-from pymoo.algorithms.moo.nsga2 import NSGA2, RankAndCrowdingSurvival, MultiObjectiveOutput
+from pymoo.algorithms.moo.nsga2 import NSGA2, RankAndCrowdingSurvival
 
 from sb_arch_opt.sampling import *
 from sb_arch_opt.util import capture_log
 from sb_arch_opt.problem import ArchOptRepair
+from sb_arch_opt.algo.pymoo_interface.metrics import *
 from sb_arch_opt.algo.pymoo_interface.md_mating import *
 from sb_arch_opt.algo.pymoo_interface.storage_restart import *
 
 __all__ = ['provision_pymoo', 'ArchOptNSGA2', 'get_nsga2', 'initialize_from_previous_results', 'ResultsStorageCallback',
-           'ExtremeBarrierEvaluator']
+           'ExtremeBarrierEvaluator', 'get_default_termination', 'DeltaHVTermination']
 
 log = logging.getLogger('sb_arch_opt.pymoo')
 
@@ -68,7 +69,7 @@ class ArchOptNSGA2(NSGA2):
                  mating=MixedDiscreteMating(repair=ArchOptRepair(), eliminate_duplicates=LargeDuplicateElimination()),
                  eliminate_duplicates=LargeDuplicateElimination(),
                  survival=RankAndCrowdingSurvival(),
-                 output=MultiObjectiveOutput(),
+                 output=EHVMultiObjectiveOutput(),
                  results_folder=None,
                  **kwargs):
 
@@ -80,11 +81,11 @@ class ArchOptNSGA2(NSGA2):
                          evaluator=evaluator, callback=callback, **kwargs)
 
 
-def get_nsga2(pop_size: int, results_folder=None) -> NSGA2:
+def get_nsga2(pop_size: int, results_folder=None, **kwargs) -> NSGA2:
     """Returns a NSGA2 algorithm preconfigured to work with mixed-discrete variables and other architecture optimization
     measures"""
     capture_log()
-    return ArchOptNSGA2(pop_size=pop_size, results_folder=results_folder)
+    return ArchOptNSGA2(pop_size=pop_size, results_folder=results_folder, **kwargs)
 
 
 class ExtremeBarrierEvaluator(Evaluator):

@@ -39,6 +39,7 @@ from pymoo.core.initialization import Initialization
 from pymoo.core.duplicate import DuplicateElimination
 from pymoo.operators.sampling.lhs import LatinHypercubeSampling
 from pymoo.termination.max_gen import MaximumGenerationTermination
+from pymoo.termination.default import DefaultMultiObjectiveTermination, DefaultSingleObjectiveTermination
 from pymoo.optimize import minimize
 
 try:
@@ -72,6 +73,10 @@ class InfillAlgorithm(Algorithm):
         self.initialization = Initialization(
             init_sampling, repair=infill.repair, eliminate_duplicates=infill.eliminate_duplicates)
         self.survival = survival
+
+        if self.output is None:
+            from sb_arch_opt.algo.simple_sbo.metrics import SBOMultiObjectiveOutput
+            self.output = SBOMultiObjectiveOutput()
 
     def _initialize(self):
         super(InfillAlgorithm, self)._initialize()
@@ -134,6 +139,7 @@ class SBOInfill(InfillCriterion):
         self.y_train_centered = None
         self.n_train = 0
         self.time_train = None
+        self.pf_estimate = None
 
         self.pop_size = pop_size or 100
         self.termination = termination
@@ -256,6 +262,7 @@ class SBOInfill(InfillCriterion):
         self.x_train = x_norm
         self.y_train = y
 
+        self.pf_estimate = None
         self._train_model()
 
     def _train_model(self):
@@ -286,6 +293,15 @@ class SBOInfill(InfillCriterion):
         if keep_centered:
             return y/norm, y_min, y_max
         return (y-y_min)/norm, y_min, y_max
+
+    @staticmethod
+    def _denormalize_y(y_norm: np.ndarray, keep_centered=False, y_min=None, y_max=None):
+        norm = y_max-y_min
+        norm[norm < 1e-6] = 1e-6
+
+        if keep_centered:
+            return y_norm*norm
+        return (y_norm*norm) + y_min
 
     def _generate_infill_points(self, n_infill: int) -> Population:
         # Create infill problem and algorithm
@@ -318,15 +334,44 @@ class SBOInfill(InfillCriterion):
         x = self._denormalize(selected_pop.get('X'))
         return Population.new(X=x)
 
-    def _get_infill_problem(self):
-        x_exist_norm = self._normalize(self.total_pop.get('X')) if self.force_new_points else None
-        return SurrogateInfillOptimizationProblem(self.infill, self.problem, x_exist_norm=x_exist_norm)
+    def get_pf_estimate(self) -> Optional[Population]:
+        """Estimate the location of the Pareto front as predicted by the surrogate model"""
+
+        if self.problem is None or self.n_train == 0:
+            return
+        if self.pf_estimate is not None:
+            return self.pf_estimate
+
+        infill = FunctionEstimateInfill()
+        infill.initialize(self.problem, self.surrogate_model)
+        infill.set_samples(self.x_train, self.y_train)
+
+        problem = self._get_infill_problem(infill, force_new_points=False)
+        algorithm = self._get_infill_algorithm()
+        termination = self._get_termination(n_obj=problem.n_obj)
+
+        result = minimize(problem, algorithm, termination=termination, copy_termination=False)
+
+        selected_pop = infill.select_infill_solutions(result.pop, problem, 100)
+
+        y_min, y_max = self.y_train_min, self.y_train_max
+        f_min, f_max = y_min[:self.problem.n_obj], y_max[:self.problem.n_obj]
+        self.pf_estimate = self._denormalize_y(selected_pop.get('F'), y_min=f_min, y_max=f_max)
+        return self.pf_estimate
+
+    def _get_infill_problem(self, infill: SurrogateInfill = None, force_new_points=None):
+        if infill is None:
+            infill = self.infill
+        if force_new_points is None:
+            force_new_points = self.force_new_points
+
+        x_exist_norm = self._normalize(self.total_pop.get('X')) if force_new_points else None
+        return SurrogateInfillOptimizationProblem(infill, self.problem, x_exist_norm=x_exist_norm)
 
     def _get_termination(self, n_obj):
         termination = self.termination
         if termination is None or not isinstance(termination, Termination):
             # return MaximumGenerationTermination(n_max_gen=termination or 100)
-            from pymoo.termination.default import DefaultMultiObjectiveTermination, DefaultSingleObjectiveTermination
             robust_period = 5
             n_max_gen = termination or 100
             n_max_eval = n_max_gen*self.pop_size
@@ -377,7 +422,7 @@ class SurrogateInfillOptimizationProblem(Problem):
         n_obj = infill.get_n_infill_objectives()
         n_constr = infill.get_n_infill_constraints()
 
-        self.pop_exist_norm = Population.new(X=x_exist_norm)
+        self.pop_exist_norm = Population.new(X=x_exist_norm) if x_exist_norm is not None else None
         self.force_new_points = x_exist_norm is not None
         if self.force_new_points:
             n_constr += 1

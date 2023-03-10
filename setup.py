@@ -35,7 +35,7 @@ if __name__ == '__main__':
         install_requires=[
             'pytest',
             'numpy',
-            'pymoo==0.6.0',
+            'pymoo~=0.6.0',
             'scipy',
         ],
         extras_require={

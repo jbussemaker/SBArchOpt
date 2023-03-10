@@ -30,7 +30,7 @@ from pymoo.core.problem import Problem
 from pymoo.core.evaluator import Evaluator
 from pymoo.visualization.scatter import Scatter
 from pymoo.core.initialization import Initialization
-from pymoo.algorithms.moo.nsga2 import NSGA2, calc_crowding_distance
+from pymoo.algorithms.moo.nsga2 import calc_crowding_distance
 from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
 from pymoo.termination.default import DefaultMultiObjectiveTermination, DefaultSingleObjectiveTermination
 
@@ -45,12 +45,20 @@ class CachedParetoFrontMixin(Problem):
     """Mixin to calculate the Pareto front once by simply running the problem several times using NSGA2, meant for test
     problems. Stores the results based on the repr of the main class, so make sure that one is set."""
 
+    default_enable_pf_calc = True
+
     def reset_pf_cache(self):
         cache_path = self._pf_cache_path()
         if os.path.exists(cache_path):
             os.remove(cache_path)
 
-    def _calc_pareto_front(self, *_, pop_size=200, n_gen_min=10, n_repeat=12, n_pts_keep=100, **__):
+    def calc_pareto_front(self, **kwargs):
+        return self._calc_pareto_front(force=True, **kwargs)
+
+    def _calc_pareto_front(self, *_, pop_size=200, n_gen_min=10, n_repeat=12, n_pts_keep=100, force=False, **kwargs):
+        if not force and not self.default_enable_pf_calc:
+            raise RuntimeError('On-demand PF calc is disabled, use calc_pareto_front instead')
+
         # Check if Pareto front has already been cached
         cache_path = self._pf_cache_path()
         if os.path.exists(cache_path):

@@ -23,11 +23,16 @@ def test_provision():
 
 def test_nsga2(problem: ArchOptProblemBase):
     nsga2 = get_nsga2(pop_size=100)
-    result = minimize(problem, nsga2, termination=('n_gen', 10))
+    result = minimize(problem, nsga2, termination=('n_gen', 10), verbose=True, progress=True)
     pop = result.pop
 
     x_imp, _ = problem.correct_x(pop.get('X'))
     assert np.all(pop.get('X') == x_imp)
+
+
+def test_termination(problem: ArchOptProblemBase):
+    nsga2 = get_nsga2(pop_size=100)
+    assert minimize(problem, nsga2, get_default_termination(problem, tol=1e-4), verbose=True, progress=True)
 
 
 class DummyResultSavingProblem(ArchOptProblemBase):

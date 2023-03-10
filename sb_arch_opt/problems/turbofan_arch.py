@@ -52,6 +52,8 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
     https://www.researchgate.net/publication/353530868_System_Architecture_Optimization_An_Open_Source_Multidisciplinary_Aircraft_Jet_Engine_Architecting_Problem
     """
 
+    default_enable_pf_calc = False
+
     def __init__(self, open_turb_arch_problem: 'ArchitectingProblem', n_parallel=None):
         check_dependency()
         self._problem = open_turb_arch_problem

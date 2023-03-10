@@ -15,7 +15,6 @@ Copyright: (c) 2023, Deutsches Zentrum fuer Luft- und Raumfahrt e.V.
 Contact: jasper.bussemaker@dlr.de
 """
 import logging
-from sb_arch_opt.util import capture_log
 from sb_arch_opt.problem import ArchOptRepair
 
 try:
@@ -25,12 +24,13 @@ try:
 
     from sb_arch_opt.algo.simple_sbo.algo import *
     from sb_arch_opt.algo.simple_sbo.infill import *
+    from sb_arch_opt.algo.simple_sbo.metrics import *
 
     HAS_SIMPLE_SBO = True
 except ImportError:
     HAS_SIMPLE_SBO = False
 
-__all__ = ['get_simple_sbo_rbf', 'get_simple_sbo_krg', 'HAS_SIMPLE_SBO']
+__all__ = ['get_simple_sbo_rbf', 'get_simple_sbo_krg', 'HAS_SIMPLE_SBO', 'get_sbo_termination']
 
 log = logging.getLogger('sb_arch_opt.sbo')
 
@@ -74,8 +74,6 @@ def get_simple_sbo_krg(init_size: int = 100, use_mvpf=True, use_ei=False, min_po
 
 def _get_sbo(sm: 'SurrogateModel', infill: 'SurrogateInfill', infill_size: int = 1, init_size: int = 100,
              infill_pop_size: int = 100, infill_gens: int = 100, repair=None, **kwargs):
-    capture_log()
-
     if repair is None:
         repair = ArchOptRepair()
 
