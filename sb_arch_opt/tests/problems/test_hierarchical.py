@@ -42,3 +42,7 @@ def test_hier_zaefferer():
 
 def test_hier_test_problem():
     run_test_hierarchy(MOHierarchicalTestProblem(), 72)
+
+
+def test_jenatton():
+    run_test_hierarchy(Jenatton(), 2)

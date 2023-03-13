@@ -31,6 +31,7 @@ An overview of available test problems in `sb_arch_opt.problems`:
 | `MDDASCMOP`                   | 15      | 15     | 3     | 7     |     | Y   | Y   |      |     | ~14.3e6       |           |              |                                  |
 | Module: `hierarchical`        |
 | `ZaeffererHierarchical`       |         | 2      | 1     |       |     |     |     | Y    |     |               |           |              |                                  |
+| `Jenatton`                    | 3       | 6      | 1     |       |     | Y   |     | Y    |     | 4             | 2         |              |                                  |
 | `HierarchicalGoldstein`       | 6       | 5      | 1     | 1     |     | Y   |     | Y    |     | 288           | 2.25      |              |                                  |
 | `MOHierarchicalGoldstein`     | 6       | 5      | 2     | 1     |     | Y   | Y   | Y    |     | 288           | 2.25      |              |                                  |
 | `HierarchicalRosenbrock`      | 5       | 8      | 1     | 2     |     | Y   |     | Y    |     | 32            | 1.5       |              |                                  |

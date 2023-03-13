@@ -26,7 +26,7 @@ from pymoo.util.ref_dirs import get_reference_directions
 
 __all__ = ['HierarchyProblemBase', 'HierarchicalGoldstein', 'HierarchicalRosenbrock', 'ZaeffererHierarchical',
            'ZaeffererProblemMode', 'MOHierarchicalGoldstein', 'MOHierarchicalRosenbrock', 'HierarchicalMetaProblemBase',
-           'MOHierarchicalTestProblem']
+           'MOHierarchicalTestProblem', 'Jenatton']
 
 
 class HierarchyProblemBase(ArchOptTestProblemBase):
@@ -581,6 +581,56 @@ class MOHierarchicalTestProblem(HierarchicalMetaProblemBase):
         return f'{self.__class__.__name__}()'
 
 
+class Jenatton(HierarchyProblemBase):
+    """
+    Jenatton test function:
+    - https://github.com/facebook/Ax/blob/main/ax/benchmark/problems/synthetic/hss/jenatton.py
+    - https://github.com/facebook/Ax/blob/main/ax/metrics/jenatton.py
+    """
+
+    def __init__(self):
+        des_vars = [
+            Choice(options=[0, 1]),  # x1
+            Choice(options=[0, 1]),  # x2
+            Choice(options=[0, 1]),  # x3
+            Real(bounds=(0, 1)),  # x4
+            Real(bounds=(0, 1)),  # x5
+            Real(bounds=(0, 1)),  # x6
+            Real(bounds=(0, 1)),  # x7
+            Real(bounds=(0, 1)),  # r8
+            Real(bounds=(0, 1)),  # r9
+        ]
+        super().__init__(des_vars)
+
+    def get_n_valid_discrete(self) -> int:
+        return 4
+
+    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
+                       h_out: np.ndarray, *args, **kwargs):
+        for i, xi in enumerate(x):
+            if xi[0] == 0:
+                if xi[1] == 0:
+                    f_out[i, 0] = xi[3]**2 + .1 + xi[7]  # x4^2 + .1 + r8
+                else:
+                    f_out[i, 0] = xi[4]**2 + .1 + xi[7]  # x5^2 + .1 + r8
+            else:
+                if xi[2] == 0:
+                    f_out[i, 0] = xi[5]**2 + .1 + xi[8]  # x6^2 + .1 + r9
+                else:
+                    f_out[i, 0] = xi[6]**2 + .1 + xi[8]  # x7^2 + .1 + r9
+
+    def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
+        for i in [2, 5, 6, 8]:  # x1 = 0: x3, x6, x7, r9 inactive
+            is_active[x[:, 0] == 0, i] = False
+        is_active[(x[:, 0] == 0) & (x[:, 1] == 0), 4] = False  # x2 = 0: x5 inactive
+        is_active[(x[:, 0] == 0) & (x[:, 1] == 1), 3] = False  # x2 = 1: x4 inactive
+
+        for i in [1, 4, 5, 7]:  # x2, x4, x5, r8 inactive
+            is_active[x[:, 0] == 1, i] = False
+        is_active[(x[:, 0] == 1) & (x[:, 2] == 0), 6] = False  # x3 = 0: x7 inactive
+        is_active[(x[:, 0] == 1) & (x[:, 2] == 1), 5] = False  # x3 = 1: x6 inactive
+
+
 if __name__ == '__main__':
     # HierarchicalGoldstein().print_stats()
     # MOHierarchicalGoldstein().print_stats()
@@ -597,3 +647,6 @@ if __name__ == '__main__':
 
     MOHierarchicalTestProblem().print_stats()
     # MOHierarchicalTestProblem().plot_pf()
+
+    # Jenatton().print_stats()
+    # # Jenatton().plot_pf()
