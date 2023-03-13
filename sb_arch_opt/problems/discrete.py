@@ -20,12 +20,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pymoo.core.population import Population
 from pymoo.core.variable import Real, Choice, Integer
+from sb_arch_opt.problems.continuous import Branin
 from sb_arch_opt.problems.problems_base import *
 
 __all__ = ['MDBranin', 'AugmentedMDBranin', 'MDGoldstein', 'MunozZunigaToy', 'Halstrup04']
 
 
-class MDBranin(NoHierarchyProblemBase):
+class MDBranin(Branin):
     """
     Mixed-discrete version of the Branin problem that introduces two discrete variables that transform the original
     Branin space in different ways.
@@ -40,9 +41,6 @@ class MDBranin(NoHierarchyProblemBase):
         Choice(options=[0, 1]), Choice(options=[0, 1]),
     ]
 
-    def __init__(self):
-        super().__init__(self._des_vars)
-
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
 
@@ -54,12 +52,6 @@ class MDBranin(NoHierarchyProblemBase):
                 f_out[i, 0] = h if z2 == 0 else (.4*h + 1.1)
             else:
                 f_out[i, 0] = (-.75*h + 5.2) if z2 == 0 else (-.5*h - 2.1)
-
-    @staticmethod
-    def _h(x1, x2):
-        t1 = (15*x2 - (5/(4*np.pi**2))*(15*x1-5)**2 + (5/np.pi)*(15*x1-5) - 6)**2
-        t2 = 10*(1-1/(8*np.pi))*np.cos(15*x1-5) + 10
-        return ((t1+t2)-54.8104)/51.9496
 
     def plot(self, z1=0, z2=0, show=True):
         xx, yy = np.meshgrid(np.linspace(0, 1, 50), np.linspace(0, 1, 50))

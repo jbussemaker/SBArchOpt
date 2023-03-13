@@ -4,6 +4,12 @@ An overview of available test problems in `sb_arch_opt.problems`:
 
 | Problem Class                 | n_discr | n_cont | n_obj | n_con | D   | MD  | MO  | HIER | HC  | n_valid_discr | imp_ratio | dependencies | Notes                            |
 |-------------------------------|---------|--------|-------|-------|-----|-----|-----|------|-----|---------------|-----------|--------------|----------------------------------|
+| Module: `continuous`          |
+| `Himmelblau`                  |         | 2      | 1     |       |     |     |     |      |     |               |           |              |                                  |
+| `Goldstein`                   |         | 2      | 1     |       |     |     |     |      |     |               |           |              |                                  |
+| `Branin`                      |         | 2      | 1     |       |     |     |     |      |     |               |           |              |                                  |
+| `Rosenbrock`                  |         | 10     | 1     |       |     |     |     |      |     |               |           |              |                                  |
+| `Griewank`                    |         | 10     | 1     |       |     |     |     |      |     |               |           |              |                                  |
 | Module: `discrete`            |
 | `MDBranin`                    | 2       | 2      | 1     |       |     | Y   |     |      |     | 4             |           |              |                                  |
 | `AugmentedMDBranin`           | 2       | 10     | 1     |       |     | Y   |     |      |     | 4             |           |              |                                  |
@@ -21,6 +27,7 @@ An overview of available test problems in `sb_arch_opt.problems`:
 | `MDZDT1`                      | 15      | 15     | 2     |       |     | Y   | Y   |      |     | ~30.5e9       |           |              |                                  |
 | `DZDT1`                       | 30      |        | 2     |       | Y   |     | Y   |      |     | ~931e18       |           |              |                                  |
 | Module: `constrained`         |
+| `ArchCantileveredBeam`        |         | 4      | 1     | 2     |     |     |     |      |     |               |           |              |                                  |
 | `ArchWeldedBeam`              |         | 4      | 2     | 4     |     |     | Y   |      |     |               |           |              |                                  |
 | `MDWeldedBeam`                | 2       | 2      | 2     | 4     |     | Y   | Y   |      |     | 100           |           |              |                                  |
 | `ArchCarside`                 |         | 7      | 3     | 10    |     |     | Y   |      |     |               |           |              |                                  |

@@ -19,10 +19,11 @@ This test suite contains a set of mixed-discrete multi-objective problems.
 import numpy as np
 from pymoo.core.variable import Real
 from pymoo.problems.multi.zdt import ZDT1
-from pymoo.problems.single.himmelblau import Himmelblau
+from pymoo.problems.single.himmelblau import Himmelblau as HB
+from sb_arch_opt.problems.continuous import *
 from sb_arch_opt.problems.problems_base import *
 
-__all__ = ['MOHimmelblau', 'MDMOHimmelblau', 'DMOHimmelblau', 'Goldstein', 'MOGoldstein', 'MDMOGoldstein',
+__all__ = ['MOHimmelblau', 'MDMOHimmelblau', 'DMOHimmelblau', 'MOGoldstein', 'MDMOGoldstein',
            'DMOGoldstein', 'MOZDT1', 'MDZDT1', 'DZDT1']
 
 
@@ -30,7 +31,7 @@ class MOHimmelblau(NoHierarchyProblemBase):
     """Multi-objective version of the Himmelblau test problem"""
 
     def __init__(self):
-        self._problem = problem = Himmelblau()
+        self._problem = problem = HB()
         des_vars = [Real(bounds=(problem.xl[i], problem.xu[i])) for i in range(problem.n_var)]
         super().__init__(des_vars, n_obj=2)
 
@@ -53,25 +54,6 @@ class DMOHimmelblau(MixedDiscretizerProblemBase):
 
     def __init__(self):
         super().__init__(MOHimmelblau())
-
-
-class Goldstein(NoHierarchyProblemBase):
-    """Goldstein-Price test problem, implementation based on
-    https://github.com/scipy/scipy/blob/main/benchmarks/benchmarks/go_benchmark_functions/go_funcs_G.py#L88"""
-
-    def __init__(self):
-        des_vars = [Real(bounds=(-2, 2)) for _ in range(2)]
-        super().__init__(des_vars)
-
-    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
-                       h_out: np.ndarray, *args, **kwargs):
-        a = (1 + (x[:, 0] + x[:, 1] + 1) ** 2
-             * (19 - 14 * x[:, 0] + 3 * x[:, 0] ** 2
-             - 14 * x[:, 1] + 6 * x[:, 0] * x[:, 1] + 3 * x[:, 1] ** 2))
-        b = (30 + (2 * x[:, 0] - 3 * x[:, 1]) ** 2
-             * (18 - 32 * x[:, 0] + 12 * x[:, 0] ** 2
-             + 48 * x[:, 1] - 36 * x[:, 0] * x[:, 1] + 27 * x[:, 1] ** 2))
-        f_out[:, 0] = a*b
 
 
 class MOGoldstein(NoHierarchyProblemBase):

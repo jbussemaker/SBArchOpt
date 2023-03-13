@@ -2,6 +2,10 @@ from sb_arch_opt.problems.constrained import *
 from sb_arch_opt.tests.problems.test_md_mo import run_test_no_hierarchy
 
 
+def test_cantilevered_beam():
+    run_test_no_hierarchy(ArchCantileveredBeam())
+
+
 def test_welded_beam():
     run_test_no_hierarchy(ArchWeldedBeam())
 

@@ -20,9 +20,17 @@ from pymoo.problems.multi.osy import OSY
 from pymoo.problems.multi.carside import Carside
 from pymoo.problems.multi.welded_beam import WeldedBeam
 from pymoo.problems.multi.dascmop import DASCMOP7, DIFFICULTIES
+from pymoo.problems.single.cantilevered_beam import CantileveredBeam
 from sb_arch_opt.problems.problems_base import *
 
-__all__ = ['ArchWeldedBeam', 'MDWeldedBeam', 'ArchCarside', 'MDCarside', 'ArchOSY', 'MDOSY', 'MODASCMOP', 'MDDASCMOP']
+__all__ = ['ArchCantileveredBeam', 'ArchWeldedBeam', 'MDWeldedBeam', 'ArchCarside', 'MDCarside', 'ArchOSY', 'MDOSY',
+           'MODASCMOP', 'MDDASCMOP']
+
+
+class ArchCantileveredBeam(NoHierarchyWrappedProblem):
+
+    def __init__(self):
+        super().__init__(CantileveredBeam())
 
 
 class ArchWeldedBeam(NoHierarchyWrappedProblem):
@@ -83,6 +91,7 @@ class MDDASCMOP(MixedDiscretizerProblemBase):
 
 
 if __name__ == '__main__':
+    ArchCantileveredBeam().print_stats()
     # ArchWeldedBeam().print_stats()
     # MDWeldedBeam().print_stats()
     # # ArchWeldedBeam().plot_pf()
