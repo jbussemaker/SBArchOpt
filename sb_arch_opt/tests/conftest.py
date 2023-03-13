@@ -7,7 +7,7 @@ from pymoo.problems.multi.zdt import ZDT1
 
 class DummyProblem(ArchOptTestProblemBase):
 
-    def __init__(self, only_discrete=False):
+    def __init__(self, only_discrete=False, fail=False):
         self._problem = problem = ZDT1(n_var=2 if only_discrete else 5)
         if only_discrete:
             des_vars = [Choice(options=[str(9-j) for j in range(10)]) if i == 0 else Integer(bounds=(1, 10))
@@ -17,6 +17,8 @@ class DummyProblem(ArchOptTestProblemBase):
                 Choice(options=[str(9-j) for j in range(10)]) if i == 1 else Integer(bounds=(0, 9)))
                          for i in range(problem.n_var)]
         self.only_discrete = only_discrete
+        self.fail = fail
+        self._i_eval = 0
         super().__init__(des_vars, n_obj=problem.n_obj)
 
     def get_n_valid_discrete(self) -> int:
@@ -38,6 +40,12 @@ class DummyProblem(ArchOptTestProblemBase):
         out = self._problem.evaluate(x_eval, return_as_dictionary=True)
         f_out[:, :] = out['F']
 
+        if self.fail:
+            is_failed = np.zeros((len(x),), dtype=bool)
+            is_failed[(self._i_eval % 2)::2] = True
+            f_out[is_failed, :] = np.nan
+            self._i_eval += len(x)
+
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
         values = x[:, 0 if self.only_discrete else 1]
         is_active[:, -1] = values < 5
@@ -54,3 +62,8 @@ def problem():
 @pytest.fixture
 def discrete_problem():
     return DummyProblem(only_discrete=True)
+
+
+@pytest.fixture
+def failing_problem():
+    return DummyProblem(fail=True)

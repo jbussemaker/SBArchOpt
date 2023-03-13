@@ -33,26 +33,28 @@ Architecture optimization aspects and mitigation measures:
 | Mixed-discrete (MD)     | Convert float to int; high distance correlation | Support discrete operations                | Cont. relaxation; specific kernels; dummy coding; force new infill point selection |
 | Multi-objective (MO)    |                                                 | Prioritize w.r.t. distance to Pareto front | Multi-objective infill criteria                                                    |
 | Hierarchical (HIER)     | Imputation; activeness; low imputation ratio    | Impute during sampling, evaluation         | Impute during sampling, evaluation, infill search; hierarchical kernels            |
-| Hidden constraints (HC) | Catch errors and return NaN                     | Extreme barrier approach                   | Predict hidden constraints area                                                    |
-| Expensive (EXP)         |                                                 | Use SBO to reduce function evaluations     | Intermediate results storage; resuming optimizations                               |
+| Hidden constraints (HC) | Catch errors and return NaN                     | Extreme barrier approach                   | Process NaNs; predict hidden constraints area                                      |
+| Expensive (EXP)         |                                                 | Same as for SBO                            | Intermediate results storage; resuming optimizations; ask-tell interface           |
 
 Architecture optimization measure implementation status
-(Lib = yes, in the library; SBArchOpt = yes, in SBArchOpt; N = not implemented; empty = unknown or not relevant):
+(Lib = yes, in the library; SBArchOpt = yes, in SBArchOpt; N = not implemented; NbP = not implemented but possible to implement; empty = unknown or not relevant):
 
 | Aspect: measure                       | pymoo     | SBArchOpt SBO | BoTorch (Ax) | Trieste |
 |---------------------------------------|-----------|---------------|--------------|---------|
 | MD: continuous relaxation             |           | SBArchOpt     | Lib          |         |
 | MD: kernels                           |           | N             | Lib          |         |
 | MD: dummy coding                      |           | N             | Lib          |         |
-| MD: force new infill point selection  |           | SBArchOpt     |              |         |
+| MD: force new infill point selection  |           | SBArchOpt     | N            |         |
 | MO: multi-objective infill            |           | SBArchOpt     | Lib          |         |
-| HIER: imputation during sampling      | SBArchOpt | SBArchOpt     |              |         |
+| HIER: imputation during sampling      | SBArchOpt | SBArchOpt     | N            |         |
 | HIER: imputation during evaluation    | SBArchOpt | SBArchOpt     | SBArchOpt    |         |
-| HIER: imputation during infill search |           | SBArchOpt     |              |         |
-| HIER: kernels                         |           | N             |              |         |
-| HC: predict area                      |           | N             |              |         |
-| EXP: intermediate result storage      | SBArchOpt | SBArchOpt     |              |         |
-| EXP: resuming optimizations           | SBArchOpt | SBArchOpt     |              |         |
+| HIER: imputation during infill search |           | SBArchOpt     | N            |         |
+| HIER: kernels                         |           | N             | N            |         |
+| HC: process NaNs                      | Lib       | SBArchOpt     | Lib          |         |
+| HC: predict area                      |           | N             | N            |         |
+| EXP: intermediate result storage      | SBArchOpt | SBArchOpt     | NbP          |         |
+| EXP: resuming optimizations           | SBArchOpt | SBArchOpt     | NbP          |         |
+| EXP: ask-tell interface               | Lib       | SBArchOpt     | NbP          |         |
 
 ## Installation
 

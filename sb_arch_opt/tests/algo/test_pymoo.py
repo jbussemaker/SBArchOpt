@@ -35,6 +35,11 @@ def test_termination(problem: ArchOptProblemBase):
     assert minimize(problem, nsga2, get_default_termination(problem, tol=1e-4), verbose=True, progress=True)
 
 
+def test_failing_evaluations(failing_problem: ArchOptProblemBase):
+    nsga2 = get_nsga2(pop_size=100)
+    assert minimize(failing_problem, nsga2, termination=('n_gen', 10), verbose=True, progress=True)
+
+
 class DummyResultSavingProblem(ArchOptProblemBase):
 
     def __init__(self):

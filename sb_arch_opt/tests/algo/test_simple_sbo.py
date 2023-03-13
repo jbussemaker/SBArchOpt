@@ -26,6 +26,15 @@ def test_simple_sbo_rbf_termination(problem: ArchOptProblemBase):
 
 
 @check_dependency()
+def test_simple_sbo_rbf_failing(failing_problem: ArchOptProblemBase):
+    assert HAS_SIMPLE_SBO
+
+    sbo = get_simple_sbo_rbf(init_size=10)
+    result = minimize(failing_problem, sbo, termination=('n_eval', 12), verbose=True, progress=True)
+    assert len(result.pop) == 12
+
+
+@check_dependency()
 def test_simple_sbo_krg(problem: ArchOptProblemBase):
     assert HAS_SIMPLE_SBO
 

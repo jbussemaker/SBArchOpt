@@ -42,6 +42,12 @@ class AxInterface:
     """
     Class handling interfacing between ArchOptProblemBase and the Ax optimization loop, based on:
     https://ax.dev/tutorials/gpei_hartmann_developer.html
+
+    Restart can be implemented based on:
+    - https://ax.dev/tutorials/generation_strategy.html#3B.-JSON-storage
+    - https://ax.dev/tutorials/gpei_hartmann_service.html#7.-Save-/-reload-optimization-to-JSON-/-SQL
+    Failed trails can be marked (as a primitive way of dealing with hidden constraints):
+    - https://ax.dev/tutorials/gpei_hartmann_service.html#Special-Cases
     """
 
     def __init__(self, problem: ArchOptProblemBase):
