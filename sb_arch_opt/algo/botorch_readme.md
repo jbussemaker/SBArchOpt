@@ -15,8 +15,9 @@ python setup.py install[botorch]
 
 ## Usage
 
-The `get_interface` function can be used to get an interface object that can be used to create an `OptimizationLoop`
-instance, with correctly configured search space, optimization configuration, and evaluation function.
+The `get_botorch_interface` function can be used to get an interface object that can be used to create an
+`OptimizationLoop` instance, with correctly configured search space, optimization configuration, and evaluation
+function.
 
 Ax will take care of selecting the best underlying Bayesian (GP) model for the defined optimization problem. Note that
 it will always be some Gaussian Process model and therefore can be relatively expensive.

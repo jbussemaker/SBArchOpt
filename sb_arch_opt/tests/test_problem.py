@@ -3,9 +3,9 @@ import itertools
 import numpy as np
 from sb_arch_opt.problem import *
 from sb_arch_opt.sampling import *
-from sb_arch_opt.pareto_front import *
 from pymoo.core.evaluator import Evaluator
 from pymoo.core.population import Population
+from sb_arch_opt.problems.problems_base import *
 from pymoo.core.variable import Real, Integer, Binary, Choice
 
 

@@ -251,6 +251,12 @@ class ArchOptProblemBase(Problem):
     def load_previous_results(self, results_folder) -> Optional[Population]:
         """Return a Population (with X and F (optionally G and H) defined) created from previous results"""
 
+    def might_have_hidden_constraints(self):
+        """By default, it is assumed that at any time one or more points might fail to evaluate (i.e. return NaN).
+        If you are sure this will never happen, set this to False. This information can be used by optimization
+        algorithms to speed up the process."""
+        return True
+
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
         """

@@ -52,6 +52,9 @@ if __name__ == '__main__':
                 'ax-platform~=0.3.0',
                 'botorch~=0.8.2',
             ],
+            'trieste': [
+                'trieste~=1.0.0',
+            ],
         },
         python_requires='>=3.7',
         packages=['sb_arch_opt'],

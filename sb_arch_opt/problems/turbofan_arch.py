@@ -86,6 +86,9 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
                                       for con in open_turb_arch_problem.opt_constraints])
         self._con_offsets = np.array([con.limit_value for con in open_turb_arch_problem.opt_constraints])
 
+    def might_have_hidden_constraints(self):
+        return True
+
     def get_n_valid_discrete(self) -> int:
         raise NotImplementedError
 

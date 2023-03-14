@@ -38,7 +38,7 @@ from sb_arch_opt.util import patch_ftol_bug
 from sb_arch_opt.problem import ArchOptProblemBase
 from sb_arch_opt.sampling import RepairedExhaustiveSampling, RepairedRandomSampling
 
-__all__ = ['CachedParetoFrontMixin', 'ArchOptTestProblemBase']
+__all__ = ['CachedParetoFrontMixin']
 
 
 class CachedParetoFrontMixin(Problem):
@@ -176,8 +176,3 @@ class CachedParetoFrontMixin(Problem):
             class_str = hashlib.md5(class_str.encode('utf-8')).hexdigest()[:20]
 
         return os.path.expanduser(os.path.join('~', '.arch_opt_pf_cache', class_str+'.pkl'))
-
-
-class ArchOptTestProblemBase(CachedParetoFrontMixin, ArchOptProblemBase):
-    """Helper class to extend the ArchOptProblemBase with Pareto front caching"""
-    pass

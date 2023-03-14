@@ -33,6 +33,9 @@ class MOHierarchicalRosenbrockHC(MOHierarchicalRosenbrock):
         super().__init__()
         self.n_ieq_constr -= 1
 
+    def might_have_hidden_constraints(self):
+        return True
+
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
         self._correct_x_impute(x, is_active_out)
@@ -60,6 +63,9 @@ class HCMOHierarchicalTestProblem(HierarchicalMetaProblemBase):
 
     def __init__(self):
         super().__init__(MOHierarchicalRosenbrockHC(), n_rep=2, n_maps=2, f_par_range=[100, 100])
+
+    def might_have_hidden_constraints(self):
+        return True
 
     def __repr__(self):
         return f'{self.__class__.__name__}()'

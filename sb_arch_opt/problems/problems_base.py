@@ -17,9 +17,18 @@ Contact: jasper.bussemaker@dlr.de
 import numpy as np
 from pymoo.core.problem import Problem
 from pymoo.core.variable import Real, Integer
-from sb_arch_opt.pareto_front import ArchOptTestProblemBase
+from sb_arch_opt.problem import ArchOptProblemBase
+from sb_arch_opt.pareto_front import CachedParetoFrontMixin
 
-__all__ = ['NoHierarchyProblemBase', 'NoHierarchyWrappedProblem', 'MixedDiscretizerProblemBase']
+__all__ = ['ArchOptTestProblemBase', 'NoHierarchyProblemBase', 'NoHierarchyWrappedProblem', 'MixedDiscretizerProblemBase']
+
+
+class ArchOptTestProblemBase(CachedParetoFrontMixin, ArchOptProblemBase):
+    """Helper class to extend the ArchOptProblemBase with Pareto front caching"""
+
+    def might_have_hidden_constraints(self):
+        """For the test problems we know which ones have hidden constraints"""
+        return False
 
 
 class NoHierarchyProblemBase(ArchOptTestProblemBase):

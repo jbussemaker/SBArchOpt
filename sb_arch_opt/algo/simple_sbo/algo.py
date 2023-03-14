@@ -231,7 +231,7 @@ class SBOInfill(InfillCriterion):
 
         # Get output training points (y, from f and g) and normalize
         f_real = self.total_pop.get('F')
-        f_is_invalid = np.bitwise_or(np.isnan(f_real), np.isinf(f_real))
+        f_is_invalid = ~np.isfinite(f_real)
         f_real[f_is_invalid] = np.nan
 
         f, self.y_train_min, self.y_train_max = self._normalize_y(f_real)
@@ -240,7 +240,7 @@ class SBOInfill(InfillCriterion):
         g = np.zeros((x.shape[0], 0))
         if self.problem.n_constr > 0:
             g_real = self.total_pop.get('G')
-            g_is_invalid = np.bitwise_or(np.isnan(g_real), np.isinf(g_real))
+            g_is_invalid = ~np.isfinite(g_real)
             g_real[g_is_invalid] = np.nan
 
             g, g_min, g_max = self._normalize_y(g_real, keep_centered=True)

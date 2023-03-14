@@ -19,8 +19,8 @@ This test suite contains a set of mixed-discrete, constrained, hierarchical, mul
 import enum
 import numpy as np
 from typing import *
-from sb_arch_opt.pareto_front import *
 from sb_arch_opt.problems.discrete import *
+from sb_arch_opt.problems.problems_base import *
 from pymoo.core.variable import Real, Integer, Choice
 from pymoo.util.ref_dirs import get_reference_directions
 

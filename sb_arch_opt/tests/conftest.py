@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from sb_arch_opt.pareto_front import *
+from sb_arch_opt.problems.problems_base import *
 from pymoo.core.variable import Real, Integer, Choice
 from pymoo.problems.multi.zdt import ZDT1
 
@@ -20,6 +20,9 @@ class DummyProblem(ArchOptTestProblemBase):
         self.fail = fail
         self._i_eval = 0
         super().__init__(des_vars, n_obj=problem.n_obj)
+
+    def might_have_hidden_constraints(self):
+        return self.fail
 
     def get_n_valid_discrete(self) -> int:
         if self.only_discrete:
