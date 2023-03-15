@@ -252,6 +252,9 @@ class ArchOptBayesianOptimizer(BayesianOptimizer):
         https://secondmind-labs.github.io/trieste/1.0.0/notebooks/multi_objective_ehvi.html#Define-the-acquisition-function
         """
 
+        if self._problem.n_eq_constr > 0:
+            raise RuntimeError('Trieste currently does not support equality constraints')
+
         if self.is_constrained:
             # Reduce the PoF rules into one
             # https://secondmind-labs.github.io/trieste/1.0.0/notebooks/inequality_constraints.html#Constrained-optimization-with-more-than-one-constraint
@@ -331,25 +334,21 @@ class ArchOptBayesianOptimizer(BayesianOptimizer):
 
     def evaluate(self, x: 'tf.Tensor') -> Dict[str, 'Dataset']:
         out = self._problem.evaluate(x.numpy(), return_as_dictionary=True)
-        return self._process_evaluation_results(out['X'], out['F'], out.get('G'))
+        return self._process_evaluation_results(out)
 
     def _to_datasets(self, population: Population) -> Dict[str, 'Dataset']:
-        return self._process_evaluation_results(population.get('X'), population.get('F'), population.get('G'))
+        return self._process_evaluation_results(population)
 
-    def _process_evaluation_results(self, x_out: np.ndarray, f: np.ndarray, g: np.ndarray) -> Dict[str, 'Dataset']:
+    def _process_evaluation_results(self, pop_or_dict: Union[dict, Population]) -> Dict[str, 'Dataset']:
         is_constrained = self.is_constrained
 
         # Separate failed evaluations (hidden constraints)
-        is_failed = np.any(~np.isfinite(f), axis=1)
-        if is_constrained:
-            is_failed |= np.any(~np.isfinite(g), axis=1)
-
+        is_failed = self._problem.get_failed_points(pop_or_dict)
         is_ok = ~is_failed
-        x_all = x_out
-        x_out = x_out[is_ok, :]
-        f = f[is_ok, :]
-        if is_constrained:
-            g = g[is_ok, :]
+        x_all = pop_or_dict.get('X')
+        x_out = x_all[is_ok, :]
+        f = pop_or_dict.get('F')[is_ok, :]
+        g = pop_or_dict.get('G')[is_ok, :] if is_constrained else None
 
         x_ts = tf.constant(x_out, dtype=tf.float64)
         datasets = {

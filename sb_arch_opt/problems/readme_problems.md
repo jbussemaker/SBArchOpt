@@ -28,6 +28,7 @@ An overview of available test problems in `sb_arch_opt.problems`:
 | `DZDT1`                       | 30      |        | 2     |       | Y   |     | Y   |      |     | ~931e18       |           |              |                                  |
 | Module: `constrained`         |
 | `ArchCantileveredBeam`        |         | 4      | 1     | 2     |     |     |     |      |     |               |           |              |                                  |
+| `MDCantileveredBeam`          | 2       | 2      | 1     | 2     |     | Y   |     |      |     | 100           |           |              |                                  |
 | `ArchWeldedBeam`              |         | 4      | 2     | 4     |     |     | Y   |      |     |               |           |              |                                  |
 | `MDWeldedBeam`                | 2       | 2      | 2     | 4     |     | Y   | Y   |      |     | 100           |           |              |                                  |
 | `ArchCarside`                 |         | 7      | 3     | 10    |     |     | Y   |      |     |               |           |              |                                  |
@@ -54,11 +55,14 @@ An overview of available test problems in `sb_arch_opt.problems`:
 | `GNCNoNr`                     | 36      |        | 2     |       | Y   |     | Y   | Y    |     | 70225000      | 37.6e3    |              |                                  |
 | `GNC`                         | 39      |        | 2     |       | Y   |     | Y   | Y    |     | 79091323      | 901e3     |              |                                  |
 | Module: `hidden_constraints`  |
-| `MOHierarchicalRosenbrockHC`  | 5       | 8      | 2     | 1     |     | Y   | Y   | Y    | Y   | 32            | 1.5       |              |                                  |
-| `HCMOHierarchicalTestProblem` | 11      | 16     | 2     | 1     |     | Y   | Y   | Y    | Y   | 64            | 72        |              |                                  |
+| `Mueller01`                   |         | 5      | 1     |       |     |     |     |      | Y   |               |           |              | fail_rate: 67%                   |
+| `Mueller02`                   |         | 4      | 1     |       |     |     |     |      | Y   |               |           |              | fail_rate: 40%                   |
+| `Mueller08`                   |         | 10     | 1     |       |     |     |     |      | Y   |               |           |              | fail_rate: 73%                   |
+| `MOHierarchicalRosenbrockHC`  | 5       | 8      | 2     | 1     |     | Y   | Y   | Y    | Y   | 32            | 1.5       |              | fail_rate: 60%                   |
+| `HCMOHierarchicalTestProblem` | 11      | 16     | 2     | 1     |     | Y   | Y   | Y    | Y   | 64            | 72        |              | fail_rate: 60%                   |
 | Module: `turbofan_arch`       |         |        |       |       |     |     |     |      |     |               |           | `ota`        |                                  |
-| `SimpleTurbofanArch`          | 6       | 9      | 1     | 5     |     | Y   |     | Y    | Y   | 70            | 3.1       | `ota`        | t_eval: 1-5 min                  |
-| `RealisticTurbofanArch`       | 11      | 30     | 3     | 15    |     | Y   | Y   | Y    | Y   | 1163          | 1114      | `ota`        | t_eval: 1-5 min                  |
+| `SimpleTurbofanArch`          | 6       | 9      | 1     | 5     |     | Y   |     | Y    | Y   | 70            | 3.1       | `ota`        | t_eval: 1-5 min; fail_rate: 51%  |
+| `RealisticTurbofanArch`       | 11      | 30     | 3     | 15    |     | Y   | Y   | Y    | Y   | 1163          | 1114      | `ota`        | t_eval: 1-5 min; fail_rate: 67%  |
 | Module: `assignment`          |         |        |       |       |     |     |     |      |     |               |           | `assignment` | dist_corr: 100% if not specified |
 | `Assignment`                  | 12      |        | 2     |       | Y   |     | Y   |      |     | 4096          |           | `assignment` |                                  |
 | `AssignmentLarge`             | 16      |        | 2     |       | Y   |     | Y   |      |     | 65536         |           | `assignment` |                                  |
@@ -93,10 +97,11 @@ Nomenclature:
 - MD: whether the problem is a mixed-discrete problem or not
 - MO: whether the problem is a multi-objective problem or not
 - HIER: whether the problem contains hierarchical variables
-- HC: whether the problem contains hidden constraints (i.e. some points might fail)
+- HC: whether the problem contains hidden constraints (i.e. some points might fail to evaluate); see also failure_rate
 - n_valid_discr: number of valid discrete design points (i.e. ignoring continuous dimensions)
 - imp_ratio: imputation ratio; ratio between the number of declared and valid discrete design points (1 means there are
   no invalid design vectors)
 - dependencies: name of the optional dependencies list to install to use the test problem (`python setup.py install[name]`)
+- fail_rate: fraction of randomly-sampled points that fail to evaluate
 - t_eval: rough estimate of the time it takes to evaluate one design point (practically instantaneous if left empty)
 - dist_corr: distance correlation between design vectors and assignment patterns (higher is better)

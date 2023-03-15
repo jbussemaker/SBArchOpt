@@ -23,14 +23,20 @@ from pymoo.problems.multi.dascmop import DASCMOP7, DIFFICULTIES
 from pymoo.problems.single.cantilevered_beam import CantileveredBeam
 from sb_arch_opt.problems.problems_base import *
 
-__all__ = ['ArchCantileveredBeam', 'ArchWeldedBeam', 'MDWeldedBeam', 'ArchCarside', 'MDCarside', 'ArchOSY', 'MDOSY',
-           'MODASCMOP', 'MDDASCMOP']
+__all__ = ['ArchCantileveredBeam', 'MDCantileveredBeam', 'ArchWeldedBeam', 'MDWeldedBeam', 'ArchCarside', 'MDCarside',
+           'ArchOSY', 'MDOSY', 'MODASCMOP', 'MDDASCMOP']
 
 
 class ArchCantileveredBeam(NoHierarchyWrappedProblem):
 
     def __init__(self):
         super().__init__(CantileveredBeam())
+
+
+class MDCantileveredBeam(MixedDiscretizerProblemBase):
+
+    def __init__(self):
+        super().__init__(ArchCantileveredBeam(), n_vars_int=2)
 
 
 class ArchWeldedBeam(NoHierarchyWrappedProblem):
@@ -92,6 +98,7 @@ class MDDASCMOP(MixedDiscretizerProblemBase):
 
 if __name__ == '__main__':
     ArchCantileveredBeam().print_stats()
+    MDCantileveredBeam().print_stats()
     # ArchWeldedBeam().print_stats()
     # MDWeldedBeam().print_stats()
     # # ArchWeldedBeam().plot_pf()
@@ -102,10 +109,10 @@ if __name__ == '__main__':
     # # ArchCarside().plot_pf()
     # MDCarside().plot_pf()
 
-    ArchOSY().print_stats()
-    MDOSY().print_stats()
-    # ArchOSY().plot_pf()
-    MDOSY().plot_pf()
+    # ArchOSY().print_stats()
+    # MDOSY().print_stats()
+    # # ArchOSY().plot_pf()
+    # MDOSY().plot_pf()
 
     # MODASCMOP().print_stats()
     # MDDASCMOP().print_stats()

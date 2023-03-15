@@ -15,7 +15,7 @@ Copyright: (c) 2023, Deutsches Zentrum fuer Luft- und Raumfahrt e.V.
 Contact: jasper.bussemaker@dlr.de
 """
 import numpy as np
-from typing import List, Optional
+from typing import List, Optional, Union
 from pymoo.core.repair import Repair
 from pymoo.core.problem import Problem
 from pymoo.core.population import Population
@@ -158,6 +158,14 @@ class ArchOptProblemBase(Problem):
             x[~is_active[:, i_dv], i_dv] = self._x_cont_mid[i_cont]
 
     def _evaluate(self, x, out, *args, **kwargs):
+        """
+        Evaluates a set of design vectors (provided as matrix). Outputs:
+        X: imputed design vectors
+        is_active: activeness matrix, specifying for each design variable whether it is active or not
+        F: objective values
+        G: inequality constraint values
+        H: equality constraint values
+        """
         # Prepare output matrices for evaluation
         x_out = x.copy()
         self._correct_x_discrete(x_out)
@@ -180,6 +188,29 @@ class ArchOptProblemBase(Problem):
             out['H'] = h_out
 
     @staticmethod
+    def get_failed_points(pop_or_out: Union[dict, Population]):
+        f = pop_or_out.get('F')
+        is_failed = np.any(~np.isfinite(f), axis=1)
+
+        g = pop_or_out.get('G')
+        if g is not None:
+            is_failed |= np.any(~np.isfinite(g), axis=1)
+
+        h = pop_or_out.get('H')
+        if h is not None:
+            is_failed |= np.any(~np.isfinite(h), axis=1)
+
+        return is_failed
+
+    def extend_pop_data(self, population: Population) -> Population:
+        """Extend the data in the Population (assuming at least X and F are present): impute X and provide is_active"""
+        population = population.copy()
+        x_imp, is_active = self.correct_x(population.get('X'))
+        population.set('X', x_imp)
+        population.set('is_active', is_active)
+        return population
+
+    @staticmethod
     def get_repair():
         """Get the repair operator for architecture optimization problems"""
         return ArchOptRepair()
@@ -198,10 +229,18 @@ class ArchOptProblemBase(Problem):
         print(f'n_con  : {self.n_ieq_constr}')
         print(f'MD     : {n_discr > 0 and n_cont > 0}')
         print(f'MO     : {self.n_obj > 1}')
+
         if not np.isnan(imp_ratio):
             print(f'HIER         : {imp_ratio > 1}')
             print(f'n_valid_discr: {self.get_n_valid_discrete()}')
             print(f'imp_ratio    : {imp_ratio:.2f}')
+
+        fail_rate = self.get_failure_rate()
+        if fail_rate is not None and fail_rate > 0:
+            might_have_warn = ' (CHECK DECLARATION)' if not self.might_have_hidden_constraints() else ''
+            print(f'HC           : {self.might_have_hidden_constraints()}{might_have_warn}')
+            print(f'failure_rate : {fail_rate*100:.0f}%')
+
         self._print_extra_stats()
 
     def _print_extra_stats(self):
@@ -249,13 +288,19 @@ class ArchOptProblemBase(Problem):
         """Callback function to store intermediate or final results in some results folder"""
 
     def load_previous_results(self, results_folder) -> Optional[Population]:
-        """Return a Population (with X and F (optionally G and H) defined) created from previous results"""
+        """
+        Return a Population (with X and F (optionally G and H) defined) created from previous results.
+        Call `extend_pop_data` afterwards if is_active and is_failed are also needed as data.
+        """
 
     def might_have_hidden_constraints(self):
         """By default, it is assumed that at any time one or more points might fail to evaluate (i.e. return NaN).
         If you are sure this will never happen, set this to False. This information can be used by optimization
         algorithms to speed up the process."""
         return True
+
+    def get_failure_rate(self) -> float:
+        """Estimate the failure rate: the fraction of randomly-sampled points of which evaluation will fail"""
 
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):

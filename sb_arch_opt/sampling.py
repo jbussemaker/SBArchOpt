@@ -50,7 +50,7 @@ def get_init_sampler(repair: Repair = None, lhs=True, remove_duplicates=True, **
 
 class RepairedExhaustiveSampling(Sampling):
     """Exhaustively samples the design space, taking n_cont samples for each continuous variable.
-    Can take a long time if the design space is large."""
+    Can take a long time if the design space is large, and doesn't work well for purely continuous problems."""
 
     def __init__(self, repair: Repair = None, n_cont=5, remove_duplicates=True):
         super().__init__()
@@ -76,18 +76,23 @@ class RepairedExhaustiveSampling(Sampling):
 
         return pop.get('X')
 
-    @staticmethod
-    def get_exhaustive_sample_values(problem: Problem, n_cont=5):
+    @classmethod
+    def get_exhaustive_sample_values(cls, problem: Problem, n_cont=5):
         # Determine bounds and which design variables are discrete
         xl, xu = problem.bounds()
-        is_cont = np.ones((len(xl),), dtype=bool)
+        is_cont = cls.get_is_cont_mask(problem)
+
+        # Get values to be sampled for each design variable
+        return [np.linspace(xl[i], xu[i], n_cont) if is_cont[i] else np.arange(xl[i], xu[i]+1) for i in range(len(xl))]
+
+    @staticmethod
+    def get_is_cont_mask(problem: Problem):
+        is_cont = np.ones((problem.n_var,), dtype=bool)
         if problem.vars is not None:
             for i, var in enumerate(problem.vars.values()):
                 if not isinstance(var, Real):
                     is_cont[i] = False
-
-        # Get values to be sampled for each design variable
-        return [np.linspace(xl[i], xu[i], n_cont) if is_cont[i] else np.arange(xl[i], xu[i]+1) for i in range(len(xl))]
+        return is_cont
 
     @classmethod
     def get_n_sample_exhaustive(cls, problem: Problem, n_cont=5):
@@ -159,6 +164,8 @@ class RepairedRandomSampling(FloatRandomSampling):
     def _do(self, problem, n_samples, **kwargs):
         # Get values to be sampled for each design variable
         opt_values = RepairedExhaustiveSampling.get_exhaustive_sample_values(problem, n_cont=5)
+        is_cont_mask = RepairedExhaustiveSampling.get_is_cont_mask(problem)
+        xl, xu = problem.xl, problem.xu
 
         # Get the number of samples in the cartesian product
         n_opt_values = int(np.prod([len(values) for values in opt_values], dtype=float))
@@ -173,7 +180,16 @@ class RepairedRandomSampling(FloatRandomSampling):
                 pop = Population.new(X=x)
                 pop = self._repair.do(problem, pop)
                 pop = RepairedExhaustiveSampling.safe_remove_duplicates(pop)
+
+                # Randomize continuous variables
                 x = pop.get('X')
+                if np.any(is_cont_mask):
+                    for i_dv, is_cont in enumerate(is_cont_mask):
+                        if is_cont:
+                            x[:, i_dv] = (np.random.random((x.shape[0],)))*(xu[i_dv]-xl[i_dv])+xl[i_dv]
+
+                    pop = self._repair.do(problem, Population.new(X=x))
+                    x = pop.get('X')
 
                 # Randomly select values
                 if n_samples < x.shape[0]:
@@ -185,9 +201,12 @@ class RepairedRandomSampling(FloatRandomSampling):
                 pass
 
         # If above the threshold (or a memory error occurred), sample randomly
-        x = np.empty((n_samples, len(opt_values)))
-        for i_x in range(n_samples):
-            x[i_x, :] = [np.random.choice(opt_values_i) for opt_values_i in opt_values]
+        x = np.empty((n_samples, problem.n_var))
+        for i_dv in range(problem.n_var):
+            if is_cont_mask[i_dv]:
+                x[:, i_dv] = np.random.random((n_samples,))*(xu[i_dv]-xl[i_dv]) + xl[i_dv]
+            else:
+                x[:, i_dv] = np.random.choice(opt_values[i_dv], (n_samples,))
 
         # Repair
         x = self._repair.do(problem, Population.new(X=x)).get("X")

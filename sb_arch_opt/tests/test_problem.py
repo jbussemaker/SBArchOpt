@@ -226,7 +226,7 @@ def test_repaired_random_sampling_non_exhaustive(problem: ArchOptProblemBase):
     assert isinstance(sampling._repair, ArchOptRepair)
     x = sampling.do(problem, 1000).get('X')
     assert x.shape == (1000, 5)
-    assert np.unique(x, axis=0).shape[0] < 1000
+    assert np.unique(x, axis=0).shape[0] == 1000
     problem.evaluate(x)
 
     RepairedRandomSampling._n_comb_gen_all_max = limit
@@ -248,3 +248,9 @@ def test_cached_pareto_front_mixin(problem: ArchOptTestProblemBase, discrete_pro
         pf = discrete_problem.pareto_front()
         assert pf.shape == (10, 2)
         assert os.path.exists(discrete_problem._pf_cache_path())
+
+
+def test_failing_evaluations(failing_problem: ArchOptTestProblemBase):
+    out = failing_problem.evaluate(np.random.random((4, 5)), return_as_dictionary=True)
+    is_failed = failing_problem.get_failed_points(out)
+    assert np.all(is_failed == [True, False, True, False])

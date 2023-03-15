@@ -92,6 +92,9 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
     def get_n_valid_discrete(self) -> int:
         raise NotImplementedError
 
+    def get_failure_rate(self) -> float:
+        raise NotImplementedError
+
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
 
@@ -159,6 +162,9 @@ class SimpleTurbofanArch(OpenTurbArchProblemWrapper):
 
         return int(sum(n_valid_no_fan)+sum(n_valid_fan))
 
+    def get_failure_rate(self) -> float:
+        return .51  # Paper section IV.B
+
 
 class RealisticTurbofanArch(OpenTurbArchProblemWrapper):
     """
@@ -204,16 +210,19 @@ class RealisticTurbofanArch(OpenTurbArchProblemWrapper):
 
         return int(sum(n_valid_no_fan)+sum(n_valid_fan))
 
+    def get_failure_rate(self) -> float:
+        return .67  # Paper section IV.C
+
 
 if __name__ == '__main__':
     SimpleTurbofanArch().print_stats()
     RealisticTurbofanArch().print_stats()
 
-    from pymoo.optimize import minimize
-    from sb_arch_opt.algo.pymoo_interface import get_nsga2
-    problem = SimpleTurbofanArch(n_parallel=4)
-    algo = get_nsga2(pop_size=2)
-    result = minimize(problem, algo, termination=('n_eval', 2))
-    print(result.pop.get('X'))
-    print(result.pop.get('F'))
-    print(result.pop.get('G'))
+    # from pymoo.optimize import minimize
+    # from sb_arch_opt.algo.pymoo_interface import get_nsga2
+    # problem = SimpleTurbofanArch(n_parallel=4)
+    # algo = get_nsga2(pop_size=2)
+    # result = minimize(problem, algo, termination=('n_eval', 2))
+    # print(result.pop.get('X'))
+    # print(result.pop.get('F'))
+    # print(result.pop.get('G'))
