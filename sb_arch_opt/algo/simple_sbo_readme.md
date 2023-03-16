@@ -15,7 +15,7 @@ to train and evaluate.
 ## Installation
 
 ```
-python setup.py install[simple_sbo]
+pip install -e .[simple_sbo]
 ```
 
 ## Usage

@@ -12,7 +12,7 @@ The framework is mostly interacted with through [Ax](https://ax.dev/).
 ## Installation
 
 ```
-python setup.py install[botorch]
+pip install -e .[botorch]
 ```
 
 ## Usage

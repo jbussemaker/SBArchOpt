@@ -101,7 +101,7 @@ Nomenclature:
 - n_valid_discr: number of valid discrete design points (i.e. ignoring continuous dimensions)
 - imp_ratio: imputation ratio; ratio between the number of declared and valid discrete design points (1 means there are
   no invalid design vectors)
-- dependencies: name of the optional dependencies list to install to use the test problem (`python setup.py install[name]`)
+- dependencies: name of the optional dependencies list to install to use the test problem (`pip install -e .[name]`)
 - fail_rate: fraction of randomly-sampled points that fail to evaluate
 - t_eval: rough estimate of the time it takes to evaluate one design point (practically instantaneous if left empty)
 - dist_corr: distance correlation between design vectors and assignment patterns (higher is better)
