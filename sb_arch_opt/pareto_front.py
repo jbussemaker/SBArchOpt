@@ -33,9 +33,6 @@ from pymoo.core.initialization import Initialization
 from pymoo.algorithms.moo.nsga2 import calc_crowding_distance
 from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
 from pymoo.termination.default import DefaultMultiObjectiveTermination, DefaultSingleObjectiveTermination
-
-from sb_arch_opt.util import patch_ftol_bug
-from sb_arch_opt.problem import ArchOptProblemBase
 from sb_arch_opt.sampling import RepairedExhaustiveSampling, RepairedRandomSampling
 
 __all__ = ['CachedParetoFrontMixin']
@@ -133,7 +130,6 @@ class CachedParetoFrontMixin(Problem):
             termination = DefaultSingleObjectiveTermination(
                 xtol=1e-8, cvtol=1e-8, ftol=1e-6, period=robust_period, n_max_gen=n_max_gen, n_max_evals=n_max_eval)
 
-        patch_ftol_bug(termination)
         result = minimize(self, get_nsga2(pop_size=pop_size), termination=termination, copy_termination=False)
         result.history = None
         result.algorithm = None

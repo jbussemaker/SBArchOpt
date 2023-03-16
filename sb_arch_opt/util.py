@@ -32,21 +32,3 @@ def capture_log(level='INFO'):
             },
         },
     })
-
-
-def patch_ftol_bug(term):  # Already fixed in upcoming release: https://github.com/anyoptimization/pymoo/issues/325
-    from pymoo.termination.default import DefaultMultiObjectiveTermination
-    from pymoo.termination.ftol import MultiObjectiveSpaceTermination
-    data_func = None
-
-    def _wrap_data(algorithm):
-        data = data_func(algorithm)
-        if data['ideal'] is None:
-            data['feas'] = False
-        return data
-
-    if isinstance(term, DefaultMultiObjectiveTermination):
-        ftol_term = term.criteria[2].termination
-        if isinstance(ftol_term, MultiObjectiveSpaceTermination):
-            data_func = ftol_term._data
-            ftol_term._data = _wrap_data

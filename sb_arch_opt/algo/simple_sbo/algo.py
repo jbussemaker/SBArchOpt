@@ -20,7 +20,6 @@ import logging
 import numpy as np
 from typing import *
 from sb_arch_opt.sampling import *
-from sb_arch_opt.util import patch_ftol_bug
 from sb_arch_opt.algo.pymoo_interface import *
 from sb_arch_opt.problem import ArchOptProblemBase
 
@@ -320,7 +319,7 @@ class SBOInfill(InfillCriterion):
             termination=termination,
             callback=SurrogateInfillCallback(n_gen_report=n_callback, verbose=self.verbose,
                                              n_points_outer=len(self.total_pop), n_eval_outer=n_eval_outer),
-            copy_termination=False,  # Needed for maintaining the patch
+            copy_termination=False,
             # verbose=True, progress=True,
         )
         if self.opt_results is None:
@@ -383,7 +382,6 @@ class SBOInfill(InfillCriterion):
                 termination = DefaultSingleObjectiveTermination(
                     xtol=1e-8, cvtol=1e-8, ftol=1e-6, period=robust_period, n_max_gen=n_max_gen, n_max_evals=n_max_eval)
 
-        patch_ftol_bug(termination)
         return termination
 
     def _get_infill_algorithm(self):
