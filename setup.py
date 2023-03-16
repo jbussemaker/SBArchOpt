@@ -56,7 +56,7 @@ if __name__ == '__main__':
                 'trieste~=1.0.0',
             ],
             # 'hebo': [
-            #     'hebo @ git+https://github.com/huawei-noah/HEBO@98a2e5e#egg=hebo&subdirectory=HEBO',
+            #     'HEBO',
             # ],
         },
         python_requires='>=3.7',
