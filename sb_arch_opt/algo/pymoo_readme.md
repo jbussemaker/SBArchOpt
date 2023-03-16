@@ -1,3 +1,5 @@
+![pymoo Logo](https://github.com/anyoptimization/pymoo-data/blob/main/logo.png?raw=true)
+
 # Interface to: pymoo
 
 [pymoo](https://pymoo.org/) is a multi-objective optimization framework that supports mixed-discrete problem
