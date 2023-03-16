@@ -218,33 +218,31 @@ class ArchOptProblemBase(Problem):
     def print_stats(self):
         n_discr = np.sum(self.is_discrete_mask)
         n_cont = np.sum(self.is_cont_mask)
-        imp_ratio = self.get_imputation_ratio()
         try:
             print(f'problem: {self!r}')
         except NotImplementedError:
             pass
-        print(f'n_discr: {n_discr}')
-        print(f'n_cont : {n_cont}')
-        print(f'n_obj  : {self.n_obj}')
-        print(f'n_con  : {self.n_ieq_constr}')
-        print(f'MD     : {n_discr > 0 and n_cont > 0}')
-        print(f'MO     : {self.n_obj > 1}')
+        print(f'n_discr: {n_discr}')  # Number of discrete design variables
+        print(f'n_cont : {n_cont}')  # Number of continuous design variables
+        print(f'n_obj  : {self.n_obj}')  # Number of objectives
+        print(f'n_con  : {self.n_ieq_constr}')  # Number of (inequality) constraints
+        print(f'MD     : {n_discr > 0 and n_cont > 0}')  # Is it a mixed-discrete problem?
+        print(f'MO     : {self.n_obj > 1}')  # Is it a multi-objective problem?
 
+        imp_ratio = self.get_imputation_ratio()
         if not np.isnan(imp_ratio):
-            print(f'HIER         : {imp_ratio > 1}')
-            print(f'n_valid_discr: {self.get_n_valid_discrete()}')
-            print(f'imp_ratio    : {imp_ratio:.2f}')
+            print(f'HIER         : {imp_ratio > 1}')  # Is it a hierarchical problem?
+            print(f'n_valid_discr: {self.get_n_valid_discrete()}')  # Number of valid discrete design points
+            print(f'imp_ratio    : {imp_ratio:.2f}')  # Imputation ratio: nr of declared designs / n_valid_discr
 
         fail_rate = self.get_failure_rate()
         if fail_rate is not None and fail_rate > 0:
             might_have_warn = ' (CHECK DECLARATION)' if not self.might_have_hidden_constraints() else ''
+            # Problem has hidden constraints (= regions with failed evaluations)?
             print(f'HC           : {self.might_have_hidden_constraints()}{might_have_warn}')
-            print(f'failure_rate : {fail_rate*100:.0f}%')
+            print(f'failure_rate : {fail_rate*100:.0f}%')  # Failure rate: fraction of points where evaluation fails
 
         self._print_extra_stats()
-
-    def _print_extra_stats(self):
-        pass
 
     def get_imputation_ratio(self) -> float:
         """
@@ -302,6 +300,9 @@ class ArchOptProblemBase(Problem):
     def get_failure_rate(self) -> float:
         """Estimate the failure rate: the fraction of randomly-sampled points of which evaluation will fail"""
 
+    def _print_extra_stats(self):
+        """Print extra statistics when the print_stats() function is used"""
+
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
         """
@@ -315,8 +316,8 @@ class ArchOptProblemBase(Problem):
         raise NotImplementedError
 
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
-        """Fill the activeness matrix and impute any design variables that are partially inactive.
-        Imputation of inactive design variables is applied after this function."""
+        """Fill the activeness matrix and (if needed) impute any design variables that are partially inactive.
+        Imputation of inactive design variables is always applied after this function."""
         raise NotImplementedError
 
     def __repr__(self):

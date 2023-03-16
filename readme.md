@@ -107,8 +107,8 @@ You then need to implement the following functionality:
 - Design variable definition in the `__init__` function using `Variable` classes (in `pymoo.core.variable`)
 - Evaluation of a design vector in `_arch_evaluate`
 - Correction (imputation/repair) of a design vector in `_correct_x`
-- An interface for implementing intermediate storage of problem-specific results (`store_results`), and restarting an
-  optimization from these previous results (`load_previous_results`)
+- An (optional) interface for implementing intermediate storage of problem-specific results (`store_results`), and
+  restarting an optimization from these previous results (`load_previous_results`)
 - A unique class representation in `__repr__`
 
 Design variables of different types are defined as follows:
@@ -126,18 +126,24 @@ therefore have integer values). Output of the evaluation should be provided as f
 - Equality constraints `h` according to `h(x) = 0` means "satisfied"
 
 Note: if you are implementing a test problem where it is relatively cheap to determine the "real" Pareto front, you
-may also extend the `sb_arch_opt.pareto_front.ArchOptTestProblemBase` class. This class has the same features as the
-other base class, however enables the use of the `pareto_front()` function to get a reference Pareto front for testing.
+may use the `sb_arch_opt.pareto_front.CachedParetoFrontMixin` mixin. This mixin adds functions for automatically finding
+the Pareto front, so the `pareto_front()` function can be used.
 
 Example:
 
 ```python
 import numpy as np
 from sb_arch_opt.problem import ArchOptProblemBase
+from sb_arch_opt.pareto_front import CachedParetoFrontMixin
 from pymoo.core.variable import Real, Integer, Choice
 
 
-class DemoArchOptProblem(ArchOptProblemBase):
+class DemoArchOptProblem(CachedParetoFrontMixin, ArchOptProblemBase):
+    """
+    An example of an architecture optimization problem implementation.
+    
+    NOTE: only use CachedParetoFrontMixin if it is cheap to find the Pareto front (mostly the case for test functions)!
+    """
 
     def __init__(self):
         super().__init__(des_vars=[
@@ -164,23 +170,43 @@ class DemoArchOptProblem(ArchOptProblemBase):
         f_out[:, 0] = np.sum(x ** 2, axis=1)
 
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
-        """Impute the design vectors (discrete variables already have integer values),
-        writing the imputed design vectors and the activeness matrix to the provided matrices"""
+        """Fill the activeness matrix and (if needed) impute any design variables that are partially inactive.
+        Imputation of inactive design variables is always applied after this function."""
 
         # Get categorical values associated to the third design variables (i_dv = 2)
         categorical_values = self.get_categorical_values(x, i_dv=2)
 
         # Set second design variable inactive if value is other than A
         is_active[:, 1] = categorical_values != 'A'
+        
+        # Set inactive variables to some predefined value (can be left out, as this is also done by `_impute_x`)
         x[~is_active] = 0
 
-    def store_results(self, results_folder, final=False):
+    def store_results(self, results_folder, final=False):  # Optional
         """Implement this function to enable problem-specific intermediate results storage"""
 
-    def load_previous_results(self, results_folder):
+    def load_previous_results(self, results_folder):  # Optional
         """Implement this function to enable problem-specific results loading for algorithm restart"""
+
+    def get_n_valid_discrete(self) -> int:  # Optional
+        """Return the number of valid discrete design points (ignoring continuous dimensions); enables calculation of
+        the imputation ratio"""
+
+    def might_have_hidden_constraints(self):  # Optional
+        """By default, it is assumed that at any time one or more points might fail to evaluate (i.e. return NaN).
+        If you are sure this will never happen, set this to False. This information can be used by optimization
+        algorithms to speed up the process."""
+        return True
+
+    def get_failure_rate(self) -> float:  # Optional
+        """Estimate the failure rate: the fraction of randomly-sampled points of which evaluation will fail"""
 
     def __repr__(self):
         """repr() of the class, should be unique for unique Pareto fronts"""
         return f'{self.__class__.__name__}()'
+
+
+if __name__ == '__main__':
+    # Print some statistics about the problem
+    DemoArchOptProblem().print_stats()
 ```
