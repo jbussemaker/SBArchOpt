@@ -1,4 +1,4 @@
-# SEGOMOE: Super Efficient Global Optimization with Mixture of Experts
+# SBArchOpt Interface to SEGOMOE: Super Efficient Global Optimization with Mixture of Experts
 
 SEGOMOE is a Bayesian optimization toolbox developed by ONERA and ISAE-SUPAERO. For more information refer to:
 

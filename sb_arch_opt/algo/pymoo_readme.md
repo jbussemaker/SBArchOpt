@@ -1,6 +1,6 @@
 ![pymoo Logo](https://github.com/anyoptimization/pymoo-data/blob/main/logo.png?raw=true)
 
-# Interface to: pymoo
+# SBArchOpt Interface to pymoo
 
 [pymoo](https://pymoo.org/) is a multi-objective optimization framework that supports mixed-discrete problem
 definitions. It includes many test problems and algorithms, mostly evolutionary algorithms such as a Genetic Algorithm

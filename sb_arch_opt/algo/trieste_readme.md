@@ -1,4 +1,4 @@
-# Trieste
+# SBArchOpt Interface to Trieste
 
 [Trieste](https://secondmind-labs.github.io/trieste/1.0.0/index.html) is a Bayesian optimization library built on
 [TensorFlow](https://www.tensorflow.org/), Google's machine learning framework. Trieste is an evolution of spearmint.

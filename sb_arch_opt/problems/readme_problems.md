@@ -1,6 +1,6 @@
 # SBArchOpt: Overview of Test Problems
 
-An overview of available test problems in `sb_arch_opt.problems`:
+An overview of available test problems in `sb_arch_opt.problems` (nomenclature is explained below the table):
 
 | Problem Class                 | n_discr | n_cont | n_obj | n_con | D   | MD  | MO  | HIER | HC  | n_valid_discr | imp_ratio | dependencies | Notes                            |
 |-------------------------------|---------|--------|-------|-------|-----|-----|-----|------|-----|---------------|-----------|--------------|----------------------------------|

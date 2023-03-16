@@ -1,6 +1,6 @@
 ![BoTorch Logo](https://github.com/pytorch/botorch/raw/main/botorch_logo_lockup.png)
 
-# BoTorch: Bayesian Optimization with PyTorch
+# SBArchOpt Interface to BoTorch: Bayesian Optimization with PyTorch
 
 [BoTorch](https://botorch.org/) is a Bayesian optimization framework written on top of the [PyTorch](https://pytorch.org/)
 machine learning library. More information:
