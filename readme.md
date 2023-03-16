@@ -64,6 +64,7 @@ Architecture optimization measure implementation status
 Following Python SBO frameworks are not implemented, however deserve an acknowledgment:
 - [pysamoo](https://anyoptimization.com/projects/pysamoo/): generic acceleration of (multi-objective) evolutionary
   algorithms by surrogate assistance (incompatible with pymoo 0.6.0 [2023-03-13])
+- [HEBO](https://github.com/huawei-noah/HEBO/tree/master/HEBO): incompatible with pymoo 0.6.0 [2023-03-16]
 - [Dragonfly](https://github.com/dragonfly/dragonfly)
 - [Emukit](https://emukit.github.io/)
 - [ParMOO](https://github.com/parmoo/parmoo)
