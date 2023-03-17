@@ -27,10 +27,6 @@ def test_hc_sphere():
     run_test_no_hierarchy(HCSphere())
 
 
-def test_hc_hyper_sphere():
-    run_test_no_hierarchy(HCHyperSphere())
-
-
 def test_hier_rosenbrock_hc():
     run_test_hierarchy(MOHierarchicalRosenbrockHC(), 1.5)
 

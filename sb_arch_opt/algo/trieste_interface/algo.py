@@ -50,7 +50,11 @@ except ImportError:
     class BayesianOptimizer:
         pass
 
+    class SingleModelAcquisitionBuilder:
+        pass
+
     HAS_TRIESTE = False
+    OBJECTIVE = 'OBJECTIVE'
 
 __all__ = ['HAS_TRIESTE', 'check_dependencies', 'ArchOptBayesianOptimizer', 'OBJECTIVE', 'CONSTR_PREFIX',
            'ProbabilityOfValidity']
@@ -150,7 +154,7 @@ class ArchOptBayesianOptimizer(BayesianOptimizer):
 
         log.info('No previous results found')
 
-    def run_optimization(self, results_folder=None) -> Record:
+    def run_optimization(self, results_folder=None) -> 'Record':
         """Runs a full optimization, including initial DOE"""
         capture_log()
         self._results_folder = results_folder
@@ -245,7 +249,7 @@ class ArchOptBayesianOptimizer(BayesianOptimizer):
     def get_state_path(results_folder):
         return os.path.join(results_folder, 'trieste_state')
 
-    def get_acquisition_rule(self, pof=.5) -> AcquisitionRule:
+    def get_acquisition_rule(self, pof=.5) -> 'AcquisitionRule':
         """
         Builds the acquisition rule based on whether the problem is single- or multi-objective and constrained or not:
         https://secondmind-labs.github.io/trieste/1.0.0/notebooks/inequality_constraints.html#Define-the-acquisition-process

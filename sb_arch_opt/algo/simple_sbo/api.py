@@ -29,6 +29,8 @@ try:
     HAS_SIMPLE_SBO = True
 except ImportError:
     HAS_SIMPLE_SBO = False
+    get_sbo_termination = lambda *_, **__: None
+
 
 __all__ = ['get_simple_sbo_rbf', 'get_simple_sbo_krg', 'HAS_SIMPLE_SBO', 'get_sbo_termination']
 
