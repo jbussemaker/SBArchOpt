@@ -18,6 +18,7 @@ This test suite contains a set of mixed-discrete, multi-objective, constrained, 
 subject to hidden constraints.
 """
 import numpy as np
+from scipy.spatial import distance
 from pymoo.core.variable import Real
 from sb_arch_opt.problems.hierarchical import *
 from sb_arch_opt.problems.problems_base import *
@@ -27,7 +28,7 @@ from sb_arch_opt.sampling import RepairedLatinHypercubeSampling
 from pymoo.problems.single.ackley import Ackley
 
 __all__ = ['SampledFailureRateMixin', 'Mueller01', 'Mueller02', 'Mueller08', 'Alimo', 'HCBranin',
-           'MOHierarchicalRosenbrockHC', 'HCMOHierarchicalTestProblem']
+           'MOHierarchicalRosenbrockHC', 'HCMOHierarchicalTestProblem', 'RandomHiddenConstraintsBase', 'HCSphere']
 
 
 class SampledFailureRateMixin(ArchOptProblemBase):
@@ -165,6 +166,60 @@ class HCBranin(SampledFailureRateMixin, Branin):
         f_out[c > .22, :] = np.nan
 
 
+class RandomHiddenConstraintsBase(SampledFailureRateMixin, NoHierarchyProblemBase):
+    """
+    Base class for randomly adding failed regions to some design space.
+
+    Inspired by:
+    Sacher et al., "A classification approach to efficient global optimization in presence of non-computable domains",
+    2018, DOI: 10.1007/s00158-018-1981-8
+    """
+
+    def __init__(self, des_vars, density=.25, radius=.1, seed=None, **kwargs):
+        self.density = density
+        self.radius = radius
+        self.seed = seed
+        super().__init__(des_vars, **kwargs)
+        self._x_failed = None
+        self._scale = None
+
+    def _set_failed_points(self, x: np.ndarray, f_out: np.ndarray, g_out: np.ndarray, h_out: np.ndarray):
+        if self._x_failed is None:
+            if self.seed is not None:
+                np.random.seed(self.seed)
+            x_failed = RepairedLatinHypercubeSampling().do(self, 100).get('X')
+            i_selected = np.random.choice(len(x_failed), size=int(self.density*len(x_failed)), replace=False)
+
+            self._scale = 1/(self.xu-self.xl)
+            self._x_failed = x_failed[i_selected, :]*self._scale
+
+        is_failed = np.any(distance.cdist(x*self._scale, self._x_failed) < self.radius, axis=1)
+        f_out[is_failed, :] = np.nan
+        g_out[is_failed, :] = np.nan
+        h_out[is_failed, :] = np.nan
+
+    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
+                       h_out: np.ndarray, *args, **kwargs):
+        """At the end of the function, use `_set_failed_points`!"""
+        raise NotImplementedError
+
+
+class HCSphere(RandomHiddenConstraintsBase):
+    """Sphere with randomly-added hidden constraints"""
+
+    _n_vars = 2
+    _density = .25
+
+    def __init__(self):
+        des_vars = [Real(bounds=(0, 1)) for _ in range(self._n_vars)]
+        super().__init__(des_vars, density=self._density, radius=.1, seed=0)
+
+    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
+                       h_out: np.ndarray, *args, **kwargs):
+        f_out[:, 0] = np.sum((x - .5*(self.xu-self.xl))**2, axis=1)
+        self._set_failed_points(x, f_out, g_out, h_out)
+
+
 class MOHierarchicalRosenbrockHC(SampledFailureRateMixin, MOHierarchicalRosenbrock):
     """
     Adaptation of the multi-objective hierarchical Rosenbrock problem, that sets points with a large constraint
@@ -226,5 +281,7 @@ if __name__ == '__main__':
 
     # Alimo().print_stats()
     # Alimo().plot_design_space()
-    HCBranin().print_stats()
-    HCBranin().plot_design_space()
+    # HCBranin().print_stats()
+    # HCBranin().plot_design_space()
+    HCSphere().print_stats()
+    # HCSphere().plot_design_space()

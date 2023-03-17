@@ -60,6 +60,7 @@ An overview of available test problems in `sb_arch_opt.problems` (nomenclature i
 | `Mueller08`                   |         | 10     | 1     |       |     |     |     |      | Y   |               |           |              | fail_rate: 73%                   |
 | `Alimo`                       |         | 2      | 1     |       |     |     |     |      | Y   |               |           |              | fail_rate: 88%                   |
 | `HCBranin`                    |         | 2      | 1     |       |     |     |     |      | Y   |               |           |              | fail_rate: 33%                   |
+| `HCSphere`                    |         | 2      | 1     |       |     |     |     |      | Y   |               |           |              | fail_rate: 57%                   |
 | `MOHierarchicalRosenbrockHC`  | 5       | 8      | 2     | 1     |     | Y   | Y   | Y    | Y   | 32            | 1.5       |              | fail_rate: 60%                   |
 | `HCMOHierarchicalTestProblem` | 11      | 16     | 2     | 1     |     | Y   | Y   | Y    | Y   | 64            | 72        |              | fail_rate: 60%                   |
 | Module: `turbofan_arch`       |         |        |       |       |     |     |     |      |     |               |           | `ota`        |                                  |
