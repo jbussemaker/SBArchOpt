@@ -95,3 +95,4 @@ if __name__ == '__main__':
     Griewank().print_stats()
     Goldstein().print_stats()
     Branin().print_stats()
+    # Branin().plot_design_space()

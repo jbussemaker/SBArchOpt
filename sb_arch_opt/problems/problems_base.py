@@ -30,6 +30,56 @@ class ArchOptTestProblemBase(CachedParetoFrontMixin, ArchOptProblemBase):
         """For the test problems we know which ones have hidden constraints"""
         return False
 
+    def plot_design_space(self, ix_plot=None, x_base=None, n=100, show=True):
+        import matplotlib.pyplot as plt
+        from matplotlib.colors import CenteredNorm
+        if ix_plot is None:
+            ix_plot = (0, 1)
+        ix, iy = ix_plot
+        x_name, y_name = f'$x_{ix}$', f'$x_{iy}$'
+
+        x_lim, y_lim = (self.xl[ix], self.xu[ix]), (self.xl[iy], self.xu[iy])
+        x, y = np.linspace(x_lim[0], x_lim[1], n), np.linspace(y_lim[0], y_lim[1], n)
+        xx, yy = np.meshgrid(x, y)
+
+        if x_base is None:
+            x_base = .5*(self.xl+self.xu)
+        x_eval = np.zeros((xx.size, len(x_base)))
+        x_eval[:, :] = x_base
+        x_eval[:, ix] = xx.ravel()
+        if self.n_var > 1:
+            x_eval[:, iy] = yy.ravel()
+        out = self.evaluate(x_eval, return_as_dictionary=True)
+
+        def _plot_out(z, z_name, is_constraint=False):
+            zz = z.reshape(xx.shape)
+            plt.figure()
+
+            plt.fill_between(x_lim, y_lim[0], y_lim[1], facecolor='none', hatch='X', edgecolor='r', linewidth=0)
+
+            cmap = 'RdBu_r' if is_constraint else 'summer'
+            kwargs = {}
+            if is_constraint:
+                kwargs['norm'] = CenteredNorm()
+            c = plt.contourf(xx, yy, zz, 50, cmap=cmap, **kwargs)
+            plt.contour(xx, yy, zz, 10, colors='k', linewidths=.5, **kwargs)
+            if is_constraint:
+                plt.contour(xx, yy, zz, [0], colors='k', linewidths=3)
+            plt.colorbar(c).set_label(z_name)
+            plt.xlabel(x_name), plt.xlim(x_lim)
+            plt.ylabel(y_name), plt.ylim(y_lim)
+            plt.tight_layout()
+
+        for if_ in range(self.n_obj):
+            _plot_out(out['F'][:, if_], f'$f_{if_}$')
+        for ig in range(self.n_ieq_constr):
+            _plot_out(out['G'][:, ig], f'$g_{ig}$', is_constraint=True)
+        for ih in range(self.n_eq_constr):
+            _plot_out(out['H'][:, ih], f'$h_{ih}$', is_constraint=True)
+
+        if show:
+            plt.show()
+
 
 class NoHierarchyProblemBase(ArchOptTestProblemBase):
     """Base class for test problems that have no decision hierarchy"""

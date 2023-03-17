@@ -22,10 +22,10 @@ from pymoo.core.variable import Real
 from sb_arch_opt.problems.hierarchical import *
 from sb_arch_opt.problems.problems_base import *
 from sb_arch_opt.problem import ArchOptProblemBase
-from sb_arch_opt.sampling import RepairedRandomSampling
+from sb_arch_opt.sampling import RepairedLatinHypercubeSampling
 from pymoo.problems.single.ackley import Ackley
 
-__all__ = ['SampledFailureRateMixin', 'Mueller01', 'Mueller02', 'Mueller08', 'MOHierarchicalRosenbrockHC',
+__all__ = ['SampledFailureRateMixin', 'Mueller01', 'Mueller02', 'Mueller08', 'Alimo', 'MOHierarchicalRosenbrockHC',
            'HCMOHierarchicalTestProblem']
 
 
@@ -35,7 +35,7 @@ class SampledFailureRateMixin(ArchOptProblemBase):
     n_samples_failure_rate = 10000
 
     def get_failure_rate(self) -> float:
-        x = RepairedRandomSampling().do(self, self.n_samples_failure_rate).get('X')
+        x = RepairedLatinHypercubeSampling().do(self, self.n_samples_failure_rate).get('X')
         out = self.evaluate(x, return_as_dictionary=True)
         is_failed = self.get_failed_points(out)
         return np.sum(is_failed)/len(is_failed)
@@ -127,6 +127,28 @@ class Mueller08(SampledFailureRateMixin, NoHierarchyProblemBase):
         f_out[cx > 0, :] = np.nan
 
 
+class Alimo(SampledFailureRateMixin, NoHierarchyProblemBase):
+    """
+    Test problem used by:
+    Alimo et al. "Delaunay-based global optimization in nonconvex domains defined by hidden constraints", 2018,
+    DOI: 10.1007/978-3-319-89890-2_17
+    """
+
+    def __init__(self):
+        n_var = 2
+        des_vars = [Real(bounds=(0, 1)) for _ in range(n_var)]
+        super().__init__(des_vars)
+
+    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
+                       h_out: np.ndarray, *args, **kwargs):
+        x0 = [.19, .29]  # In the paper, no other reference point is given
+        f_out[:, 0] = np.sum(np.abs(x - x0)**2, axis=1) - .024*self.n_var
+
+        # The term of -.25 is added
+        cx = (self.n_var/12) + .1*np.sum(4*(x-.7)**2 - 2*np.cos(4*np.pi*(x-.7)), axis=1) - .25
+        f_out[cx >= 0, :] = np.nan
+
+
 class MOHierarchicalRosenbrockHC(SampledFailureRateMixin, MOHierarchicalRosenbrock):
     """
     Adaptation of the multi-objective hierarchical Rosenbrock problem, that sets points with a large constraint
@@ -177,8 +199,14 @@ if __name__ == '__main__':
     # HCMOHierarchicalTestProblem().plot_pf()
 
     # Mueller01().print_stats()
+    # Mueller01().plot_design_space(x_base=[-.5]*5)
     # Mueller01().plot_pf()
     # Mueller02().print_stats()
+    # Mueller02().plot_design_space()
     # Mueller02().plot_pf()
-    Mueller08().print_stats()
+    # Mueller08().print_stats()
     # Mueller08().plot_pf()
+    # Mueller08().plot_design_space()
+
+    # Alimo().print_stats()
+    Alimo().plot_design_space()

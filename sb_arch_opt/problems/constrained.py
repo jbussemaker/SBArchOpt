@@ -98,7 +98,8 @@ class MDDASCMOP(MixedDiscretizerProblemBase):
 
 if __name__ == '__main__':
     ArchCantileveredBeam().print_stats()
-    MDCantileveredBeam().print_stats()
+    # ArchCantileveredBeam().plot_design_space()
+    # MDCantileveredBeam().print_stats()
     # ArchWeldedBeam().print_stats()
     # MDWeldedBeam().print_stats()
     # # ArchWeldedBeam().plot_pf()

@@ -644,8 +644,9 @@ if __name__ == '__main__':
 
     # ZaeffererHierarchical.from_mode(ZaeffererProblemMode.A_OPT_INACT_IMP_PROF_UNI).print_stats()
     # ZaeffererHierarchical.from_mode(ZaeffererProblemMode.A_OPT_INACT_IMP_PROF_UNI).plot_pf()
+    ZaeffererHierarchical.from_mode(ZaeffererProblemMode.A_OPT_INACT_IMP_PROF_UNI).plot_design_space()
 
-    MOHierarchicalTestProblem().print_stats()
+    # MOHierarchicalTestProblem().print_stats()
     # MOHierarchicalTestProblem().plot_pf()
 
     # Jenatton().print_stats()

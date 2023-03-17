@@ -163,7 +163,7 @@ class RepairedRandomSampling(FloatRandomSampling):
 
     def _do(self, problem, n_samples, **kwargs):
         # Get values to be sampled for each design variable
-        opt_values = RepairedExhaustiveSampling.get_exhaustive_sample_values(problem, n_cont=5)
+        opt_values = RepairedExhaustiveSampling.get_exhaustive_sample_values(problem, n_cont=kwargs.get('n_cont', 5))
         is_cont_mask = RepairedExhaustiveSampling.get_is_cont_mask(problem)
         xl, xu = problem.xl, problem.xu
 
