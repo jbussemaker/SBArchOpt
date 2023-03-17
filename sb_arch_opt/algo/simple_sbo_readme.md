@@ -31,7 +31,7 @@ problem = ...  # Subclass of ArchOptProblemBase
 
 # Get Kriging or RBF algorithm
 n_init = 100
-simple_krg_sbo_algo = get_simple_sbo_krg(init_size=n_init, use_mvpf=True, use_ei=False, min_pof=.95)
+simple_krg_sbo_algo = get_simple_sbo_krg(init_size=n_init, use_mvpf=True, use_ei=False, min_pof=.5)
 simple_rbf_sbo_algo = get_simple_sbo_rbf(init_size=n_init)
 
 # Enable intermediate results storage

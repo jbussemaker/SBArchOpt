@@ -178,7 +178,7 @@ class FunctionEstimateInfill(SurrogateInfill):
 class PoFInfill(SurrogateInfill):
     """Probability of Feasibility infill criterion base, for handling constraints using the PoF criterion"""
 
-    def __init__(self, min_pof: float = .95):
+    def __init__(self, min_pof: float = .5):
         self.min_pof = min_pof
         super(PoFInfill, self).__init__()
 
