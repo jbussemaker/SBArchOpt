@@ -15,6 +15,14 @@ def test_mueller_08():
     run_test_no_hierarchy(Mueller08())
 
 
+def test_alimo():
+    run_test_no_hierarchy(Alimo())
+
+
+def test_hc_branin():
+    run_test_no_hierarchy(HCBranin())
+
+
 def test_hier_rosenbrock_hc():
     run_test_hierarchy(MOHierarchicalRosenbrockHC(), 1.5)
 

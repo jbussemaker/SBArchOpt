@@ -21,12 +21,13 @@ import numpy as np
 from pymoo.core.variable import Real
 from sb_arch_opt.problems.hierarchical import *
 from sb_arch_opt.problems.problems_base import *
+from sb_arch_opt.problems.continuous import Branin
 from sb_arch_opt.problem import ArchOptProblemBase
 from sb_arch_opt.sampling import RepairedLatinHypercubeSampling
 from pymoo.problems.single.ackley import Ackley
 
-__all__ = ['SampledFailureRateMixin', 'Mueller01', 'Mueller02', 'Mueller08', 'Alimo', 'MOHierarchicalRosenbrockHC',
-           'HCMOHierarchicalTestProblem']
+__all__ = ['SampledFailureRateMixin', 'Mueller01', 'Mueller02', 'Mueller08', 'Alimo', 'HCBranin',
+           'MOHierarchicalRosenbrockHC', 'HCMOHierarchicalTestProblem']
 
 
 class SampledFailureRateMixin(ArchOptProblemBase):
@@ -149,6 +150,21 @@ class Alimo(SampledFailureRateMixin, NoHierarchyProblemBase):
         f_out[cx >= 0, :] = np.nan
 
 
+class HCBranin(SampledFailureRateMixin, Branin):
+    """
+    Modified Branin problem with infeasibility disk, as used in:
+    Gelbart et al., "Bayesian optimization with unknown constraints", arXiv preprint arXiv:1403.5607 (2014).
+    """
+
+    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
+                       h_out: np.ndarray, *args, **kwargs):
+        super()._arch_evaluate(x, is_active_out, f_out, g_out, h_out, *args, **kwargs)
+
+        # The original function is scaled differently
+        c = (x[:, 0]-.5)**2 + (x[:, 1]-.5)**2
+        f_out[c > .22, :] = np.nan
+
+
 class MOHierarchicalRosenbrockHC(SampledFailureRateMixin, MOHierarchicalRosenbrock):
     """
     Adaptation of the multi-objective hierarchical Rosenbrock problem, that sets points with a large constraint
@@ -209,4 +225,6 @@ if __name__ == '__main__':
     # Mueller08().plot_design_space()
 
     # Alimo().print_stats()
-    Alimo().plot_design_space()
+    # Alimo().plot_design_space()
+    HCBranin().print_stats()
+    HCBranin().plot_design_space()
