@@ -30,7 +30,7 @@ Architecture optimization aspects and mitigation measures:
 
 | Aspect                  | Problem-level                                                  | MOEA                                       | SBO                                                                                                                  |
 |-------------------------|----------------------------------------------------------------|--------------------------------------------|----------------------------------------------------------------------------------------------------------------------|
-| Mixed-discrete (MD)     | Convert float to int; high distance correlation                | Support discrete operations                | Cont. relaxation; specific kernels; dummy coding; force new infill point selection                                   |
+| Mixed-discrete (MD)     | Convert float to int; high distance correlation                | Support discrete operations                | Cont. surrogates; specific kernels; one-hot encoding; force new infill point selection                               |
 | Multi-objective (MO)    |                                                                | Prioritize w.r.t. distance to Pareto front | Multi-objective infill criteria                                                                                      |
 | Hierarchical (HIER)     | Imputation; activeness; design space def; low imputation ratio | Impute during sampling, evaluation         | Impute during sampling, evaluation, infill search; hierarchical kernels; design space def; discard non-canonical DVs |
 | Hidden constraints (HC) | Catch errors and return NaN                                    | Extreme barrier approach                   | Process NaNs; predict hidden constraints area                                                                        |
@@ -41,9 +41,9 @@ Architecture optimization measure implementation status
 
 | Aspect: measure                        | pymoo     | Simple SBO | SEGOMOE   | BoTorch (Ax) | Trieste   |
 |----------------------------------------|-----------|------------|-----------|--------------|-----------|
-| MD: continuous relaxation              |           | SBArchOpt  | N         | Lib          | Lib       |
+| MD: continuous surrogates              |           | SBArchOpt  | N         | Lib          | Lib       |
 | MD: kernels                            |           | N          | Lib       |              | N         |
-| MD: dummy coding                       |           | N          | Lib       |              | N         |
+| MD: one-hot encoding                   |           | N          | Lib       |              | N         |
 | MD: force new infill point selection   |           | SBArchOpt  | N         | N            | N         |
 | MO: multi-objective infill             |           | SBArchOpt  | Lib       | Lib          | Lib       |
 | HIER: imputation during sampling       | SBArchOpt | SBArchOpt  | SBArchOpt | N            | NbP       |
