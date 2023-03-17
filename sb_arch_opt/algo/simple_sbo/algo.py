@@ -224,45 +224,51 @@ class SBOInfill(InfillCriterion):
     def _build_model(self, _: Population):
         """Update the underlying model. New population is given, total population is available from self.total_pop"""
 
-        # Get input training points (x) and normalize
+        # Get input and output training points
         x = self.total_pop.get('X')
+        y = self.total_pop.get('F')
+        if self.problem.n_ieq_constr > 0:
+            y = np.column_stack([y, self.total_pop.get('G')])
+
+        x, y = self._get_xy_train(x, y)
+
+        # Normalize training values
         x_norm = self._normalize(x)
 
-        # Get output training points (y, from f and g) and normalize
-        f_real = self.total_pop.get('F')
-        f_is_invalid = ~np.isfinite(f_real)
-        f_real[f_is_invalid] = np.nan
+        n_obj = self.problem.n_obj
+        f_norm, self.y_train_min, self.y_train_max = self._normalize_y(y[:, :n_obj])
+        self.y_train_centered = [False]*f_norm.shape[1]
+        y_norm = f_norm
 
-        f, self.y_train_min, self.y_train_max = self._normalize_y(f_real)
-        self.y_train_centered = [False]*f.shape[1]
-
-        g = np.zeros((x.shape[0], 0))
-        if self.problem.n_constr > 0:
-            g_real = self.total_pop.get('G')
-            g_is_invalid = ~np.isfinite(g_real)
-            g_real[g_is_invalid] = np.nan
-
-            g, g_min, g_max = self._normalize_y(g_real, keep_centered=True)
+        if self.problem.n_ieq_constr > 0:
+            g_norm, g_min, g_max = self._normalize_y(y[:, n_obj:], keep_centered=True)
+            y_norm = np.column_stack([y_norm, g_norm])
 
             self.y_train_min = np.append(self.y_train_min, g_min)
             self.y_train_max = np.append(self.y_train_max, g_max)
-            self.y_train_centered += [True]*g.shape[1]
-
-        # Replace invalid points with the current maximum (i.e. worst) values known
-        f_is_nan = np.any(np.isnan(f), axis=1)
-        f[f_is_nan] = np.nanmax(f, axis=0)
-
-        g_is_nan = np.any(np.isnan(g), axis=1)
-        g[g_is_nan] = 1.
-
-        y = np.append(f, g, axis=1)
+            self.y_train_centered += [True]*g_norm.shape[1]
 
         # Train the model
         self.x_train = x_norm
-        self.y_train = y
+        self.y_train = y_norm
 
         self.pf_estimate = None
         self._train_model()
+
+    def _get_xy_train(self, x: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        """Replace failed points with current worst values"""
+        is_failed = np.any(~np.isfinite(y), axis=1)
+        if ~np.any(is_failed):
+            return x, y
+
+        x = x.copy()
+        y = y.copy()
+
+        n_obj = self.problem.n_obj
+        y[:, :n_obj] = np.nanmax(y[:, :n_obj], axis=0)  # f
+        y[:, n_obj:] = 1.  # g
+
+        return x, y
 
     def _train_model(self):
         s = timeit.default_timer()
