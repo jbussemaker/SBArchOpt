@@ -16,6 +16,7 @@ Contact: jasper.bussemaker@dlr.de
 """
 import itertools
 import numpy as np
+from typing import Optional
 from scipy.spatial import distance
 
 from pymoo.core.repair import Repair
@@ -151,7 +152,21 @@ class RepairedLatinHypercubeSampling(LatinHypercubeSampling):
 
 
 class RepairedRandomSampling(FloatRandomSampling):
-    """Repaired float sampling with architecture repair"""
+    """
+    Repaired float sampling with architecture repair. There are two ways the random sampling is done:
+    A: Generate and select:
+       1. Generate the Cartesian product of all discrete values
+       2. Repair/impute design vectors
+       3. Randomly select from remaining design vectors
+       4. Randomize continuous variables
+       5. Repair again to impute continuous variables
+    B: One-shot
+       1. Randomly select design variable values
+       2. Repair/impute design vectors
+
+    The first way yields better results, as there is an even chance of selecting every valid discrete design vector,
+    however it takes more memory and might be too much for very large design spaces.
+    """
 
     _n_comb_gen_all_max = 100e3
 
@@ -162,45 +177,62 @@ class RepairedRandomSampling(FloatRandomSampling):
         super().__init__()
 
     def _do(self, problem, n_samples, **kwargs):
-        # Get values to be sampled for each design variable
-        opt_values = RepairedExhaustiveSampling.get_exhaustive_sample_values(problem, n_cont=kwargs.get('n_cont', 5))
-        is_cont_mask = RepairedExhaustiveSampling.get_is_cont_mask(problem)
-        xl, xu = problem.xl, problem.xu
+        # Get Cartesian product of all discrete design variables (only available if design space is not too large)
+        pop = self.get_repaired_cartesian_product(problem, self._repair)
+
+        return self.randomly_sample(problem, n_samples, self._repair, pop)
+
+    @classmethod
+    def get_repaired_cartesian_product(cls, problem: Problem, repair: Repair) -> Optional[Population]:
+        # Get values to be sampled for each discrete design variable
+        opt_values = RepairedExhaustiveSampling.get_exhaustive_sample_values(problem, n_cont=1)
 
         # Get the number of samples in the cartesian product
         n_opt_values = int(np.prod([len(values) for values in opt_values], dtype=float))
 
         # If less than some threshold, sample all and then select (this gives a better distribution)
-        if n_opt_values < self._n_comb_gen_all_max:
+        if n_opt_values < cls._n_comb_gen_all_max:
             try:
                 # Get cartesian product of all values
                 x = np.array([np.array(dv) for dv in itertools.product(*opt_values)])
 
                 # Repair sampled population and remove duplicates
                 pop = Population.new(X=x)
-                pop = self._repair.do(problem, pop)
-                pop = RepairedExhaustiveSampling.safe_remove_duplicates(pop)
-
-                # Randomize continuous variables
-                x = pop.get('X')
-                if np.any(is_cont_mask):
-                    for i_dv, is_cont in enumerate(is_cont_mask):
-                        if is_cont:
-                            x[:, i_dv] = (np.random.random((x.shape[0],)))*(xu[i_dv]-xl[i_dv])+xl[i_dv]
-
-                    pop = self._repair.do(problem, Population.new(X=x))
-                    x = pop.get('X')
-
-                # Randomly select values
-                if n_samples < x.shape[0]:
-                    i_x = np.random.choice(x.shape[0], size=n_samples, replace=False)
-                    x = x[i_x, :]
-                return x
+                pop = repair.do(problem, pop)
+                return LargeDuplicateElimination().do(pop)
 
             except MemoryError:
                 pass
 
+    @staticmethod
+    def randomly_sample(problem, n_samples, repair: Repair, pop: Optional[Population]):
+        is_cont_mask = RepairedExhaustiveSampling.get_is_cont_mask(problem)
+        xl, xu = problem.xl, problem.xu
+
+        # If the population of all available discrete design vectors is available, sample from there
+        if pop is not None:
+            # Randomly select values
+            x = pop.get('X')
+            if n_samples < x.shape[0]:
+                i_x = np.random.choice(x.shape[0], size=n_samples, replace=False)
+            else:
+                i_x = np.sort(np.concatenate([
+                    np.arange(x.shape[0]), np.random.choice(x.shape[0], size=n_samples-x.shape[0], replace=True)]))
+            x = x[i_x, :]
+
+            # Randomize continuous variables
+            if np.any(is_cont_mask):
+                for i_dv, is_cont in enumerate(is_cont_mask):
+                    if is_cont:
+                        x[:, i_dv] = (np.random.random((x.shape[0],)))*(xu[i_dv]-xl[i_dv])+xl[i_dv]
+
+                pop = repair.do(problem, Population.new(X=x))
+                x = pop.get('X')
+
+            return x
+
         # If above the threshold (or a memory error occurred), sample randomly
+        opt_values = RepairedExhaustiveSampling.get_exhaustive_sample_values(problem, n_cont=1)
         x = np.empty((n_samples, problem.n_var))
         for i_dv in range(problem.n_var):
             if is_cont_mask[i_dv]:
@@ -209,7 +241,7 @@ class RepairedRandomSampling(FloatRandomSampling):
                 x[:, i_dv] = np.random.choice(opt_values[i_dv], (n_samples,))
 
         # Repair
-        x = self._repair.do(problem, Population.new(X=x)).get("X")
+        x = repair.do(problem, Population.new(X=x)).get("X")
         return x
 
     def __repr__(self):
