@@ -734,12 +734,6 @@ class CombinatorialHierarchicalMetaProblem(HierarchyProblemBase):
             raise ValueError('Not enough parts to select from: increase n_part or reduce n_parallel')
 
         self._n_sel_dv = n_base_vars = int(np.ceil(np.log(n_sel_opts)/np.log(cat_base)))
-        cat_sel_n_opts = np.ones((n_base_vars,), dtype=int)*cat_base
-        if n_sel_opts <= cat_base:
-            cat_sel_n_opts[0] = n_sel_opts
-        else:
-            cat_sel_n_opts[0] = int(np.ceil(n_sel_opts/(cat_base**(n_base_vars-1))))
-
         self._dv_last = dv_last = self.base_repr_int(n_sel_opts-1, cat_base)
         i_inactive = np.where(dv_last == 0)[0]
         dv_inactive_key = None
@@ -748,6 +742,8 @@ class CombinatorialHierarchicalMetaProblem(HierarchyProblemBase):
             dv_inactive_key = (i_inactive, left_side_values)
         self._dv_inactive_key = dv_inactive_key
 
+        cat_sel_n_opts = np.ones((n_base_vars,), dtype=int) * cat_base
+        cat_sel_n_opts[0] = dv_last[0]+1
         for _ in range(n_parallel):
             des_vars += [Choice(options=list(range(n_opts))) for n_opts in cat_sel_n_opts]
 

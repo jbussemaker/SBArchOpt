@@ -71,8 +71,8 @@ class RepairedExhaustiveSampling(Sampling):
         # Create and repair the sampled design vectors in batches
         n_batch = 1000
         x_later = x
-        x_repaired = []
-        is_active_repaired = []
+        x_repaired = x[:0, :]
+        is_active_repaired = np.zeros(x_repaired.shape, dtype=bool)
         while x_later.shape[0] > 0:
             # Repair current batch
             x_repair = x_later[:n_batch, :]
@@ -84,17 +84,23 @@ class RepairedExhaustiveSampling(Sampling):
             else:
                 is_active = np.ones(x_repair.shape, dtype=bool)
 
+            # Remove duplicates
             is_dup_mask = LargeDuplicateElimination.eliminate(x_repair)
             x_repair = x_repair[~is_dup_mask, :]
             is_active = is_active[~is_dup_mask, :]
-            x_repaired.append(x_repair)
+
+            # Remove duplicates compared to previous
+            is_dup_mask = LargeDuplicateElimination.eliminate(x_repair, x_repaired)
+            x_repair = x_repair[~is_dup_mask, :]
+            is_active = is_active[~is_dup_mask, :]
+
+            x_repaired = np.row_stack([x_repaired, x_repair])
 
             # If we also have activeness information, remove duplicate design vectors from to-be-repaired vectors
-            if is_active is None or x_later.shape[0] == 0:
-                is_active_repaired.append(is_active)
-                continue
             is_active = is_active.astype(bool)
-            is_active_repaired.append(is_active)
+            is_active_repaired = np.row_stack([is_active_repaired, is_active])
+            if x_later.shape[0] == 0:
+                continue
 
             for i, xi in enumerate(x_repair):
                 is_act_i = is_active[i, :]
