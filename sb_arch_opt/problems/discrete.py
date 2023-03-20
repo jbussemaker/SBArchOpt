@@ -267,6 +267,7 @@ if __name__ == '__main__':
     Halstrup04().print_stats()
 
     # MDBranin().plot_pf()
+    MDBranin().plot_design_space()
     # AugmentedMDBranin().plot_pf()
     # MDGoldstein().plot_pf()
     # MunozZunigaToy().plot_pf()

@@ -18,6 +18,7 @@ This test suite contains a set of mixed-discrete, multi-objective, constrained, 
 subject to hidden constraints.
 """
 import numpy as np
+from deprecated import deprecated
 from scipy.spatial import distance
 from pymoo.core.variable import Real
 from sb_arch_opt.problems.hierarchical import *
@@ -248,6 +249,7 @@ class MOHierarchicalRosenbrockHC(SampledFailureRateMixin, MOHierarchicalRosenbro
         g_out[:, 0] = g[:, 0]
 
 
+@deprecated(reason='Not realistic (see HierarchicalMetaProblemBase docstring)')
 class HCMOHierarchicalTestProblem(SampledFailureRateMixin, HierarchicalMetaProblemBase):
     """
     Multi-objective hierarchical test problem with hidden constraints:

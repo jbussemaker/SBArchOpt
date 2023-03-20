@@ -46,3 +46,11 @@ def test_hier_test_problem():
 
 def test_jenatton():
     run_test_hierarchy(Jenatton(), 2)
+
+
+def test_comb_hier_branin():
+    run_test_hierarchy(CombHierBranin(), 5.56)
+
+
+def test_hier_mo_rosenbrock():
+    run_test_hierarchy(CombHierMORosenbrock(), 2.23, check_n_valid=False)

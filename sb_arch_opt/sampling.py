@@ -168,7 +168,7 @@ class RepairedRandomSampling(FloatRandomSampling):
     however it takes more memory and might be too much for very large design spaces.
     """
 
-    _n_comb_gen_all_max = 100e3
+    _n_comb_gen_all_max = 10e3
 
     def __init__(self, repair: Repair = None):
         if repair is None:

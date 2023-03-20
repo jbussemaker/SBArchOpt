@@ -17,8 +17,12 @@ Contact: jasper.bussemaker@dlr.de
 This test suite contains a set of mixed-discrete, constrained, hierarchical, multi-objective problems.
 """
 import enum
+import string
+import itertools
 import numpy as np
 from typing import *
+from deprecated import deprecated
+from sb_arch_opt.problems.md_mo import *
 from sb_arch_opt.problems.discrete import *
 from sb_arch_opt.problems.problems_base import *
 from pymoo.core.variable import Real, Integer, Choice
@@ -26,7 +30,8 @@ from pymoo.util.ref_dirs import get_reference_directions
 
 __all__ = ['HierarchyProblemBase', 'HierarchicalGoldstein', 'HierarchicalRosenbrock', 'ZaeffererHierarchical',
            'ZaeffererProblemMode', 'MOHierarchicalGoldstein', 'MOHierarchicalRosenbrock', 'HierarchicalMetaProblemBase',
-           'MOHierarchicalTestProblem', 'Jenatton']
+           'MOHierarchicalTestProblem', 'Jenatton', 'CombinatorialHierarchicalMetaProblem', 'CombHierBranin',
+           'CombHierMORosenbrock']
 
 
 class HierarchyProblemBase(ArchOptTestProblemBase):
@@ -441,6 +446,7 @@ class ZaeffererHierarchical(HierarchyProblemBase):
         return f'{self.__class__.__name__}(b={self.b}, c={self.c}, d={self.d})'
 
 
+@deprecated(reason='Not realistic (see docstring)')
 class HierarchicalMetaProblemBase(HierarchyProblemBase):
     """
     Meta problem used for increasing the amount of design variables of an underlying mixed-integer/hierarchical problem.
@@ -451,6 +457,11 @@ class HierarchicalMetaProblemBase(HierarchyProblemBase):
     front for each objective dimension should be provided (f_par_range).
 
     Note that each map will correspond to a new part of the Pareto front.
+
+    DEPRECATED: this class and derived problems should not be used anymore, as they don't represent realistic
+    hierarchical problem behavior:
+    - One or more design variables might have options that are never selected
+    - The spread between option occurrence of design variables is not realistic
     """
 
     def __init__(self, problem: ArchOptTestProblemBase, n_rep=2, n_maps=4, f_par_range=None):
@@ -568,10 +579,15 @@ class HierarchicalMetaProblemBase(HierarchyProblemBase):
                f'f_par_range={self.f_par_range})'
 
 
+@deprecated(reason='Not realistic (see HierarchicalMetaProblemBase docstring)')
 class MOHierarchicalTestProblem(HierarchicalMetaProblemBase):
     """
     Multi-objective hierarchical test problem based on the hierarchical rosenbrock problem. Increased number of design
     variables and increased sparseness (approx. 42% of design variables are active in a DOE).
+
+    This is the analytical test problem used in:
+    J.H. Bussemaker et al. "Effectiveness of Surrogate-Based Optimization Algorithms for System Architecture
+    Optimization." AIAA AVIATION 2021 FORUM. 2021. DOI: 10.2514/6.2021-3095
     """
 
     def __init__(self):
@@ -631,6 +647,264 @@ class Jenatton(HierarchyProblemBase):
         is_active[(x[:, 0] == 1) & (x[:, 2] == 1), 5] = False  # x3 = 1: x6 inactive
 
 
+class CombinatorialHierarchicalMetaProblem(HierarchyProblemBase):
+    """
+    Meta problem that turns any (mixed-discrete, multi-objective) problem into a realistically-behaving hierarchical
+    optimization problem:
+    - The problem is separated into n_parts per dimension:
+      - Continuous variables are simply separated linearly
+      - Discrete variables are separated such that there are at least 2 options in each part
+    - Categorical design variables are added to select n_parallel subparts to apply divided variables to
+      - Parts are selected ordinally (i.e. not per dimension, but from "one big list"); orders are randomized
+      - For each subpart:
+        - One or more original dimensions are deactivated
+        - The selection variables are encoded as some base in order to limit the amount of options per variable
+      - Outputs are calculated from the mean of the respective subparts
+      - Between subparts it is ensured that the next selected subpart is always higher (non-replaceable) than the
+        previous, as selecting the same subparts in different orders gives the same outputs
+
+    Note: the underlying problem should not be hierarchical!
+    """
+
+    _str_lookup = {char: i for i, char in enumerate(string.digits+string.ascii_uppercase)}
+
+    def __init__(self, problem: ArchOptTestProblemBase, n_parts=2, n_parallel=2, cat_base=4):
+        self._problem = problem
+        self._n_parts = n_parts
+        self._n_parallel = n_parallel
+        self._cat_base = cat_base
+
+        # Separate the underlying design space in different parts
+        np.random.seed(problem.n_var * problem.n_obj * n_parts * n_parallel * cat_base)
+        parts = []
+        is_cont_mask, xl, xu = problem.is_cont_mask, problem.xl, problem.xu
+        div_bounds = 1/n_parts
+        n_opts_max = np.zeros((problem.n_var,), dtype=int)
+        for i_div in itertools.product(*[range(n_parts) for _ in range(problem.n_var)]):
+            part = []
+            for i_dv, i in enumerate(i_div):
+                if is_cont_mask[i_dv]:
+                    # Map continuous variable to a subrange
+                    xl_i, xu_i = xl[i_dv], xu[i_dv]
+                    bounds = tuple(np.array([i, i+1])*div_bounds*(xu_i-xl_i)+xl_i)
+                    part.append((False, bounds))
+
+                else:
+                    # Map discrete variable to a subrange that exists of at least 2 options
+                    n_opts = int(xu[i_dv]+1)
+                    n_opt_per_div = max(2, np.ceil(n_opts / n_parts))
+                    i_opts = np.arange(n_opt_per_div*i, n_opt_per_div*(i+1))
+
+                    # Ensure that no options outside the bounds can be selected
+                    i_opts = tuple(i_opts[i_opts < n_opts])
+                    if len(i_opts) == 0:
+                        # If too far outside the bounds, retain the last option only
+                        i_opts = (n_opts-1,)
+
+                    # Track the maximum nr of options
+                    if len(i_opts) > n_opts_max[i_dv]:
+                        n_opts_max[i_dv] = len(i_opts)
+
+                    part.append((True, i_opts))
+            parts.append(part)
+
+        # Shuffle parts
+        self._parts = parts = [parts[i] for i in np.random.permutation(np.arange(len(parts)))]
+
+        # Define which mapped design variables are active for each part
+        self._parts_is_active = parts_is_active = np.ones((len(parts), problem.n_var), dtype=bool)
+        osc_period = max(5, int(len(parts)/5))
+        n_inactive = np.floor(problem.n_var*(.5-.5*np.cos(osc_period*np.arange(len(parts))/np.pi))).astype(int)
+        for i, part in enumerate(parts):
+            # Discrete variables with one option only are inactive
+            for i_dv, (is_discrete, settings) in enumerate(part):
+                if is_discrete and len(settings) < 2:
+                    parts_is_active[i, i_dv] = False
+
+            # Deactivate variables based on an oscillating equation
+            parts_is_active[i, parts_is_active.shape[1]-n_inactive[i]:] = False
+
+        # Define selection design variables
+        # They are related to a non-replacing unordered combining problem, where we take n_parallel from len(parts)
+        # We encode this as n_parallel design variables with len(parts)-(n_parallel-1) options
+        # Each of these design variables is further encoded in a cat_base base representation
+        des_vars = []
+        self._sel_n_opts = n_sel_opts = len(parts)-(n_parallel-1)
+        if n_sel_opts < 2:
+            raise ValueError('Not enough parts to select from: increase n_part or reduce n_parallel')
+
+        self._n_sel_dv = n_base_vars = int(np.ceil(np.log(n_sel_opts)/np.log(cat_base)))
+        cat_sel_n_opts = np.ones((n_base_vars,), dtype=int)*cat_base
+        if n_sel_opts <= cat_base:
+            cat_sel_n_opts[0] = n_sel_opts
+        else:
+            cat_sel_n_opts[0] = int(np.ceil(n_sel_opts/(cat_base**(n_base_vars-1))))
+
+        self._dv_last = dv_last = self.base_repr_int(n_sel_opts-1, cat_base)
+        i_inactive = np.where(dv_last == 0)[0]
+        dv_inactive_key = None
+        if len(i_inactive) > 0:
+            left_side_values = dv_last[:i_inactive[-1]+1]
+            dv_inactive_key = (i_inactive, left_side_values)
+        self._dv_inactive_key = dv_inactive_key
+
+        for _ in range(n_parallel):
+            des_vars += [Choice(options=list(range(n_opts))) for n_opts in cat_sel_n_opts]
+
+        # Add mapped design variables
+        for i_dv, des_var in enumerate(problem.des_vars):
+            if isinstance(des_var, Real):
+                des_vars.append(Real(bounds=des_var.bounds))
+            elif isinstance(des_var, Integer):
+                des_vars.append(Integer(bounds=(0, n_opts_max[i_dv]-1)))
+            elif isinstance(des_var, Choice):
+                des_vars.append(Choice(options=list(range(n_opts_max[i_dv]))))
+            else:
+                raise RuntimeError(f'Design variable type not supported: {des_var!r}')
+
+        super().__init__(des_vars, n_obj=problem.n_obj, n_ieq_constr=problem.n_ieq_constr,
+                         n_eq_constr=problem.n_eq_constr)
+
+        self.__correct_output = {}
+
+    @classmethod
+    def base_repr_int(cls, value: int, base: int) -> np.ndarray:
+        return np.array([cls._str_lookup[char] for char in
+                         (np.binary_repr(value) if base == 2 else np.base_repr(value, base))], dtype=int)
+
+    def get_n_valid_discrete(self) -> int:
+        # Get nr of combinations for each part
+        parts_is_active = self._parts_is_active
+        n_part_combs = np.ones(parts_is_active.shape, dtype=int)
+        for i, part in enumerate(self._parts):
+            for i_dv, (is_discrete, settings) in enumerate(part):
+                if not parts_is_active[i, i_dv] or not is_discrete:
+                    continue
+                n_part_combs[i, i_dv] = len(settings)
+
+        # Get nr of combinations for each selection
+        n_combinations = 0
+        for i_parts in itertools.combinations(list(range(len(self._parts))), self._n_parallel):
+            n_combs = np.prod(np.max(n_part_combs[i_parts, :], axis=0))
+            n_combinations += n_combs
+        return int(n_combinations)
+
+    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
+                       h_out: np.ndarray, *args, **kwargs):
+        # Correct and impute
+        self._correct_x_impute(x, is_active_out)
+        i_part_selected = self.__correct_output['i_part_sel']
+
+        parts = self._parts
+        parts_is_active = self._parts_is_active
+        n_dv_map = self._n_sel_dv*self._n_parallel
+        xl, xu = self._problem.xl, self._problem.xu
+        for i, i_parts in enumerate(i_part_selected):
+            # Map design variables to underlying problem
+            x_parts = []
+            for j, i_part in enumerate(i_parts):
+                is_active_i = parts_is_active[i_part, :]
+                x_part = x[i, n_dv_map:].copy()
+                for i_dv, (is_discrete, settings) in enumerate(parts[i_part]):
+                    if is_discrete:
+                        if is_active_i[i_dv]:
+                            x_part[i_dv] = settings[x_part[i_dv]] if x_part[i_dv] >= len(settings) else settings[-1]
+                        else:
+                            x_part[i_dv] = 0
+                    else:
+                        bnd = settings
+                        if is_active_i[i_dv]:
+                            x_part[i_dv] = bnd[0]+(bnd[1]-bnd[0])*((x_part[i_dv]-xl[i_dv])/(xu[i_dv]-xl[i_dv]))
+                        else:
+                            x_part[i_dv] = .5*np.sum(bnd)
+                x_parts.append(x_part)
+
+            # Evaluate underlying problem
+            out = self._problem.evaluate(np.array(x_parts), return_as_dictionary=True)
+            if np.any(out['is_active'] == 0):
+                raise RuntimeError('Underlying problem should not be hierarchical!')
+
+            # Outputs are the means of the selected parts
+            f_out[i, :] = np.mean(out['F'], axis=0)
+            if 'G' in out:
+                g_out[i, :] = np.mean(out['G'], axis=0)
+            if 'H' in out:
+                h_out[i, :] = np.mean(out['H'], axis=0)
+
+    def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
+        n_parallel = self._n_parallel
+        cat_base = self._cat_base
+        sel_n_opts = self._sel_n_opts
+        n_sel_dv = self._n_sel_dv
+        dv_inactive_key = self._dv_inactive_key
+
+        # Decode and correct part selection design variables
+        i_part_selected = np.zeros((x.shape[0], n_parallel), dtype=int)
+        for i_parallel in range(n_parallel):
+            x_sel = x[:, i_parallel*n_sel_dv:(i_parallel+1)*n_sel_dv]
+            for i, x_sel_i in enumerate(x_sel):
+                # Decode from base representation
+                i_part_selected[i, i_parallel] = np.sum((cat_base**np.arange(len(x_sel_i)))*x_sel_i[::-1])
+
+        # Bound to max selection index
+        i_part_selected[i_part_selected >= sel_n_opts] = sel_n_opts-1
+
+        # Correct selected parts such that they are increasing (or equal) from left to right
+        # We start in the middle to get a better distribution when randomly sampling design variable values
+        i_center = int(np.floor(.5*(n_parallel-1)))
+
+        for i_parallel in reversed(range(0, i_center)):
+            for i, i_part in enumerate(i_part_selected[:, i_parallel]):
+                next_i_part = i_part_selected[i, i_parallel+1]
+                if i_part > next_i_part:
+                    i_part_selected[i, i_parallel] = np.random.choice(np.arange(0, next_i_part+1))
+
+        for i_parallel in range(i_center+1, n_parallel):
+            for i, i_part in enumerate(i_part_selected[:, i_parallel]):
+                prev_i_part = i_part_selected[i, i_parallel-1]
+                if i_part < prev_i_part:
+                    i_part_selected[i, i_parallel] = np.random.choice(np.arange(prev_i_part, sel_n_opts))
+
+        # Encode for imputation, and set activeness
+        for i_parallel in range(n_parallel):
+            x_sel = x[:, i_parallel*n_sel_dv:(i_parallel+1)*n_sel_dv]
+            is_act_sel = is_active[:, i_parallel*n_sel_dv:(i_parallel+1)*n_sel_dv]
+            for i, i_part in enumerate(i_part_selected[:, i_parallel]):
+                x_sel_i = self.base_repr_int(i_part, cat_base)
+                x_sel[i, :] = 0
+                x_sel[i, -len(x_sel_i):] = x_sel_i
+                x_sel_i = x_sel[i, :]
+
+                if dv_inactive_key is not None:
+                    i_inactive, left_side_values = dv_inactive_key
+                    if np.all(x_sel_i[:len(left_side_values)] == left_side_values):
+                        is_act_sel[i, i_inactive] = False
+
+        # Move each selection index one up, because part selections are non-replaceable
+        i_part_selected += np.arange(n_parallel)
+
+        # Correct and set activeness
+        n_dv_map = n_sel_dv*n_parallel
+        part_is_active = self._parts_is_active
+        for i, i_parts in enumerate(i_part_selected):
+            is_active_i = np.max(part_is_active[i_parts, :], axis=0)
+            is_active[i, n_dv_map:] = is_active_i
+
+        self.__correct_output = {'i_part_sel': i_part_selected}
+
+
+class CombHierBranin(CombinatorialHierarchicalMetaProblem):
+
+    def __init__(self):
+        super().__init__(MDBranin(), n_parts=2, n_parallel=2, cat_base=3)
+
+
+class CombHierMORosenbrock(CombinatorialHierarchicalMetaProblem):
+
+    def __init__(self):
+        super().__init__(MDMORosenbrock(), n_parts=2, n_parallel=1, cat_base=3)
+
+
 if __name__ == '__main__':
     # HierarchicalGoldstein().print_stats()
     # MOHierarchicalGoldstein().print_stats()
@@ -644,10 +918,15 @@ if __name__ == '__main__':
 
     # ZaeffererHierarchical.from_mode(ZaeffererProblemMode.A_OPT_INACT_IMP_PROF_UNI).print_stats()
     # ZaeffererHierarchical.from_mode(ZaeffererProblemMode.A_OPT_INACT_IMP_PROF_UNI).plot_pf()
-    ZaeffererHierarchical.from_mode(ZaeffererProblemMode.A_OPT_INACT_IMP_PROF_UNI).plot_design_space()
+    # ZaeffererHierarchical.from_mode(ZaeffererProblemMode.A_OPT_INACT_IMP_PROF_UNI).plot_design_space()
 
     # MOHierarchicalTestProblem().print_stats()
     # MOHierarchicalTestProblem().plot_pf()
 
     # Jenatton().print_stats()
     # # Jenatton().plot_pf()
+
+    # CombHierBranin().print_stats()
+    # CombHierBranin().plot_pf()
+    CombHierMORosenbrock().print_stats()
+    # CombHierMORosenbrock().plot_pf()

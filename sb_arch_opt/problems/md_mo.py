@@ -24,7 +24,7 @@ from sb_arch_opt.problems.continuous import *
 from sb_arch_opt.problems.problems_base import *
 
 __all__ = ['MOHimmelblau', 'MDMOHimmelblau', 'DMOHimmelblau', 'MOGoldstein', 'MDMOGoldstein',
-           'DMOGoldstein', 'MOZDT1', 'MDZDT1', 'DZDT1']
+           'DMOGoldstein', 'MOZDT1', 'MDZDT1', 'DZDT1', 'MDZDT1Small', 'MDZDT1Mid', 'MORosenbrock', 'MDMORosenbrock']
 
 
 class MOHimmelblau(NoHierarchyProblemBase):
@@ -83,6 +83,42 @@ class DMOGoldstein(MixedDiscretizerProblemBase):
         super().__init__(MOGoldstein())
 
 
+class MORosenbrock(NoHierarchyProblemBase):
+    """Multi-objective version of the Rosenbrock problem"""
+
+    def __init__(self):
+        self._rosenbrock = problem = Rosenbrock()
+        des_vars = problem.des_vars
+        super().__init__(des_vars, n_obj=2)
+
+    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
+                       h_out: np.ndarray, *args, **kwargs):
+        out = self._rosenbrock.evaluate(x, return_as_dictionary=True)
+        f_out[:, 0] = f1 = out['F'][:, 0]
+        f_out[:, 1] = .1*(np.abs((6000-f1)/40)**2 + np.sum((x[:, :4]+1)**2*2000, axis=1))
+
+
+class MDMORosenbrock(MixedDiscretizerProblemBase):
+    """Mixed-discrete multi-objective Rosenbrock problem"""
+
+    def __init__(self):
+        super().__init__(MORosenbrock(), n_opts=4, n_vars_int=5)
+
+
+class MDZDT1Small(MixedDiscretizerProblemBase):
+    """Mixed-discrete version of the multi-objective ZDT1 test problem"""
+
+    def __init__(self):
+        super().__init__(ZDT1(n_var=12), n_opts=3, n_vars_int=6)
+
+
+class MDZDT1Mid(MixedDiscretizerProblemBase):
+    """Mixed-discrete version of the multi-objective ZDT1 test problem"""
+
+    def __init__(self):
+        super().__init__(ZDT1(n_var=20), n_opts=3, n_vars_int=10)
+
+
 class MOZDT1(NoHierarchyWrappedProblem):
     """Wrapper for ZDT1 test problem"""
 
@@ -118,13 +154,20 @@ if __name__ == '__main__':
     # MDMOGoldstein().print_stats()
     # MDMOGoldstein().plot_design_space()
     # DMOGoldstein().print_stats()
-    DMOGoldstein().plot_design_space()
+    # DMOGoldstein().plot_design_space()
     # # MOGoldstein().plot_pf()
     # # MDMOGoldstein().plot_pf()
     # DMOGoldstein().plot_pf()
 
+    MORosenbrock().print_stats()
+    # MORosenbrock().plot_pf()
+    # MDMORosenbrock().print_stats()
+    # MDMORosenbrock().plot_pf()
+
     # MOZDT1().print_stats()
     # MDZDT1().print_stats()
+    # MDZDT1Small().print_stats()
+    # MDZDT1Mid().print_stats()
     # DZDT1().print_stats()
     # # MOZDT1().plot_pf()
     # # MDZDT1().plot_pf()

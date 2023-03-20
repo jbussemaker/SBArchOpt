@@ -55,8 +55,24 @@ def test_discrete_mo_goldstein():
     run_test_no_hierarchy(DMOGoldstein())
 
 
+def test_mo_rosenbrock():
+    run_test_no_hierarchy(MORosenbrock())
+
+
+def test_md_mo_rosenbrock():
+    run_test_no_hierarchy(MDMORosenbrock())
+
+
 def test_mo_zdt1():
     run_test_no_hierarchy(MOZDT1())
+
+
+def test_md_mo_zdt1_small():
+    run_test_no_hierarchy(MDZDT1Small())
+
+
+def test_md_mo_zdt1_mid():
+    run_test_no_hierarchy(MDZDT1Mid())
 
 
 def test_md_mo_zdt1():
