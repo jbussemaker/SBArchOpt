@@ -1,4 +1,5 @@
 import os
+import pytest
 import itertools
 import numpy as np
 from sb_arch_opt.problem import *
@@ -183,6 +184,39 @@ def test_repaired_exhaustive_sampling(problem: ArchOptProblemBase):
     assert x.shape == (7500, 5)
     assert np.unique(x, axis=0).shape[0] == 7500
     problem.evaluate(x)
+
+
+class HierarchicalDummyProblem(ArchOptProblemBase):
+
+    def __init__(self, n=4):
+        self._n = n
+        des_vars = []
+        for _ in range(n):
+            des_vars.append(Binary())
+        for _ in range(n):
+            des_vars.append(Real(bounds=(0, 1)))
+        super().__init__(des_vars)
+
+    def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
+        n = self._n
+        for i, xi in enumerate(x):
+            x_sel = xi[:n]
+            is_one = np.where(x_sel == 1)[0]
+            if len(is_one) > 0:
+                j = is_one[0]
+                is_active[i, j+1:n] = False
+                is_active[i, n+j:] = False
+
+
+def test_repaired_exhaustive_sampling_hierarchical():
+    x = RepairedExhaustiveSampling(n_cont=2).do(HierarchicalDummyProblem(), 0).get('X')
+    assert x.shape == (31, 8)  # 2**(n+1)-1
+
+
+def test_repaired_exhaustive_sampling_hierarchical_large():
+    n = 12
+    x = RepairedExhaustiveSampling(n_cont=2).do(HierarchicalDummyProblem(n=n), 0).get('X')
+    assert x.shape == (2**(n+1)-1, n*2)
 
 
 def test_repaired_lhs_sampling(problem: ArchOptProblemBase):

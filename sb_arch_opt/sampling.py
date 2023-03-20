@@ -53,29 +53,88 @@ class RepairedExhaustiveSampling(Sampling):
     """Exhaustively samples the design space, taking n_cont samples for each continuous variable.
     Can take a long time if the design space is large, and doesn't work well for purely continuous problems."""
 
-    def __init__(self, repair: Repair = None, n_cont=5, remove_duplicates=True):
+    def __init__(self, repair: Repair = None, n_cont=5):
         super().__init__()
         if repair is None:
             repair = ArchOptRepair()
         self._repair = repair
         self._n_cont = n_cont
-        self._remove_duplicates = remove_duplicates
 
     def _do(self, problem: Problem, n_samples, **kwargs):
-        # Get values to be sampled for each design variable
-        opt_values = self.get_exhaustive_sample_values(problem, self._n_cont)
+        # First sample only discrete dimensions
+        opt_values = self.get_exhaustive_sample_values(problem, 1)
+        x = np.array(list(itertools.product(*opt_values)))
 
-        # Get cartesian product of all values
-        x = np.array([np.array(dv) for dv in itertools.product(*opt_values)])
+        is_cont_mask = self.get_is_cont_mask(problem)
+        is_discrete_mask = ~is_cont_mask
 
-        # Create and repair the population
-        pop = Population.new(X=x)
-        pop = self._repair.do(problem, pop)
+        # Create and repair the sampled design vectors in batches
+        n_batch = 1000
+        x_later = x
+        x_repaired = []
+        is_active_repaired = []
+        while x_later.shape[0] > 0:
+            # Repair current batch
+            x_repair = x_later[:n_batch, :]
+            x_later = x_later[x_repair.shape[0]:, :]
 
-        if self._remove_duplicates:
-            pop = self.safe_remove_duplicates(pop)
+            x_repair = self._repair.do(problem, x_repair)
+            if isinstance(self._repair, ArchOptRepair):
+                is_active = self._repair.latest_is_active
+            else:
+                is_active = np.ones(x_repair.shape, dtype=bool)
 
-        return pop.get('X')
+            is_dup_mask = LargeDuplicateElimination.eliminate(x_repair)
+            x_repair = x_repair[~is_dup_mask, :]
+            is_active = is_active[~is_dup_mask, :]
+            x_repaired.append(x_repair)
+
+            # If we also have activeness information, remove duplicate design vectors from to-be-repaired vectors
+            if is_active is None or x_later.shape[0] == 0:
+                is_active_repaired.append(is_active)
+                continue
+            is_active = is_active.astype(bool)
+            is_active_repaired.append(is_active)
+
+            for i, xi in enumerate(x_repair):
+                is_act_i = is_active[i, :]
+                if np.all(is_act_i[is_discrete_mask]):
+                    continue
+
+                # Remove design vectors that are duplicate for the active design variables
+                is_dup_mask = LargeDuplicateElimination.eliminate(x_later[:, is_act_i & is_discrete_mask],
+                                                                  np.array([xi[is_act_i & is_discrete_mask]]))
+
+                x_later = x_later[~is_dup_mask, :]
+                if x_later.shape[0] == 0:
+                    break
+
+        # Expand along continuous dimensions
+        x_discr = np.row_stack(x_repaired)
+        is_act_discr = np.row_stack(is_active_repaired)
+        n_cont = self._n_cont
+        if n_cont > 1 and np.any(is_cont_mask):
+            x = x_discr
+            is_act = is_act_discr
+            for i_dv in np.where(is_cont_mask)[0]:
+                # Expand when continuous variable is active
+                is_act_i = is_act[:, i_dv]
+                n_repeat = np.ones(len(is_act_i), dtype=int)
+                n_repeat[is_act_i] = n_cont
+
+                x = np.repeat(x, n_repeat, axis=0)
+                is_act = np.repeat(is_act, n_repeat, axis=0)
+
+                # Fill sampled values
+                rep_idx = np.cumsum([0]+list(n_repeat))[:-1]
+                dv_sampled = np.linspace(problem.xl[i_dv], problem.xu[i_dv], n_cont)
+                for i in np.where(is_act_i)[0]:
+                    x[rep_idx[i]:rep_idx[i]+n_cont, i_dv] = dv_sampled
+
+        else:
+            x = x_discr
+
+        return x
 
     @classmethod
     def get_exhaustive_sample_values(cls, problem: Problem, n_cont=5):
@@ -99,10 +158,6 @@ class RepairedExhaustiveSampling(Sampling):
     def get_n_sample_exhaustive(cls, problem: Problem, n_cont=5):
         values = cls.get_exhaustive_sample_values(problem, n_cont=n_cont)
         return int(np.prod([len(opts) for opts in values], dtype=np.float))
-
-    @staticmethod
-    def safe_remove_duplicates(pop: Population) -> Population:
-        return LargeDuplicateElimination().do(pop)
 
     def __repr__(self):
         return f'{self.__class__.__name__}()'
@@ -144,7 +199,7 @@ class RepairedLatinHypercubeSampling(LatinHypercubeSampling):
     def repair_x(self, problem, x, xl, xu):
         # De-normalize before repairing
         x_abs = x*(xu-xl)+xl
-        x_abs = self._repair.do(problem, Population.new(X=x_abs)).get("X")
+        x_abs = self._repair.do(problem, x_abs)
         return (x_abs-xl)/(xu-xl)
 
     def __repr__(self):
@@ -178,12 +233,12 @@ class RepairedRandomSampling(FloatRandomSampling):
 
     def _do(self, problem, n_samples, **kwargs):
         # Get Cartesian product of all discrete design variables (only available if design space is not too large)
-        pop = self.get_repaired_cartesian_product(problem, self._repair)
+        x = self.get_repaired_cartesian_product(problem, self._repair)
 
-        return self.randomly_sample(problem, n_samples, self._repair, pop)
+        return self.randomly_sample(problem, n_samples, self._repair, x)
 
     @classmethod
-    def get_repaired_cartesian_product(cls, problem: Problem, repair: Repair) -> Optional[Population]:
+    def get_repaired_cartesian_product(cls, problem: Problem, repair: Repair) -> Optional[np.ndarray]:
         # Get values to be sampled for each discrete design variable
         opt_values = RepairedExhaustiveSampling.get_exhaustive_sample_values(problem, n_cont=1)
 
@@ -197,22 +252,22 @@ class RepairedRandomSampling(FloatRandomSampling):
                 x = np.array([np.array(dv) for dv in itertools.product(*opt_values)])
 
                 # Repair sampled population and remove duplicates
-                pop = Population.new(X=x)
-                pop = repair.do(problem, pop)
-                return LargeDuplicateElimination().do(pop)
+                x = repair.do(problem, x)
+                is_duplicate = LargeDuplicateElimination.eliminate(x)
+                return x[~is_duplicate, :]
 
             except MemoryError:
                 pass
 
     @staticmethod
-    def randomly_sample(problem, n_samples, repair: Repair, pop: Optional[Population]):
+    def randomly_sample(problem, n_samples, repair: Repair, x_all: Optional[np.ndarray]):
         is_cont_mask = RepairedExhaustiveSampling.get_is_cont_mask(problem)
         xl, xu = problem.xl, problem.xu
 
         # If the population of all available discrete design vectors is available, sample from there
-        if pop is not None:
+        if x_all is not None:
             # Randomly select values
-            x = pop.get('X')
+            x = x_all
             if n_samples < x.shape[0]:
                 i_x = np.random.choice(x.shape[0], size=n_samples, replace=False)
             else:
@@ -226,8 +281,7 @@ class RepairedRandomSampling(FloatRandomSampling):
                     if is_cont:
                         x[:, i_dv] = (np.random.random((x.shape[0],)))*(xu[i_dv]-xl[i_dv])+xl[i_dv]
 
-                pop = repair.do(problem, Population.new(X=x))
-                x = pop.get('X')
+                x = repair.do(problem, x)
 
             return x
 
@@ -241,7 +295,7 @@ class RepairedRandomSampling(FloatRandomSampling):
                 x[:, i_dv] = np.random.choice(opt_values[i_dv], (n_samples,))
 
         # Repair
-        x = repair.do(problem, Population.new(X=x)).get("X")
+        x = repair.do(problem, x)
         return x
 
     def __repr__(self):
@@ -253,25 +307,29 @@ class LargeDuplicateElimination(DefaultDuplicateElimination):
     Duplicate elimination that can deal with a large amount of individuals in a population: instead of creating one big
     n_pop x n_pop cdist matrix, it does so in batches, thereby staying fast and saving in memory at the same time.
     """
-
-    def __init__(self, *args, n_per_batch=200, **kwargs):
-        self.n_per_batch = n_per_batch
-        super().__init__(*args, **kwargs)
+    _n_per_batch = 200
 
     def _do(self, pop, other, is_duplicate):
-        # Either compare x to itself or to another x
         x = self.func(pop)
+        other = self.func(other) if other is not None else None
+        return self.eliminate(x, other, is_duplicate, self.epsilon)
+
+    @classmethod
+    def eliminate(cls, x, other=None, is_duplicate=None, epsilon=1e-16):
+        # Either compare x to itself or to another x
         x = x.copy().astype(float)
+        if is_duplicate is None:
+            is_duplicate = np.zeros((x.shape[0],), dtype=bool)
 
         to_itself = False
         if other is None:
             x_ = x
             to_itself = True
         else:
-            x_ = self.func(other).copy().astype(float)
+            x_ = other.copy().astype(float)
 
         # Determine how many batches we need
-        n_per_batch = self.n_per_batch
+        n_per_batch = cls._n_per_batch
         nx = x.shape[0]
         n = (x_.shape[0] - 1) if to_itself else x_.shape[0]
         if n == 0:
@@ -291,7 +349,7 @@ class LargeDuplicateElimination(DefaultDuplicateElimination):
                 break
 
             # Do the comparison: the result is an n_x_check x n_i_compare_to boolean matrix
-            i_is_dup = distance.cdist(x_check, x_[i_compare_to, :], metric='cityblock') < self.epsilon
+            i_is_dup = distance.cdist(x_check, x_[i_compare_to, :], metric='cityblock') < epsilon
 
             if to_itself:
                 # Expand to all indices from non-duplicate indices
