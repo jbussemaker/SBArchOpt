@@ -170,7 +170,10 @@ class RepairedExhaustiveSampling(Sampling):
 
 
 class RepairedLatinHypercubeSampling(LatinHypercubeSampling):
-    """Latin hypercube sampling only returning repaired samples."""
+    """
+    Latin hypercube sampling only returning repaired samples. Additionally, the repaired random sampling procedure is
+    used to get the best distribution corresponding to the real distribution of hierarchical variables.
+    """
 
     def __init__(self, repair: Repair = None, **kwargs):
         super().__init__(**kwargs)
@@ -182,31 +185,24 @@ class RepairedLatinHypercubeSampling(LatinHypercubeSampling):
         if self._repair is None:
             return super()._do(problem, n_samples, **kwargs)
 
-        # Get and repair initial LHS round
+        # Prepare sampling
+        x_all = RepairedRandomSampling.get_repaired_cartesian_product(problem, self._repair)
         xl, xu = problem.bounds()
-        x = sampling_lhs_unit(n_samples, problem.n_var, smooth=self.smooth)
-        x = self.repair_x(problem, x, xl, xu)
 
-        # Subsequent rounds to improve the LHS score
-        if self.criterion is not None:
-            score = self.criterion(x)
-            for j in range(1, self.iterations):
+        # Sample several times to find the best-scored samples
+        best_x = best_score = None
+        for _ in range(self.iterations):
+            x = RepairedRandomSampling.randomly_sample(problem, n_samples, self._repair, x_all, lhs=True)
+            if self.criterion is None:
+                return x
 
-                _X = sampling_lhs_unit(n_samples, problem.n_var, smooth=self.smooth)
-                _X = self.repair_x(problem, _X, xl, xu)
-                _score = self.criterion(_X)
+            x_unit = (x-xl)/(xu-xl)
+            score = self.criterion(x_unit)
+            if best_score is None or score > best_score:
+                best_x = x
+                best_score = score
 
-                if _score > score:
-                    x, score = _X, _score
-
-        # De-normalize
-        return xl + x * (xu - xl)
-
-    def repair_x(self, problem, x, xl, xu):
-        # De-normalize before repairing
-        x_abs = x*(xu-xl)+xl
-        x_abs = self._repair.do(problem, x_abs)
-        return (x_abs-xl)/(xu-xl)
+        return best_x
 
     def __repr__(self):
         return f'{self.__class__.__name__}()'
@@ -221,7 +217,7 @@ class RepairedRandomSampling(FloatRandomSampling):
        3. Randomly select from remaining design vectors
        4. Randomize continuous variables
        5. Repair again to impute continuous variables
-    B: One-shot
+    B: One-shot:
        1. Randomly select design variable values
        2. Repair/impute design vectors
 
@@ -229,7 +225,7 @@ class RepairedRandomSampling(FloatRandomSampling):
     however it takes more memory and might be too much for very large design spaces.
     """
 
-    _n_comb_gen_all_max = 10e3
+    _n_comb_gen_all_max = 100e3
 
     def __init__(self, repair: Repair = None):
         if repair is None:
@@ -266,7 +262,7 @@ class RepairedRandomSampling(FloatRandomSampling):
                 pass
 
     @staticmethod
-    def randomly_sample(problem, n_samples, repair: Repair, x_all: Optional[np.ndarray]):
+    def randomly_sample(problem, n_samples, repair: Repair, x_all: Optional[np.ndarray], lhs=False):
         is_cont_mask = RepairedExhaustiveSampling.get_is_cont_mask(problem)
         xl, xu = problem.xl, problem.xu
 
@@ -281,24 +277,23 @@ class RepairedRandomSampling(FloatRandomSampling):
                     np.arange(x.shape[0]), np.random.choice(x.shape[0], size=n_samples-x.shape[0], replace=True)]))
             x = x[i_x, :]
 
-            # Randomize continuous variables
-            if np.any(is_cont_mask):
-                for i_dv, is_cont in enumerate(is_cont_mask):
-                    if is_cont:
-                        x[:, i_dv] = (np.random.random((x.shape[0],)))*(xu[i_dv]-xl[i_dv])+xl[i_dv]
-
-                x = repair.do(problem, x)
-
-            return x
-
         # If above the threshold (or a memory error occurred), sample randomly
-        opt_values = RepairedExhaustiveSampling.get_exhaustive_sample_values(problem, n_cont=1)
-        x = np.empty((n_samples, problem.n_var))
-        for i_dv in range(problem.n_var):
-            if is_cont_mask[i_dv]:
-                x[:, i_dv] = np.random.random((n_samples,))*(xu[i_dv]-xl[i_dv]) + xl[i_dv]
+        else:
+            opt_values = RepairedExhaustiveSampling.get_exhaustive_sample_values(problem, n_cont=1)
+            x = np.empty((n_samples, problem.n_var))
+            for i_dv in range(problem.n_var):
+                if not is_cont_mask[i_dv]:
+                    x[:, i_dv] = np.random.choice(opt_values[i_dv], (n_samples,))
+
+        # Randomize continuous variables
+        if np.any(is_cont_mask):
+            nx_cont = len(np.where(is_cont_mask)[0])
+            if lhs:
+                x_unit = sampling_lhs_unit(x.shape[0], nx_cont)
             else:
-                x[:, i_dv] = np.random.choice(opt_values[i_dv], (n_samples,))
+                x_unit = np.random.random((x.shape[0], nx_cont))
+
+            x[:, is_cont_mask] = x_unit*(xu[is_cont_mask]-xl[is_cont_mask])+xl[is_cont_mask]
 
         # Repair
         x = repair.do(problem, x)

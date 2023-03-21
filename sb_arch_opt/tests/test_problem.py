@@ -1,5 +1,4 @@
 import os
-import pytest
 import itertools
 import numpy as np
 from sb_arch_opt.problem import *
@@ -39,6 +38,28 @@ def test_init_vars():
     assert np.all(problem.is_cont_mask == [True, False, False, False])
 
     assert problem.get_n_declared_discrete() == 4*2*3
+
+
+def test_rounding():
+    problem = ArchOptProblemBase([Integer(bounds=(0, 5)), Integer(bounds=(-1, 1)), Integer(bounds=(2, 4))])
+    assert np.all(problem.is_discrete_mask)
+    x = np.array(list(itertools.product(np.linspace(0, 5, 20), np.linspace(-1, 1, 20), np.linspace(2, 4, 20))))
+    problem._correct_x_discrete(x)
+
+    x1, x1_counts = np.unique(x[:, 0], return_counts=True)
+    assert np.all(x1 == [0, 1, 2, 3, 4, 5])
+    x1_counts = x1_counts/np.sum(x1_counts)
+    assert np.all(np.abs(x1_counts - np.mean(x1_counts)) <= .05)
+
+    x2, x2_counts = np.unique(x[:, 1], return_counts=True)
+    assert np.all(x2 == [-1, 0, 1])
+    x2_counts = x2_counts/np.sum(x2_counts)
+    assert np.all(np.abs(x2_counts - np.mean(x2_counts)) <= .05)
+
+    x3, x3_counts = np.unique(x[:, 2], return_counts=True)
+    assert np.all(x3 == [2, 3, 4])
+    x3_counts = x3_counts/np.sum(x3_counts)
+    assert np.all(np.abs(x3_counts - np.mean(x3_counts)) <= .05)
 
 
 def test_correct_x(problem: ArchOptProblemBase):

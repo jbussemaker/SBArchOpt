@@ -139,8 +139,27 @@ class ArchOptProblemBase(Problem):
         self._impute_x(x, is_active)
 
     def _correct_x_discrete(self, x: np.ndarray):
-        """Ensures that discrete design variables take up integer values"""
-        x[:, self._is_discrete_mask] = np.round(x[:, self._is_discrete_mask].astype(np.float64)).astype(np.int)
+        """
+        Ensures that discrete design variables take up integer values.
+        Rounding is not applied directly, as this would reduce the amount of points assigned to the first and last
+        options.
+
+        Directly rounding:
+        np.unique(np.round(np.linspace(0, 2, 100)).astype(int), return_counts=True) --> 25, 50, 25 (center bias)
+
+        Stretched rounding:
+        x = np.linspace(0, 2, 100)
+        xs = x*((np.max(x)+.99)/np.max(x))-.5
+        np.unique(np.abs(np.round(xs)).astype(int), return_counts=True) --> 34, 33, 33 (evenly distributed)
+        """
+        x_discrete = x[:, self._is_discrete_mask].astype(np.float64)
+        xl, xu = self.xl[self._is_discrete_mask], self.xu[self._is_discrete_mask]
+        diff = xu-xl
+
+        x_stretched = (x_discrete-xl)*((diff+.99)/diff)-.5
+        x_rounded = (np.abs(np.round(x_stretched))+xl).astype(np.int)
+
+        x[:, self._is_discrete_mask] = x_rounded
 
     def _impute_x(self, x: np.ndarray, is_active: np.ndarray):
         """
