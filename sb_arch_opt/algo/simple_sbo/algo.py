@@ -469,7 +469,7 @@ class NormalizedRepair(Repair):
         self._problem = problem
         self._repair = repair
 
-    def _do(self, problem, pop, **kwargs):
+    def do(self, problem, pop, **kwargs):
         is_array = not isinstance(pop, Population)
         x = pop if is_array else pop.get("X")
 
