@@ -77,6 +77,7 @@ class RepairedExhaustiveSampling(Sampling):
             # Repair current batch
             x_repair = x_later[:n_batch, :]
             x_later = x_later[x_repair.shape[0]:, :]
+            # print(f'Sampling {x_repair.shape[0]} ({x_later.shape[0]} to go; {x_repaired.shape[0]} sampled)')
 
             x_repair = self._repair.do(problem, x_repair)
             if isinstance(self._repair, ArchOptRepair):

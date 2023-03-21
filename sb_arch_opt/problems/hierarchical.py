@@ -23,6 +23,7 @@ import numpy as np
 from typing import *
 from deprecated import deprecated
 from sb_arch_opt.problems.md_mo import *
+from pymoo.problems.multi.zdt import ZDT1
 from sb_arch_opt.problems.discrete import *
 from sb_arch_opt.problems.problems_base import *
 from pymoo.core.variable import Real, Integer, Choice
@@ -31,7 +32,7 @@ from pymoo.util.ref_dirs import get_reference_directions
 __all__ = ['HierarchyProblemBase', 'HierarchicalGoldstein', 'HierarchicalRosenbrock', 'ZaeffererHierarchical',
            'ZaeffererProblemMode', 'MOHierarchicalGoldstein', 'MOHierarchicalRosenbrock', 'HierarchicalMetaProblemBase',
            'MOHierarchicalTestProblem', 'Jenatton', 'CombinatorialHierarchicalMetaProblem', 'CombHierBranin',
-           'CombHierMORosenbrock']
+           'CombHierRosenbrock']
 
 
 class HierarchyProblemBase(ArchOptTestProblemBase):
@@ -654,28 +655,27 @@ class CombinatorialHierarchicalMetaProblem(HierarchyProblemBase):
     - The problem is separated into n_parts per dimension:
       - Continuous variables are simply separated linearly
       - Discrete variables are separated such that there are at least 2 options in each part
-    - Categorical design variables are added to select n_parallel subparts to apply divided variables to
+    - Categorical selection variables are added to select subparts to apply divided variables to
       - Parts are selected ordinally (i.e. not per dimension, but from "one big list"); orders are randomized
-      - For each subpart:
-        - One or more original dimensions are deactivated
-        - The selection variables are encoded as some base in order to limit the amount of options per variable
-      - Outputs are calculated from the mean of the respective subparts
-      - Between subparts it is ensured that the next selected subpart is always higher (non-replaceable) than the
-        previous, as selecting the same subparts in different orders gives the same outputs
+      - For each subpart one or more original dimensions are deactivated
+      - Selection variables are added for selecting which subpart to evaluate, but repeated separation into groups
 
     Note: the underlying problem should not be hierarchical!
+
+    Settings:
+    - n_parts: number of parts to separate each dimension; increases the nr of possible discrete design points
+    - n_sel_dv: number of design variables to use for selecting which part to evaluate; higher values increase the
+                imputation ratio, reduce the nr of options for each selection design variable
+    - sep_power: controls how non-uniform the selection subdivisions are: higher than 1 increases imputation ratio and
+                 difference between occurrence rates
+    - target_n_opts_ratio: controls the nr of options of the last separation variable: higher reduces the imp ratio
     """
 
-    _str_lookup = {char: i for i, char in enumerate(string.digits+string.ascii_uppercase)}
-
-    def __init__(self, problem: ArchOptTestProblemBase, n_parts=2, n_parallel=2, cat_base=4):
+    def __init__(self, problem: ArchOptTestProblemBase, n_parts=2, n_sel_dv=4, sep_power=1.2, target_n_opts_ratio=5.):
         self._problem = problem
         self._n_parts = n_parts
-        self._n_parallel = n_parallel
-        self._cat_base = cat_base
 
         # Separate the underlying design space in different parts
-        np.random.seed(problem.n_var * problem.n_obj * n_parts * n_parallel * cat_base)
         parts = []
         is_cont_mask, xl, xu = problem.is_cont_mask, problem.xl, problem.xu
         div_bounds = 1/n_parts
@@ -708,7 +708,9 @@ class CombinatorialHierarchicalMetaProblem(HierarchyProblemBase):
                     part.append((True, i_opts))
             parts.append(part)
 
-        # Shuffle parts
+        # Shuffle the parts
+        n_sel_dv = max(2, n_sel_dv)
+        np.random.seed(problem.n_var * problem.n_obj * n_parts * n_sel_dv)
         self._parts = parts = [parts[i] for i in np.random.permutation(np.arange(len(parts)))]
 
         # Define which mapped design variables are active for each part
@@ -725,27 +727,73 @@ class CombinatorialHierarchicalMetaProblem(HierarchyProblemBase):
             parts_is_active[i, parts_is_active.shape[1]-n_inactive[i]:] = False
 
         # Define selection design variables
-        # They are related to a non-replacing unordered combining problem, where we take n_parallel from len(parts)
-        # We encode this as n_parallel design variables with len(parts)-(n_parallel-1) options
-        # Each of these design variables is further encoded in a cat_base base representation
+        # Repeatedly separate the number of parts to be selected
+        init_range = .65  # Directly controls the range (= difference between min and max occurrence rates) of x0
+
+        def _sep_group(n_values, n_sep):
+            return np.round((np.linspace(0, 1, n_values)**sep_power)*(n_sep-.01)-.5).astype(int)
+
+        n = len(parts)
+
+        # We define one design variable that makes the initial separation
+        init_sep_frac = .5+.5*init_range-.05+.1*np.random.random()
+
+        # Determine in how many groups we should separate at each step
+        # Repeatedly subdividing the largest group determines how many values the last largest group has. We calculate
+        # for several separation numbers what the fraction of the largest group is; then calculate how big the latest
+        # largest group is. If this number is equal to the corresponding nr of separations, it means that each design
+        # variable will have the same nr of options. We choose the nr of separations where the ratio is a bit higher
+        # than 1 to introduce another source of non-uniformity in the problem formulation
+        n_sep_possible = np.arange(2, max(2, np.floor(.25*n))+1, dtype=int)
+        frac_largest_group = np.array([np.sum(_sep_group(100, n_sep) == 0)/100 for n_sep in n_sep_possible])
+        n_rel_last_group = (init_sep_frac*frac_largest_group**(n_sel_dv-2))*n/n_sep_possible
+        n_rel_lg_idx = np.where(n_rel_last_group > target_n_opts_ratio)[0]
+        n_sep_per_dv = n_sep_possible[n_rel_lg_idx[-1]] if len(n_rel_lg_idx) > 0 else n_sep_possible[0]
+
+        x_sel = np.zeros((n, n_sel_dv), dtype=int)
+        is_active_sel = np.ones((n, n_sel_dv), dtype=bool)
+        dv_groups = [np.arange(n, dtype=int)]
+        for i in range(n_sel_dv):
+            # Separate current selection groups
+            next_dv_groups = []
+            needed_separation = False
+            for group_idx in dv_groups:
+                if len(group_idx) == 1:
+                    is_active_sel[group_idx[0], i:] = False
+                    continue
+                needed_separation = True
+
+                # For the last group just add uniformly increasing values to avoid needing additional groups
+                if i == n_sel_dv-1:
+                    x_sel[group_idx, i] = np.arange(len(group_idx))
+                    continue
+
+                # For the first group separate based on the initial separation fraction
+                if i == 0:
+                    x_next_group = np.ones((len(group_idx),), dtype=int)
+                    n_first_group = int(np.ceil(init_sep_frac*len(x_next_group)))
+                    x_next_group[:n_first_group] = 0
+                else:
+                    # Distribute values unevenly (raising the power results in a more uneven distribution)
+                    x_next_group = _sep_group(len(group_idx), n_sep_per_dv)
+
+                x_sel[group_idx, i] = x_next_group
+
+                # Determine next groups
+                for x_next in np.unique(x_next_group):
+                    next_dv_groups.append(group_idx[x_next_group == x_next])
+
+            dv_groups = next_dv_groups
+            if not needed_separation:
+                x_sel = x_sel[:, :i]
+                is_active_sel = is_active_sel[:, :i]
+                break
+
+        self._x_sel = x_sel
+        self._is_active_sel = is_active_sel
         des_vars = []
-        self._sel_n_opts = n_sel_opts = len(parts)-(n_parallel-1)
-        if n_sel_opts < 2:
-            raise ValueError('Not enough parts to select from: increase n_part or reduce n_parallel')
-
-        self._n_sel_dv = n_base_vars = int(np.ceil(np.log(n_sel_opts)/np.log(cat_base)))
-        self._dv_last = dv_last = self.base_repr_int(n_sel_opts-1, cat_base)
-        i_inactive = np.where(dv_last == 0)[0]
-        dv_inactive_key = None
-        if len(i_inactive) > 0:
-            left_side_values = dv_last[:i_inactive[-1]+1]
-            dv_inactive_key = (i_inactive, left_side_values)
-        self._dv_inactive_key = dv_inactive_key
-
-        cat_sel_n_opts = np.ones((n_base_vars,), dtype=int) * cat_base
-        cat_sel_n_opts[0] = dv_last[0]+1
-        for _ in range(n_parallel):
-            des_vars += [Choice(options=list(range(n_opts))) for n_opts in cat_sel_n_opts]
+        for i in range(x_sel.shape[1]):
+            des_vars.append(Choice(options=list(sorted(np.unique(x_sel[:, i])))))
 
         # Add mapped design variables
         for i_dv, des_var in enumerate(problem.des_vars):
@@ -763,11 +811,6 @@ class CombinatorialHierarchicalMetaProblem(HierarchyProblemBase):
 
         self.__correct_output = {}
 
-    @classmethod
-    def base_repr_int(cls, value: int, base: int) -> np.ndarray:
-        return np.array([cls._str_lookup[char] for char in
-                         (np.binary_repr(value) if base == 2 else np.base_repr(value, base))], dtype=int)
-
     def get_n_valid_discrete(self) -> int:
         # Get nr of combinations for each part
         parts_is_active = self._parts_is_active
@@ -778,12 +821,8 @@ class CombinatorialHierarchicalMetaProblem(HierarchyProblemBase):
                     continue
                 n_part_combs[i, i_dv] = len(settings)
 
-        # Get nr of combinations for each selection
-        n_combinations = 0
-        for i_parts in itertools.combinations(list(range(len(self._parts))), self._n_parallel):
-            n_combs = np.prod(np.max(n_part_combs[i_parts, :], axis=0))
-            n_combinations += n_combs
-        return int(n_combinations)
+        # Sum the nr of combinations for the parts
+        return int(np.sum(np.prod(n_part_combs, axis=1)))
 
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
@@ -793,98 +832,74 @@ class CombinatorialHierarchicalMetaProblem(HierarchyProblemBase):
 
         parts = self._parts
         parts_is_active = self._parts_is_active
-        n_dv_map = self._n_sel_dv*self._n_parallel
+        n_dv_map = self._x_sel.shape[1]
         xl, xu = self._problem.xl, self._problem.xu
-        for i, i_parts in enumerate(i_part_selected):
-            # Map design variables to underlying problem
-            x_parts = []
-            for j, i_part in enumerate(i_parts):
-                is_active_i = parts_is_active[i_part, :]
-                x_part = x[i, n_dv_map:].copy()
-                for i_dv, (is_discrete, settings) in enumerate(parts[i_part]):
-                    if is_discrete:
-                        if is_active_i[i_dv]:
-                            x_part[i_dv] = settings[x_part[i_dv]] if x_part[i_dv] >= len(settings) else settings[-1]
-                        else:
-                            x_part[i_dv] = 0
+
+        # Map design variables to underlying problem
+        x_underlying = x[:, n_dv_map:].copy()
+        for i, i_part in enumerate(i_part_selected):
+            is_active_i = parts_is_active[i_part, :]
+            x_part = x_underlying[i, :]
+            for i_dv, (is_discrete, settings) in enumerate(parts[i_part]):
+                if is_discrete:
+                    if is_active_i[i_dv]:
+                        x_part[i_dv] = settings[x_part[i_dv]] if x_part[i_dv] >= len(settings) else settings[-1]
                     else:
-                        bnd = settings
-                        if is_active_i[i_dv]:
-                            x_part[i_dv] = bnd[0]+(bnd[1]-bnd[0])*((x_part[i_dv]-xl[i_dv])/(xu[i_dv]-xl[i_dv]))
-                        else:
-                            x_part[i_dv] = .5*np.sum(bnd)
-                x_parts.append(x_part)
+                        x_part[i_dv] = 0
+                else:
+                    bnd = settings
+                    if is_active_i[i_dv]:
+                        x_part[i_dv] = bnd[0]+(bnd[1]-bnd[0])*((x_part[i_dv]-xl[i_dv])/(xu[i_dv]-xl[i_dv]))
+                    else:
+                        x_part[i_dv] = .5*np.sum(bnd)
 
-            # Evaluate underlying problem
-            out = self._problem.evaluate(np.array(x_parts), return_as_dictionary=True)
-            if np.any(out['is_active'] == 0):
-                raise RuntimeError('Underlying problem should not be hierarchical!')
+        # Evaluate underlying problem
+        out = self._problem.evaluate(x_underlying, return_as_dictionary=True)
+        if np.any(out['is_active'] == 0):
+            raise RuntimeError('Underlying problem should not be hierarchical!')
 
-            # Outputs are the means of the selected parts
-            f_out[i, :] = np.mean(out['F'], axis=0)
-            if 'G' in out:
-                g_out[i, :] = np.mean(out['G'], axis=0)
-            if 'H' in out:
-                h_out[i, :] = np.mean(out['H'], axis=0)
+        f_out[:, :] = out['F']
+        if 'G' in out:
+            g_out[:, :] = out['G']
+        if 'H' in out:
+            h_out[:, :] = out['H']
 
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
-        n_parallel = self._n_parallel
-        cat_base = self._cat_base
-        sel_n_opts = self._sel_n_opts
-        n_sel_dv = self._n_sel_dv
-        dv_inactive_key = self._dv_inactive_key
+        # Match to selection design vector
+        x_sel = self._x_sel
+        is_act_sel = self._is_active_sel
+        n_dv_sel = x_sel.shape[1]
+        i_part_selected = np.zeros((x.shape[0],), dtype=int)
+        for i, xi in enumerate(x):
 
-        # Decode and correct part selection design variables
-        i_part_selected = np.zeros((x.shape[0], n_parallel), dtype=int)
-        for i_parallel in range(n_parallel):
-            x_sel = x[:, i_parallel*n_sel_dv:(i_parallel+1)*n_sel_dv]
-            for i, x_sel_i in enumerate(x_sel):
-                # Decode from base representation
-                i_part_selected[i, i_parallel] = np.sum((cat_base**np.arange(len(x_sel_i)))*x_sel_i[::-1])
+            # Recursively select design vectors matching ours
+            idx_match = np.arange(x_sel.shape[0], dtype=int)
+            for i_sel in range(n_dv_sel):
+                idx_match_i = idx_match[x_sel[idx_match, i_sel] == xi[i_sel]]
 
-        # Bound to max selection index
-        i_part_selected[i_part_selected >= sel_n_opts] = sel_n_opts-1
+                # If none found, we impute
+                if len(idx_match_i) == 0:
+                    xi[i_sel] = imp_dv_value = x_sel[idx_match[-1], i_sel]
+                    idx_match_i = idx_match[x_sel[idx_match, i_sel] == imp_dv_value]
 
-        # Correct selected parts such that they are increasing (or equal) from left to right
-        # We start in the middle to get a better distribution when randomly sampling design variable values
-        i_center = int(np.floor(.5*(n_parallel-1)))
+                # If one found, we have a match!
+                if len(idx_match_i) == 1:
+                    i_part = idx_match_i[0]
+                    i_part_selected[i] = i_part
+                    xi[:n_dv_sel] = x_sel[i_part, :]
+                    is_active[i, :n_dv_sel] = is_act_sel[i_part, :]
+                    break
 
-        for i_parallel in reversed(range(0, i_center)):
-            for i, i_part in enumerate(i_part_selected[:, i_parallel]):
-                next_i_part = i_part_selected[i, i_parallel+1]
-                if i_part > next_i_part:
-                    i_part_selected[i, i_parallel] = np.random.choice(np.arange(0, next_i_part+1))
+                # Otherwise, we continue searching
+                idx_match = idx_match_i
+            else:
+                raise RuntimeError(f'Could not match design vectors: {xi[:n_dv_sel]}')
 
-        for i_parallel in range(i_center+1, n_parallel):
-            for i, i_part in enumerate(i_part_selected[:, i_parallel]):
-                prev_i_part = i_part_selected[i, i_parallel-1]
-                if i_part < prev_i_part:
-                    i_part_selected[i, i_parallel] = np.random.choice(np.arange(prev_i_part, sel_n_opts))
-
-        # Encode for imputation, and set activeness
-        for i_parallel in range(n_parallel):
-            x_sel = x[:, i_parallel*n_sel_dv:(i_parallel+1)*n_sel_dv]
-            is_act_sel = is_active[:, i_parallel*n_sel_dv:(i_parallel+1)*n_sel_dv]
-            for i, i_part in enumerate(i_part_selected[:, i_parallel]):
-                x_sel_i = self.base_repr_int(i_part, cat_base)
-                x_sel[i, :] = 0
-                x_sel[i, -len(x_sel_i):] = x_sel_i
-                x_sel_i = x_sel[i, :]
-
-                if dv_inactive_key is not None:
-                    i_inactive, left_side_values = dv_inactive_key
-                    if np.all(x_sel_i[:len(left_side_values)] == left_side_values):
-                        is_act_sel[i, i_inactive] = False
-
-        # Move each selection index one up, because part selections are non-replaceable
-        i_part_selected += np.arange(n_parallel)
-
-        # Correct and set activeness
-        n_dv_map = n_sel_dv*n_parallel
+        # Correct DVs of underlying problem and set activeness
+        n_dv_map = x_sel.shape[1]
         part_is_active = self._parts_is_active
-        for i, i_parts in enumerate(i_part_selected):
-            is_active_i = np.max(part_is_active[i_parts, :], axis=0)
-            is_active[i, n_dv_map:] = is_active_i
+        for i, i_part in enumerate(i_part_selected):
+            is_active[i, n_dv_map:] = part_is_active[i_part, :]
 
         self.__correct_output = {'i_part_sel': i_part_selected}
 
@@ -892,13 +907,14 @@ class CombinatorialHierarchicalMetaProblem(HierarchyProblemBase):
 class CombHierBranin(CombinatorialHierarchicalMetaProblem):
 
     def __init__(self):
-        super().__init__(MDBranin(), n_parts=2, n_parallel=2, cat_base=3)
+        super().__init__(MDBranin(), n_parts=4, n_sel_dv=4, sep_power=1.2, target_n_opts_ratio=5.)
 
 
-class CombHierMORosenbrock(CombinatorialHierarchicalMetaProblem):
+class CombHierRosenbrock(CombinatorialHierarchicalMetaProblem):
 
     def __init__(self):
-        super().__init__(MDMORosenbrock(), n_parts=2, n_parallel=1, cat_base=3)
+        problem = MixedDiscretizerProblemBase(MORosenbrock(n_var=6), n_opts=3, n_vars_int=2)
+        super().__init__(problem, n_parts=3, n_sel_dv=5, sep_power=1.1, target_n_opts_ratio=1.)
 
 
 if __name__ == '__main__':
@@ -924,5 +940,5 @@ if __name__ == '__main__':
 
     # CombHierBranin().print_stats()
     # CombHierBranin().plot_pf()
-    CombHierMORosenbrock().print_stats()
-    # CombHierMORosenbrock().plot_pf()
+    CombHierRosenbrock().print_stats()
+    # CombHierRosenbrock().plot_pf()

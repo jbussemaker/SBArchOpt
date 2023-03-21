@@ -46,8 +46,8 @@ An overview of available test problems in `sb_arch_opt.problems` (nomenclature i
 | `Jenatton`                        | 3       | 6      | 1     |       |     | Y   |     | Y    |     | 4             | 2         |              |                                  |
 | `HierarchicalGoldstein`           | 6       | 5      | 1     | 1     |     | Y   |     | Y    |     | 288           | 2.25      |              |                                  |
 | `MOHierarchicalGoldstein`         | 6       | 5      | 2     | 1     |     | Y   | Y   | Y    |     | 288           | 2.25      |              |                                  |
-| `CombHierBranin`                  | 8       | 2      | 1     |       |     | Y   |     | Y    |     | 233           | 5.6       |              |                                  |
-| `CombHierMORosenbrock`            | 12      | 5      | 2     |       |     | Y   | Y   | Y    |     | 20932         | 2.2       |              |                                  |
+| `CombHierBranin`                  | 6       | 2      | 1     |       |     | Y   |     | Y    |     | 330           | 7.8       |              |                                  |
+| `CombHierRosenbrock`              | 10      | 4      | 2     |       |     | Y   | Y   | Y    |     | 1199          | 6.7       |              |                                  |
 | `HierarchicalRosenbrock`          | 5       | 8      | 1     | 2     |     | Y   |     | Y    |     | 32            | 1.5       |              |                                  |
 | `MOHierarchicalRosenbrock`        | 5       | 8      | 2     | 2     |     | Y   | Y   | Y    |     | 32            | 1.5       |              |                                  |
 | ~~`MOHierarchicalTestProblem`~~   | 11      | 16     | 2     | 2     |     | Y   | Y   | Y    |     | 64            | 72        |              |                                  |

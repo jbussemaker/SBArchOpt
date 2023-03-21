@@ -86,8 +86,8 @@ class DMOGoldstein(MixedDiscretizerProblemBase):
 class MORosenbrock(NoHierarchyProblemBase):
     """Multi-objective version of the Rosenbrock problem"""
 
-    def __init__(self):
-        self._rosenbrock = problem = Rosenbrock()
+    def __init__(self, n_var=10):
+        self._rosenbrock = problem = Rosenbrock(n_var=n_var)
         des_vars = problem.des_vars
         super().__init__(des_vars, n_obj=2)
 

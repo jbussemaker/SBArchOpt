@@ -34,8 +34,8 @@ class Himmelblau(NoHierarchyWrappedProblem):
 
 class Rosenbrock(NoHierarchyWrappedProblem):
 
-    def __init__(self):
-        super().__init__(RB(n_var=10))
+    def __init__(self, n_var=10):
+        super().__init__(RB(n_var=n_var))
 
 
 class Griewank(NoHierarchyWrappedProblem):
