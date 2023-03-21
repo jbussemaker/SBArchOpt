@@ -37,6 +37,7 @@ if __name__ == '__main__':
             'numpy',
             'pymoo~=0.6.0.1',
             'scipy',
+            'deprecated',
         ],
         extras_require={
             'simple_sbo': [
