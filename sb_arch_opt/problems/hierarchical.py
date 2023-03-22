@@ -17,13 +17,11 @@ Contact: jasper.bussemaker@dlr.de
 This test suite contains a set of mixed-discrete, constrained, hierarchical, multi-objective problems.
 """
 import enum
-import string
 import itertools
 import numpy as np
 from typing import *
 from deprecated import deprecated
 from sb_arch_opt.problems.md_mo import *
-from pymoo.problems.multi.zdt import ZDT1
 from sb_arch_opt.problems.discrete import *
 from sb_arch_opt.problems.problems_base import *
 from pymoo.core.variable import Real, Integer, Choice
@@ -32,7 +30,7 @@ from pymoo.util.ref_dirs import get_reference_directions
 __all__ = ['HierarchyProblemBase', 'HierarchicalGoldstein', 'HierarchicalRosenbrock', 'ZaeffererHierarchical',
            'ZaeffererProblemMode', 'MOHierarchicalGoldstein', 'MOHierarchicalRosenbrock', 'HierarchicalMetaProblemBase',
            'MOHierarchicalTestProblem', 'Jenatton', 'CombinatorialHierarchicalMetaProblem', 'CombHierBranin',
-           'CombHierRosenbrock']
+           'CombHierRosenbrock', 'CombHierDRosenbrock']
 
 
 class HierarchyProblemBase(ArchOptTestProblemBase):
@@ -716,8 +714,10 @@ class CombinatorialHierarchicalMetaProblem(HierarchyProblemBase):
         # Define which mapped design variables are active for each part
         self._parts_is_active = parts_is_active = np.ones((len(parts), problem.n_var), dtype=bool)
         osc_period = max(5, int(len(parts)/5))
-        idx_cont = np.where(is_cont_mask)[0]
-        n_inactive = np.floor(len(idx_cont)*(.5-.5*np.cos(osc_period*np.arange(len(parts))/np.pi))).astype(int)
+        idx_deactivate = np.where(is_cont_mask)[0]
+        if len(idx_deactivate) == 0:
+            idx_deactivate = np.arange(problem.n_var)
+        n_inactive = np.floor(len(idx_deactivate)*(.5-.5*np.cos(osc_period*np.arange(len(parts))/np.pi))).astype(int)
         for i, part in enumerate(parts):
             # Discrete variables with one option only are inactive
             for i_dv, (is_discrete, settings) in enumerate(part):
@@ -725,8 +725,8 @@ class CombinatorialHierarchicalMetaProblem(HierarchyProblemBase):
                     parts_is_active[i, i_dv] = False
 
             # Deactivate continuous variables based on an oscillating equation
-            cont_inactive_idx = idx_cont[len(idx_cont)-n_inactive[i]:]
-            parts_is_active[i, cont_inactive_idx] = False
+            inactive_idx = idx_deactivate[len(idx_deactivate)-n_inactive[i]:]
+            parts_is_active[i, inactive_idx] = False
 
         # Define selection design variables
         # Repeatedly separate the number of parts to be selected
@@ -908,16 +908,26 @@ class CombinatorialHierarchicalMetaProblem(HierarchyProblemBase):
 
 
 class CombHierBranin(CombinatorialHierarchicalMetaProblem):
+    """Single-objective mixed-discrete hierarchical Branin test problem"""
 
     def __init__(self):
         super().__init__(MDBranin(), n_parts=4, n_sel_dv=4, sep_power=1.2, target_n_opts_ratio=5.)
 
 
 class CombHierRosenbrock(CombinatorialHierarchicalMetaProblem):
+    """Multi-objective mixed-discrete hierarchical Rosenbrock test problem"""
 
     def __init__(self):
         problem = MixedDiscretizerProblemBase(MORosenbrock(n_var=6), n_opts=3, n_vars_int=2)
         super().__init__(problem, n_parts=3, n_sel_dv=5, sep_power=1.1, target_n_opts_ratio=1.)
+
+
+class CombHierDRosenbrock(CombinatorialHierarchicalMetaProblem):
+    """Multi-objective discrete hierarchical Rosenbrock test problem"""
+
+    def __init__(self):
+        problem = MixedDiscretizerProblemBase(MORosenbrock(n_var=7), n_opts=4)
+        super().__init__(problem, n_parts=2, n_sel_dv=5, sep_power=1.2, target_n_opts_ratio=1.)
 
 
 if __name__ == '__main__':
@@ -941,7 +951,10 @@ if __name__ == '__main__':
     # Jenatton().print_stats()
     # # Jenatton().plot_pf()
 
-    CombHierBranin().print_stats()
+    # CombHierBranin().print_stats()
     # CombHierBranin().plot_pf()
-    CombHierRosenbrock().print_stats()
+    # CombHierRosenbrock().print_stats()
     # CombHierRosenbrock().plot_pf()
+    CombHierDRosenbrock().print_stats()
+    # CombHierDRosenbrock().reset_pf_cache()
+    CombHierDRosenbrock().plot_pf()

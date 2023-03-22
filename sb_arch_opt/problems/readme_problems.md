@@ -48,6 +48,7 @@ An overview of available test problems in `sb_arch_opt.problems` (* = recommende
 | `MOHierarchicalGoldstein`         | 6       | 5      | 2     | 1     |     | Y   | Y   | Y    |     | 288           | 2.25      |              |                                  |
 | `CombHierBranin`*                 | 6       | 2      | 1     |       |     | Y   |     | Y    |     | 400           | 6.7       |              |                                  |
 | `CombHierRosenbrock`*             | 10      | 4      | 2     |       |     | Y   | Y   | Y    |     | 1296          | 6.2       |              |                                  |
+| `CombHierDRosenbrock`*            | 12      |        | 2     |       | Y   |     | Y   | Y    |     | 5588          | 8.7       |              |                                  |
 | `HierarchicalRosenbrock`          | 5       | 8      | 1     | 2     |     | Y   |     | Y    |     | 32            | 1.5       |              |                                  |
 | `MOHierarchicalRosenbrock`        | 5       | 8      | 2     | 2     |     | Y   | Y   | Y    |     | 32            | 1.5       |              |                                  |
 | ~~`MOHierarchicalTestProblem`~~   | 11      | 16     | 2     | 2     |     | Y   | Y   | Y    |     | 64            | 72        |              |                                  |

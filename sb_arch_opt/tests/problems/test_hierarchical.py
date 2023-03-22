@@ -54,3 +54,7 @@ def test_comb_hier_branin():
 
 def test_comb_hier_rosenbrock():
     run_test_hierarchy(CombHierRosenbrock(), 6.17, check_n_valid=False)
+
+
+def test_comb_hier_discr_rosenbrock():
+    run_test_hierarchy(CombHierDRosenbrock(), 8.66, check_n_valid=False)
