@@ -17,13 +17,13 @@ Contact: jasper.bussemaker@dlr.de
 import itertools
 import numpy as np
 from typing import Optional
+from scipy.stats.qmc import Sobol
 from scipy.spatial import distance
 
 from pymoo.core.repair import Repair
 from pymoo.core.variable import Real
 from pymoo.core.problem import Problem
 from pymoo.core.sampling import Sampling
-from pymoo.core.population import Population
 from pymoo.core.initialization import Initialization
 from pymoo.operators.sampling.rnd import FloatRandomSampling
 from pymoo.core.duplicate import DefaultDuplicateElimination
@@ -35,14 +35,12 @@ __all__ = ['RepairedExhaustiveSampling', 'RepairedLatinHypercubeSampling', 'Repa
            'LargeDuplicateElimination']
 
 
-def get_init_sampler(repair: Repair = None, lhs=True, remove_duplicates=True, **kwargs):
-    """Helper function to get an Initialization class with repair (LHS) sampling"""
+def get_init_sampler(repair: Repair = None, remove_duplicates=True):
+    """Helper function to get an Initialization class with repaired sampling"""
 
     if repair is None:
         repair = ArchOptRepair()
-
-    sampling = RepairedLatinHypercubeSampling(repair=repair, **kwargs) \
-        if lhs else RepairedExhaustiveSampling(repair=repair, **kwargs)
+    sampling = RepairedRandomSampling(repair=repair, sobol=True)
 
     # Samples are already repaired because we're using the repaired samplers
     eliminate_duplicates = LargeDuplicateElimination() if remove_duplicates else None
@@ -228,17 +226,18 @@ class RepairedRandomSampling(FloatRandomSampling):
 
     _n_comb_gen_all_max = 100e3
 
-    def __init__(self, repair: Repair = None):
+    def __init__(self, repair: Repair = None, sobol=True):
         if repair is None:
             repair = ArchOptRepair()
         self._repair = repair
+        self.sobol = sobol
         super().__init__()
 
     def _do(self, problem, n_samples, **kwargs):
         # Get Cartesian product of all discrete design variables (only available if design space is not too large)
         x = self.get_repaired_cartesian_product(problem, self._repair)
 
-        return self.randomly_sample(problem, n_samples, self._repair, x)
+        return self.randomly_sample(problem, n_samples, self._repair, x, sobol=self.sobol)
 
     @classmethod
     def get_repaired_cartesian_product(cls, problem: Problem, repair: Repair) -> Optional[np.ndarray]:
@@ -262,20 +261,25 @@ class RepairedRandomSampling(FloatRandomSampling):
             except MemoryError:
                 pass
 
-    @staticmethod
-    def randomly_sample(problem, n_samples, repair: Repair, x_all: Optional[np.ndarray], lhs=False):
+    @classmethod
+    def randomly_sample(cls, problem, n_samples, repair: Repair, x_all: Optional[np.ndarray], lhs=False, sobol=False):
         is_cont_mask = RepairedExhaustiveSampling.get_is_cont_mask(problem)
         xl, xu = problem.xl, problem.xu
+
+        def _choice(n_choose, n_from, replace=True):
+            if sobol:
+                return cls._sobol_choice(n_choose, n_from, replace=replace)
+            return np.random.choice(n_from, n_choose, replace=replace)
 
         # If the population of all available discrete design vectors is available, sample from there
         if x_all is not None:
             # Randomly select values
             x = x_all
             if n_samples < x.shape[0]:
-                i_x = np.random.choice(x.shape[0], size=n_samples, replace=False)
+                i_x = _choice(n_samples, x.shape[0], replace=False)
             else:
-                i_x = np.sort(np.concatenate([
-                    np.arange(x.shape[0]), np.random.choice(x.shape[0], size=n_samples-x.shape[0], replace=True)]))
+                i_x_add = _choice(n_samples-x.shape[0], x.shape[0])
+                i_x = np.sort(np.concatenate([np.arange(x.shape[0]), i_x_add]))
             x = x[i_x, :]
 
         # If above the threshold (or a memory error occurred), sample randomly
@@ -284,13 +288,16 @@ class RepairedRandomSampling(FloatRandomSampling):
             x = np.empty((n_samples, problem.n_var))
             for i_dv in range(problem.n_var):
                 if not is_cont_mask[i_dv]:
-                    x[:, i_dv] = np.random.choice(opt_values[i_dv], (n_samples,))
+                    i_opt_sampled = _choice(n_samples, len(opt_values[i_dv]))
+                    x[:, i_dv] = opt_values[i_dv][i_opt_sampled]
 
         # Randomize continuous variables
         if np.any(is_cont_mask):
             nx_cont = len(np.where(is_cont_mask)[0])
             if lhs:
                 x_unit = sampling_lhs_unit(x.shape[0], nx_cont)
+            elif sobol:
+                x_unit = cls._sobol(x.shape[0], nx_cont)
             else:
                 x_unit = np.random.random((x.shape[0], nx_cont))
 
@@ -299,6 +306,49 @@ class RepairedRandomSampling(FloatRandomSampling):
         # Repair
         x = repair.do(problem, x)
         return x
+
+    @staticmethod
+    def _sobol(n_samples, n_dims=None) -> np.ndarray:
+        """
+        Sample using a Sobol sequence, which supposedly gives a better distribution of points in a hypercube.
+        More info: https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.qmc.Sobol.html
+        """
+
+        # Get the power of 2 for generating samples (generating a power of 2 gives points with the lowest discrepancy)
+        pow2 = int(np.ceil(np.log2(n_samples)))
+
+        # Sample points and only return the amount needed
+        x = Sobol(d=n_dims or 1).random_base2(m=pow2)
+        x = x[:n_samples, :]
+        return x[:, 0] if n_dims is None else x
+
+    @classmethod
+    def _sobol_choice(cls, n_choose, n_from, replace=True):
+        """
+        Randomly choose n_choose from n_from values, optionally replacing (i.e. allow choosing values multiple times).
+        If n_choose > n_from
+        """
+
+        # If replace (i.e. values can be chosen multiple times)
+        if replace:
+            # Generate unit samples
+            x_unit = cls._sobol(n_choose)
+
+            # Scale to nr of possible values and round
+            return np.round(x_unit*(n_from-.01)-.5).astype(np.int)
+
+        # If we cannot replace, we cannot choose more values than available
+        if n_choose > n_from:
+            raise ValueError(f'Nr of values to choose should be lower than available values: {n_choose} > {n_from}')
+
+        # Generate unit samples from total nr available
+        x_unit = cls._sobol(n_from)
+
+        # Get sorting arguments: this places each float value on an increasing integer scale
+        x_unit = x_unit.argsort()
+
+        # Only return the amount that we actually want to choose
+        return x_unit[:n_choose]
 
     def __repr__(self):
         return f'{self.__class__.__name__}()'

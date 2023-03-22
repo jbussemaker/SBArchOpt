@@ -18,7 +18,7 @@ def test_provision():
     ga = GA()
     provision_pymoo(ga)
     assert isinstance(ga.repair, ArchOptRepair)
-    assert isinstance(ga.initialization.sampling, RepairedLatinHypercubeSampling)
+    assert isinstance(ga.initialization.sampling, RepairedRandomSampling)
 
 
 def test_nsga2(problem: ArchOptProblemBase):

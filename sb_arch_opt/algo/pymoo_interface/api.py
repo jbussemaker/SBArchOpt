@@ -33,7 +33,7 @@ __all__ = ['provision_pymoo', 'ArchOptNSGA2', 'get_nsga2', 'initialize_from_prev
 log = logging.getLogger('sb_arch_opt.pymoo')
 
 
-def provision_pymoo(algorithm: Algorithm, init_use_lhs=True, set_init=True, results_folder=None,
+def provision_pymoo(algorithm: Algorithm, set_init=True, results_folder=None,
                     enable_extreme_barrier=True):
     """
     Provisions a pymoo Algorithm to work correctly for architecture optimization:
@@ -45,7 +45,7 @@ def provision_pymoo(algorithm: Algorithm, init_use_lhs=True, set_init=True, resu
     capture_log()
 
     if set_init and hasattr(algorithm, 'initialization'):
-        algorithm.initialization = get_init_sampler(lhs=init_use_lhs)
+        algorithm.initialization = get_init_sampler()
 
     if hasattr(algorithm, 'repair'):
         algorithm.repair = ArchOptRepair()

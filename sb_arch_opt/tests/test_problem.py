@@ -1,4 +1,5 @@
 import os
+import pytest
 import itertools
 import numpy as np
 from sb_arch_opt.problem import *
@@ -260,12 +261,32 @@ def test_repaired_random_sampling(problem: ArchOptProblemBase):
     assert len(sampling_values) == 5
     assert np.prod([len(values) for values in sampling_values]) == 12500
 
-    sampling = RepairedRandomSampling()
-    assert isinstance(sampling._repair, ArchOptRepair)
-    x = sampling.do(problem, 1000).get('X')
-    assert x.shape == (1000, 5)
-    assert np.unique(x, axis=0).shape[0] == 1000
-    problem.evaluate(x)
+    for _ in range(100):
+        i = RepairedRandomSampling._sobol_choice(5, 10, replace=True)
+        assert len(i) == 5
+        assert 0 <= np.min(i) <= np.max(i) < 10
+        assert len(np.unique(i)) <= 10
+
+        i = RepairedRandomSampling._sobol_choice(10, 5, replace=True)
+        assert len(i) == 10
+        assert 0 <= np.min(i) <= np.max(i) < 5
+        assert len(np.unique(i)) <= 5
+
+        i = RepairedRandomSampling._sobol_choice(5, 10, replace=False)
+        assert len(i) == 5
+        assert 0 <= np.min(i) <= np.max(i) < 10
+        assert len(np.unique(i)) == len(i)
+
+    with pytest.raises(ValueError):
+        RepairedRandomSampling._sobol_choice(10, 5, replace=False)
+
+    for sobol in [False, True]:
+        sampling = RepairedRandomSampling(sobol=sobol)
+        assert isinstance(sampling._repair, ArchOptRepair)
+        x = sampling.do(problem, 1000).get('X')
+        assert x.shape == (1000, 5)
+        assert np.unique(x, axis=0).shape[0] == 1000
+        problem.evaluate(x)
 
 
 def test_repaired_random_sampling_non_exhaustive(problem: ArchOptProblemBase):
@@ -277,12 +298,13 @@ def test_repaired_random_sampling_non_exhaustive(problem: ArchOptProblemBase):
     limit = RepairedRandomSampling._n_comb_gen_all_max
     RepairedRandomSampling._n_comb_gen_all_max = 10
 
-    sampling = RepairedRandomSampling()
-    assert isinstance(sampling._repair, ArchOptRepair)
-    x = sampling.do(problem, 1000).get('X')
-    assert x.shape == (1000, 5)
-    assert np.unique(x, axis=0).shape[0] == 1000
-    problem.evaluate(x)
+    for sobol in [False, True]:
+        sampling = RepairedRandomSampling(sobol=sobol)
+        assert isinstance(sampling._repair, ArchOptRepair)
+        x = sampling.do(problem, 1000).get('X')
+        assert x.shape == (1000, 5)
+        assert np.unique(x, axis=0).shape[0] == 1000
+        problem.evaluate(x)
 
     RepairedRandomSampling._n_comb_gen_all_max = limit
 
