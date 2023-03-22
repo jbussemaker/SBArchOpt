@@ -109,7 +109,27 @@ def test_store_results_restart():
             minimize(problem, nsga2, termination=('n_gen', 3), copy_algorithm=False)
             assert os.path.exists(os.path.join(tmp_folder, 'pymoo_results.pkl'))
             assert os.path.exists(os.path.join(tmp_folder, 'pymoo_population.pkl'))
+            assert os.path.exists(os.path.join(tmp_folder, 'pymoo_population.csv'))
 
             assert problem.n_eval == 3+2*i  # 3 for initial population, 2 for next because the first is a restart
             assert problem.n_stored == 3*(i+1)
             assert problem.n_stored_final == 2*(i+1)  # because pymoo calls result() twice in the end
+
+
+def test_batch_storage_evaluator(problem: ArchOptProblemBase):
+    with tempfile.TemporaryDirectory() as tmp_folder:
+        pop = RepairedRandomSampling().do(problem, 110)
+        assert pop.get('F').shape == (110, 0)
+
+        evaluator = BatchResultsStorageEvaluator(tmp_folder, n_batch=20)
+        pop = evaluator.eval(problem, pop)
+        assert len(pop) == 110
+        assert pop.get('F').shape == (110, 2)
+
+        pop_loaded = load_from_previous_results(problem, tmp_folder)
+        assert np.all(pop_loaded.get('X') == pop.get('X'))
+        assert np.all(pop_loaded.get('F') == pop.get('F'))
+
+        pop_loaded2 = evaluator.load_from_previous_results(problem)
+        assert np.all(pop_loaded2.get('X') == pop.get('X'))
+        assert np.all(pop_loaded2.get('F') == pop.get('F'))

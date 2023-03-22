@@ -15,9 +15,7 @@ Copyright: (c) 2023, Deutsches Zentrum fuer Luft- und Raumfahrt e.V.
 Contact: jasper.bussemaker@dlr.de
 """
 import logging
-import numpy as np
 from pymoo.core.algorithm import Algorithm
-from pymoo.core.evaluator import Evaluator
 from pymoo.algorithms.moo.nsga2 import NSGA2, RankAndCrowdingSurvival
 
 from sb_arch_opt.sampling import *
@@ -28,7 +26,8 @@ from sb_arch_opt.algo.pymoo_interface.md_mating import *
 from sb_arch_opt.algo.pymoo_interface.storage_restart import *
 
 __all__ = ['provision_pymoo', 'ArchOptNSGA2', 'get_nsga2', 'initialize_from_previous_results', 'ResultsStorageCallback',
-           'ExtremeBarrierEvaluator', 'get_default_termination', 'DeltaHVTermination']
+           'ExtremeBarrierEvaluator', 'get_default_termination', 'DeltaHVTermination', 'BatchResultsStorageEvaluator',
+           'load_from_previous_results']
 
 log = logging.getLogger('sb_arch_opt.pymoo')
 
@@ -86,17 +85,3 @@ def get_nsga2(pop_size: int, results_folder=None, **kwargs) -> NSGA2:
     measures"""
     capture_log()
     return ArchOptNSGA2(pop_size=pop_size, results_folder=results_folder, **kwargs)
-
-
-class ExtremeBarrierEvaluator(Evaluator):
-    """Evaluator that applies the extreme barrier approach for dealing with hidden constraints: replace NaN with Inf"""
-
-    def _eval(self, problem, pop, evaluate_values_of, **kwargs):
-        super()._eval(problem, pop, evaluate_values_of, **kwargs)
-
-        for key in ['F', 'G', 'H']:
-            values = pop.get(key)
-            values[np.isnan(values)] = np.inf
-            pop.set(key, values)
-
-        return pop

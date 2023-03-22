@@ -38,6 +38,7 @@ if __name__ == '__main__':
             'pymoo~=0.6.0.1',
             'scipy',
             'deprecated',
+            'pandas',
         ],
         extras_require={
             'simple_sbo': [

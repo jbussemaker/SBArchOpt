@@ -17,27 +17,29 @@ Contact: jasper.bussemaker@dlr.de
 import os
 import pickle
 import logging
+
+import numpy as np
+import pandas as pd
 from typing import Optional
 from pymoo.core.result import Result
 from pymoo.core.callback import Callback
 from pymoo.core.algorithm import Algorithm
+from pymoo.core.evaluator import Evaluator
 from pymoo.core.population import Population
 from pymoo.core.initialization import Initialization
 
 from sb_arch_opt.util import capture_log
 from sb_arch_opt.problem import ArchOptProblemBase
 
-__all__ = ['initialize_from_previous_results', 'ResultsStorageCallback']
+__all__ = ['load_from_previous_results', 'initialize_from_previous_results', 'ResultsStorageCallback',
+           'ExtremeBarrierEvaluator', 'BatchResultsStorageEvaluator']
 
 log = logging.getLogger('sb_arch_opt.pymoo')
 
 
-def initialize_from_previous_results(algorithm: Algorithm, problem: ArchOptProblemBase, result_folder: str) -> bool:
-    """Initialize an Algorithm from previously stored results"""
+def load_from_previous_results(problem: ArchOptProblemBase, result_folder: str) -> Optional[Population]:
+    """Load a Population from previously-stored results"""
     capture_log()
-
-    if not hasattr(algorithm, 'initialization'):
-        raise RuntimeError(f'Algorithm has no initialization step, cannot set initial population: {algorithm!r}')
 
     # Try to load using problem-specific function first
     population = problem.load_previous_results(result_folder)
@@ -50,11 +52,25 @@ def initialize_from_previous_results(algorithm: Algorithm, problem: ArchOptProbl
         if population is not None and len(population) > 0:
             log.info(f'Previous results loaded from pymoo results: {len(population)} design points')
         else:
-            log.info(f'No previous population found, not changing initialization strategy')
-            return False
+            return
 
     # Set evaluated flag
     population.apply(lambda ind: ind.evaluated.update({'X', 'F', 'G', 'H'}))
+    return population
+
+
+def initialize_from_previous_results(algorithm: Algorithm, problem: ArchOptProblemBase, result_folder: str) -> bool:
+    """Initialize an Algorithm from previously stored results"""
+    capture_log()
+
+    if not hasattr(algorithm, 'initialization'):
+        raise RuntimeError(f'Algorithm has no initialization step, cannot set initial population: {algorithm!r}')
+
+    # Try to load from previous results
+    population = load_from_previous_results(problem, result_folder)
+    if population is None:
+        log.info(f'No previous population found, not changing initialization strategy')
+        return False
 
     # Set static initialization on the algorithm to start from the loaded population
     algorithm.initialization = Initialization(population)
@@ -108,20 +124,35 @@ class ResultsStorageCallback(Callback):
 
     def store_intermediate(self, algorithm: Algorithm, final=False):
         # Store pymoo population
-        self.store_pop(algorithm)
-
-        # Store problem-specific results
-        problem = algorithm.problem
-        if isinstance(problem, ArchOptProblemBase):
-            problem.store_results(self.results_folder, final=final)
-
-    def store_pop(self, algorithm: Algorithm):
         if not hasattr(algorithm, 'pop'):
             raise RuntimeError(f'Algorithm has no population (pop property): {algorithm!r}')
         pop: Population = algorithm.pop
+        self.store_pop(pop)
 
+        # Store problem-specific results
+        self.store_intermediate_problem(algorithm.problem, final=final)
+
+    def store_pop(self, pop: Population):
         with open(self._get_pop_file_path(self.results_folder), 'wb') as fp:
             pickle.dump(pop, fp)
+
+        if len(pop) > 0:
+            self.get_pop_as_df(pop).to_csv(os.path.join(self.results_folder, 'pymoo_population.csv'))
+
+    @staticmethod
+    def get_pop_as_df(pop: Population) -> pd.DataFrame:
+        cols = []
+        all_data = []
+        for symbol in ['x', 'f', 'g', 'h']:
+            data = pop.get(symbol.upper())
+            all_data.append(data)
+            cols += [f'{symbol}{i}' for i in range(data.shape[1])]
+
+        return pd.DataFrame(columns=cols, data=np.column_stack(all_data))
+
+    def store_intermediate_problem(self, problem, final=False):
+        if isinstance(problem, ArchOptProblemBase):
+            problem.store_results(self.results_folder, final=final)
 
     def _store_results(self, result: Result):
         with open(os.path.join(self.results_folder, 'pymoo_results.pkl'), 'wb') as fp:
@@ -148,3 +179,59 @@ class ResultsStorageCallback(Callback):
         super().__call__(*args, **kwargs)
         if self.callback is not None:
             self.callback(*args, **kwargs)
+
+
+class ExtremeBarrierEvaluator(Evaluator):
+    """Evaluator that applies the extreme barrier approach for dealing with hidden constraints: replace NaN with Inf"""
+
+    def _eval(self, problem, pop, evaluate_values_of, **kwargs):
+        super()._eval(problem, pop, evaluate_values_of, **kwargs)
+
+        for key in ['F', 'G', 'H']:
+            values = pop.get(key)
+            values[np.isnan(values)] = np.inf
+            pop.set(key, values)
+
+        return pop
+
+
+class BatchResultsStorageEvaluator(ExtremeBarrierEvaluator):
+    """Evaluator that stores results every n evaluations. Useful when doing large, expensive DOE's."""
+
+    def __init__(self, results_folder: str, n_batch=4, **kwargs):
+        self._storage_callback = ResultsStorageCallback(results_folder)
+        self.n_batch = n_batch
+        super().__init__(**kwargs)
+
+    def _eval(self, problem, pop, evaluate_values_of, **kwargs):
+        callback = self._storage_callback
+
+        n_batch = self.n_batch
+        for i_batch in range(0, len(pop), n_batch):
+            batch_pop = pop[i_batch:i_batch+n_batch]
+            super()._eval(problem, batch_pop, evaluate_values_of, **kwargs)
+
+            callback.store_pop(self._normalize_pop(pop, evaluate_values_of))
+            callback.store_intermediate_problem(problem)
+
+        callback.store_intermediate_problem(problem, final=True)
+
+    def load_from_previous_results(self, problem):
+        return load_from_previous_results(problem, self._storage_callback.results_folder)
+
+    @staticmethod
+    def _normalize_pop(pop: Population, evaluate_values_of) -> Population:
+        """Ensure that the matrices in a Population are two-dimensional"""
+        pop_data = {}
+        for key in (['X']+evaluate_values_of):
+            data = pop.get(key)
+
+            if len(data.shape) == 1:
+                partial_data = np.zeros((len(data), len(data[0])))*np.nan
+                for i, row in enumerate(data):
+                    if row is not None and len(row) > 0:
+                        partial_data[i, :] = row
+                data = partial_data
+
+            pop_data[key] = data
+        return Population.new(**pop_data)

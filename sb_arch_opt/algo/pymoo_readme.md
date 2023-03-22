@@ -65,3 +65,23 @@ initialize_from_previous_results(ga_algorithm, problem, results_folder_path)
 
 result = minimize(problem, ga_algorithm, termination=('n_gen', 10))
 ```
+
+For running large DOE's with intermediate results storage, you can use the `BatchResultsStorageEvaluator`:
+
+```python
+from sb_arch_opt.sampling import RepairedRandomSampling
+from sb_arch_opt.algo.pymoo_interface import BatchResultsStorageEvaluator
+
+problem = ...  # Subclass of ArchOptProblemBase
+results_folder_path = 'path/to/results/folder'
+
+# Generate a design of experiments (of 100 design points)
+pop = RepairedRandomSampling().do(problem, 100)
+
+# Evaluate the sampled points
+evaluator = BatchResultsStorageEvaluator(results_folder_path, n_batch=4)
+pop = evaluator.eval(problem, pop)
+
+# Load intermediate results in case of crash
+pop = evaluator.load_from_previous_results(problem)
+```
