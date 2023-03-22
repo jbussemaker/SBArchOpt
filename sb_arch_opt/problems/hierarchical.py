@@ -710,8 +710,8 @@ class CombinatorialHierarchicalMetaProblem(HierarchyProblemBase):
 
         # Shuffle the parts
         n_sel_dv = max(2, n_sel_dv)
-        np.random.seed(problem.n_var * problem.n_obj * n_parts * n_sel_dv)
-        self._parts = parts = [parts[i] for i in np.random.permutation(np.arange(len(parts)))]
+        rng = np.random.default_rng(problem.n_var * problem.n_obj * n_parts * n_sel_dv)
+        self._parts = parts = [parts[i] for i in rng.permutation(np.arange(len(parts)))]
 
         # Define which mapped design variables are active for each part
         self._parts_is_active = parts_is_active = np.ones((len(parts), problem.n_var), dtype=bool)
@@ -736,7 +736,7 @@ class CombinatorialHierarchicalMetaProblem(HierarchyProblemBase):
         n = len(parts)
 
         # We define one design variable that makes the initial separation
-        init_sep_frac = .5+.5*init_range-.05+.1*np.random.random()
+        init_sep_frac = .5+.5*init_range-.05+.1*rng.random()
 
         # Determine in how many groups we should separate at each step
         # Repeatedly subdividing the largest group determines how many values the last largest group has. We calculate
@@ -938,7 +938,7 @@ if __name__ == '__main__':
     # Jenatton().print_stats()
     # # Jenatton().plot_pf()
 
-    # CombHierBranin().print_stats()
+    CombHierBranin().print_stats()
     # CombHierBranin().plot_pf()
     CombHierRosenbrock().print_stats()
     # CombHierRosenbrock().plot_pf()

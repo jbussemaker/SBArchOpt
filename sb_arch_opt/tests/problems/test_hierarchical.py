@@ -49,8 +49,8 @@ def test_jenatton():
 
 
 def test_comb_hier_branin():
-    run_test_hierarchy(CombHierBranin(), 7.76)
+    run_test_hierarchy(CombHierBranin(), 8.32)
 
 
 def test_comb_hier_rosenbrock():
-    run_test_hierarchy(CombHierRosenbrock(), 6.67, check_n_valid=False)
+    run_test_hierarchy(CombHierRosenbrock(), 6.6, check_n_valid=False)

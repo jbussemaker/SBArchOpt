@@ -1,30 +1,30 @@
 # SBArchOpt: Overview of Test Problems
 
-An overview of available test problems in `sb_arch_opt.problems` (nomenclature is explained below the table):
+An overview of available test problems in `sb_arch_opt.problems` (* = recommended; further nomenclature is explained below the table):
 
 | Problem Class                     | n_discr | n_cont | n_obj | n_con | D   | MD  | MO  | HIER | HC  | n_valid_discr | imp_ratio | dependencies | Notes                            |
 |-----------------------------------|---------|--------|-------|-------|-----|-----|-----|------|-----|---------------|-----------|--------------|----------------------------------|
 | Module: `continuous`              |
 | `Himmelblau`                      |         | 2      | 1     |       |     |     |     |      |     |               |           |              |                                  |
 | `Goldstein`                       |         | 2      | 1     |       |     |     |     |      |     |               |           |              |                                  |
-| `Branin`                          |         | 2      | 1     |       |     |     |     |      |     |               |           |              |                                  |
-| `Rosenbrock`                      |         | 10     | 1     |       |     |     |     |      |     |               |           |              |                                  |
+| `Branin`*                         |         | 2      | 1     |       |     |     |     |      |     |               |           |              |                                  |
+| `Rosenbrock`*                     |         | 10     | 1     |       |     |     |     |      |     |               |           |              |                                  |
 | `Griewank`                        |         | 10     | 1     |       |     |     |     |      |     |               |           |              |                                  |
 | Module: `discrete`                |
-| `MDBranin`                        | 2       | 2      | 1     |       |     | Y   |     |      |     | 4             |           |              |                                  |
-| `AugmentedMDBranin`               | 2       | 10     | 1     |       |     | Y   |     |      |     | 4             |           |              |                                  |
+| `MDBranin`*                       | 2       | 2      | 1     |       |     | Y   |     |      |     | 4             |           |              |                                  |
+| `AugmentedMDBranin`*              | 2       | 10     | 1     |       |     | Y   |     |      |     | 4             |           |              |                                  |
 | `MDGoldstein`                     | 2       | 2      | 1     |       |     | Y   |     |      |     | 9             |           |              |                                  |
-| `MunozZunigaToy`                  | 1       | 1      | 1     |       |     | Y   |     |      |     | 10            |           |              |                                  |
+| `MunozZunigaToy`*                 | 1       | 1      | 1     |       |     | Y   |     |      |     | 10            |           |              |                                  |
 | `Halstrup04`                      | 3       | 5      | 1     |       |     | Y   |     |      |     | 12            |           |              |                                  |
 | Module: `md_mo`                   |
 | `MOHimmelblau`                    |         | 2      | 2     |       |     |     | Y   |      |     |               |           |              |                                  |
 | `MDMOHimmelblau`                  | 1       | 1      | 2     |       |     | Y   | Y   |      |     | 10            |           |              |                                  |
 | `DMOHimmelblau`                   | 2       |        | 2     |       | Y   |     | Y   |      |     | 100           |           |              |                                  |
 | `MOGoldstein`                     |         | 2      | 2     |       |     |     | Y   |      |     |               |           |              |                                  |
-| `MDMOGoldstein`                   | 1       | 1      | 2     |       |     | Y   | Y   |      |     | 10            |           |              |                                  |
-| `DMOGoldstein`                    | 2       |        | 2     |       | Y   |     | Y   |      |     | 100           |           |              |                                  |
-| `MORosenbrock`                    |         | 10     | 2     |       |     |     | Y   |      |     |               |           |              |                                  |
-| `MDMORosenbrock`                  | 5       | 5      | 2     |       |     | Y   | Y   |      |     | 1025          |           |              |                                  |
+| `MDMOGoldstein`*                  | 1       | 1      | 2     |       |     | Y   | Y   |      |     | 10            |           |              |                                  |
+| `DMOGoldstein`*                   | 2       |        | 2     |       | Y   |     | Y   |      |     | 100           |           |              |                                  |
+| `MORosenbrock`*                   |         | 10     | 2     |       |     |     | Y   |      |     |               |           |              |                                  |
+| `MDMORosenbrock`*                 | 5       | 5      | 2     |       |     | Y   | Y   |      |     | 1025          |           |              |                                  |
 | `MOZDT1`                          |         | 30     | 2     |       |     |     | Y   |      |     |               |           |              |                                  |
 | `MDZDT1Small`                     | 6       | 6      | 2     |       |     | Y   | Y   |      |     | 729           |           |              |                                  |
 | `MDZDT1Mid`                       | 10      | 10     | 2     |       |     | Y   | Y   |      |     | 59049         |           |              |                                  |
@@ -46,8 +46,8 @@ An overview of available test problems in `sb_arch_opt.problems` (nomenclature i
 | `Jenatton`                        | 3       | 6      | 1     |       |     | Y   |     | Y    |     | 4             | 2         |              |                                  |
 | `HierarchicalGoldstein`           | 6       | 5      | 1     | 1     |     | Y   |     | Y    |     | 288           | 2.25      |              |                                  |
 | `MOHierarchicalGoldstein`         | 6       | 5      | 2     | 1     |     | Y   | Y   | Y    |     | 288           | 2.25      |              |                                  |
-| `CombHierBranin`                  | 6       | 2      | 1     |       |     | Y   |     | Y    |     | 330           | 7.8       |              |                                  |
-| `CombHierRosenbrock`              | 10      | 4      | 2     |       |     | Y   | Y   | Y    |     | 1199          | 6.7       |              |                                  |
+| `CombHierBranin`*                 | 6       | 2      | 1     |       |     | Y   |     | Y    |     | 323           | 8.3       |              |                                  |
+| `CombHierRosenbrock`*             | 10      | 4      | 2     |       |     | Y   | Y   | Y    |     | 1212          | 6.6       |              |                                  |
 | `HierarchicalRosenbrock`          | 5       | 8      | 1     | 2     |     | Y   |     | Y    |     | 32            | 1.5       |              |                                  |
 | `MOHierarchicalRosenbrock`        | 5       | 8      | 2     | 2     |     | Y   | Y   | Y    |     | 32            | 1.5       |              |                                  |
 | ~~`MOHierarchicalTestProblem`~~   | 11      | 16     | 2     | 2     |     | Y   | Y   | Y    |     | 64            | 72        |              |                                  |
