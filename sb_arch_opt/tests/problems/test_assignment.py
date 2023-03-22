@@ -24,7 +24,7 @@ def test_partitioning():
 
 @check_dependency()
 def test_unordered():
-    run_test_hierarchy(UnordNonReplComb(), 5.09)
+    run_test_hierarchy(UnordNonReplComb(), 2.55)
     UnordNonReplCombLarge().print_stats()
     UnorderedComb().print_stats()
 

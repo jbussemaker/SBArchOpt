@@ -76,11 +76,11 @@ An overview of available test problems in `sb_arch_opt.problems` (* = recommende
 | Module: `assignment`              |         |        |       |       |     |     |     |      |     |               |           | `assignment` | dist_corr: 100% if not specified |
 | `Assignment`                      | 12      |        | 2     |       | Y   |     | Y   |      |     | 4096          |           | `assignment` |                                  |
 | `AssignmentLarge`                 | 16      |        | 2     |       | Y   |     | Y   |      |     | 65536         |           | `assignment` |                                  |
-| `AssignmentInj`                   | 5       |        | 2     |       | Y   |     | Y   |      |     | 7776          |           | `assignment` |                                  |
-| `AssignmentInjLarge`              | 18      |        | 2     |       | Y   |     | Y   |      |     | 117649        |           | `assignment` |                                  |
+| `AssignmentInj`                   | 5       |        | 2     |       | Y   |     | Y   |      |     | 7776          |           | `assignment` | dist_corr: 31%                   |
+| `AssignmentInjLarge`              | 18      |        | 2     |       | Y   |     | Y   |      |     | 117649        |           | `assignment` | dist_corr: 31%                   |
 | `AssignmentRepeat`                | 8       |        | 2     |       | Y   |     | Y   |      |     | 6561          |           | `assignment` |                                  |
 | `AssignmentRepeatLarge`           | 10      |        | 2     |       | Y   |     | Y   |      |     | 59049         |           | `assignment` |                                  |
-| `Partitioning`                    | 12      |        | 2     |       | Y   |     | Y   |      |     | 4096          |           | `assignment` | dist_corr: 82%                   |
+| `Partitioning`                    | 12      |        | 2     |       | Y   |     | Y   |      |     | 4096          |           | `assignment` | dist_corr: 74%                   |
 | `PartitioningLarge`               | 7       |        | 2     |       | Y   |     | Y   |      |     | 78125         |           | `assignment` | dist_corr: 67%                   |
 | `PartitioningCovering`            | 12      |        | 2     |       | Y   |     | Y   | Y    |     | 2401          | 1.71      | `assignment` |                                  |
 | `PartitioningCoveringLarge`       | 16      |        | 2     |       | Y   |     | Y   | Y    |     | 50625         | 1.29      | `assignment` |                                  |
@@ -88,11 +88,11 @@ An overview of available test problems in `sb_arch_opt.problems` (* = recommende
 | `DownselectingLarge`              | 15      |        | 2     |       | Y   |     | Y   |      |     | 32768         |           | `assignment` |                                  |
 | `Connecting`                      | 12      |        | 2     |       | Y   |     | Y   |      |     | 4096          |           | `assignment` |                                  |
 | `ConnectingUndirected`            | 15      |        | 2     |       | Y   |     | Y   |      |     | 32768         |           | `assignment` |                                  |
-| `Permuting`                       | 1       |        | 2     |       | Y   |     | Y   |      |     | 5040          |           | `assignment` | dist_corr: 22%                   |
-| `PermutingLarge`                  | 1       |        | 2     |       | Y   |     | Y   |      |     | 40320         |           | `assignment` | dist_corr: 18%                   |
-| `UnordNonReplComb`                | 15      |        | 2     |       | Y   |     | Y   | Y    |     | 6435          | 5.09      | `assignment` |                                  |
-| `UnordNonReplCombLarge`           | 19      |        | 2     |       | Y   |     | Y   | Y    |     | 92378         | 5.68      | `assignment` |                                  |
-| `UnorderedComb`                   | 1       |        | 2     |       | Y   |     | Y   |      |     | 2002          |           | `assignment` | dist_corr: 31%                   |
+| `Permuting`                       | 6       |        | 2     |       | Y   |     | Y   |      |     | 5040          |           | `assignment` | dist_corr: 43%                   |
+| `PermutingLarge`                  | 7       |        | 2     |       | Y   |     | Y   |      |     | 40320         |           | `assignment` | dist_corr: 39%                   |
+| `UnordNonReplComb`                | 14      |        | 2     |       | Y   |     | Y   | Y    |     | 6435          | 2.55      | `assignment` |                                  |
+| `UnordNonReplCombLarge`           | 18      |        | 2     |       | Y   |     | Y   | Y    |     | 92378         | 2.84      | `assignment` |                                  |
+| `UnorderedComb`                   | 1       |        | 2     |       | Y   |     | Y   |      |     | 2002          |           | `assignment` | dist_corr: 34%                   |
 | `AssignmentGNCNoActType`          | 11      |        | 2     |       | Y   |     | Y   | Y    |     | 327           | 14.1      | `assignment` |                                  |
 | `AssignmentGNCNoAct`              | 15      |        | 2     |       | Y   |     | Y   | Y    |     | 29857         | 39.5      | `assignment` |                                  |
 | `AssignmentGNCNoType`             | 21      |        | 2     |       | Y   |     | Y   | Y    |     | 85779         | 82.5      | `assignment` |                                  |
