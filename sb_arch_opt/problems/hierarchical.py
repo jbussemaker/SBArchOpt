@@ -716,15 +716,17 @@ class CombinatorialHierarchicalMetaProblem(HierarchyProblemBase):
         # Define which mapped design variables are active for each part
         self._parts_is_active = parts_is_active = np.ones((len(parts), problem.n_var), dtype=bool)
         osc_period = max(5, int(len(parts)/5))
-        n_inactive = np.floor(problem.n_var*(.5-.5*np.cos(osc_period*np.arange(len(parts))/np.pi))).astype(int)
+        idx_cont = np.where(is_cont_mask)[0]
+        n_inactive = np.floor(len(idx_cont)*(.5-.5*np.cos(osc_period*np.arange(len(parts))/np.pi))).astype(int)
         for i, part in enumerate(parts):
             # Discrete variables with one option only are inactive
             for i_dv, (is_discrete, settings) in enumerate(part):
                 if is_discrete and len(settings) < 2:
                     parts_is_active[i, i_dv] = False
 
-            # Deactivate variables based on an oscillating equation
-            parts_is_active[i, parts_is_active.shape[1]-n_inactive[i]:] = False
+            # Deactivate continuous variables based on an oscillating equation
+            cont_inactive_idx = idx_cont[len(idx_cont)-n_inactive[i]:]
+            parts_is_active[i, cont_inactive_idx] = False
 
         # Define selection design variables
         # Repeatedly separate the number of parts to be selected
@@ -843,7 +845,8 @@ class CombinatorialHierarchicalMetaProblem(HierarchyProblemBase):
             for i_dv, (is_discrete, settings) in enumerate(parts[i_part]):
                 if is_discrete:
                     if is_active_i[i_dv]:
-                        x_part[i_dv] = settings[x_part[i_dv]] if x_part[i_dv] >= len(settings) else settings[-1]
+                        i_x_mapped = int(x_part[i_dv])
+                        x_part[i_dv] = settings[i_x_mapped] if i_x_mapped < len(settings) else settings[-1]
                     else:
                         x_part[i_dv] = 0
                 else:
