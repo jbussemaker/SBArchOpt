@@ -58,7 +58,8 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
         check_dependency()
         self._problem = open_turb_arch_problem
         open_turb_arch_problem.max_iter = 10
-        self._n_parallel = n_parallel
+        self.n_parallel = n_parallel
+        self.verbose = False
 
         des_vars = []
         for dv in open_turb_arch_problem.free_opt_des_vars:
@@ -98,10 +99,10 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
 
-        if self._n_parallel is None:
+        if self.n_parallel is None:
             results = [self._arch_evaluate_x(x[i, :]) for i in range(x.shape[0])]
         else:
-            with concurrent.futures.ProcessPoolExecutor(max_workers=self._n_parallel) as executor:
+            with concurrent.futures.ProcessPoolExecutor(max_workers=self.n_parallel) as executor:
                 futures = [executor.submit(self._arch_evaluate_x, x[i, :]) for i in range(x.shape[0])]
                 concurrent.futures.wait(futures)
                 results = [fut.result() for fut in futures]
@@ -113,6 +114,7 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
             g_out[i, :] = (np.array(g)-self._con_offsets)*self._con_factors
 
     def _arch_evaluate_x(self, x: np.ndarray):
+        self._problem.verbose = self.verbose
         x_imp, f, g, _ = self._problem.evaluate(self._convert_x(x))
         is_active = self._problem.get_last_is_active()
         return x_imp, f, g, is_active
