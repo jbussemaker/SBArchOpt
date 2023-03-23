@@ -21,16 +21,16 @@ import itertools
 import numpy as np
 from typing import *
 from deprecated import deprecated
-from sb_arch_opt.problems.md_mo import *
 from sb_arch_opt.problems.discrete import *
 from sb_arch_opt.problems.problems_base import *
+from pymoo.problems.multi.omnitest import OmniTest
 from pymoo.core.variable import Real, Integer, Choice
 from pymoo.util.ref_dirs import get_reference_directions
 
 __all__ = ['HierarchyProblemBase', 'HierarchicalGoldstein', 'HierarchicalRosenbrock', 'ZaeffererHierarchical',
            'ZaeffererProblemMode', 'MOHierarchicalGoldstein', 'MOHierarchicalRosenbrock', 'HierarchicalMetaProblemBase',
            'MOHierarchicalTestProblem', 'Jenatton', 'CombinatorialHierarchicalMetaProblem', 'CombHierBranin',
-           'CombHierRosenbrock', 'CombHierDRosenbrock']
+           'CombHierMO', 'CombHierDMO']
 
 
 class HierarchyProblemBase(ArchOptTestProblemBase):
@@ -914,20 +914,21 @@ class CombHierBranin(CombinatorialHierarchicalMetaProblem):
         super().__init__(MDBranin(), n_parts=4, n_sel_dv=4, sep_power=1.2, target_n_opts_ratio=5.)
 
 
-class CombHierRosenbrock(CombinatorialHierarchicalMetaProblem):
-    """Multi-objective mixed-discrete hierarchical Rosenbrock test problem"""
+class CombHierMO(CombinatorialHierarchicalMetaProblem):
+    """Multi-objective mixed-discrete hierarchical test problem"""
 
     def __init__(self):
-        problem = MixedDiscretizerProblemBase(MORosenbrock(n_var=6), n_opts=3, n_vars_int=2)
+        problem = MixedDiscretizerProblemBase(OmniTest(n_var=6), n_opts=3, n_vars_int=2)
         super().__init__(problem, n_parts=3, n_sel_dv=5, sep_power=1.1, target_n_opts_ratio=1.)
 
 
-class CombHierDRosenbrock(CombinatorialHierarchicalMetaProblem):
-    """Multi-objective discrete hierarchical Rosenbrock test problem"""
+class CombHierDMO(CombinatorialHierarchicalMetaProblem):
+    """Multi-objective discrete hierarchical test problem"""
 
     def __init__(self):
-        problem = MixedDiscretizerProblemBase(MORosenbrock(n_var=7), n_opts=4)
-        super().__init__(problem, n_parts=2, n_sel_dv=5, sep_power=1.2, target_n_opts_ratio=1.)
+        # problem = MixedDiscretizerProblemBase(OmniTest(n_var=5), n_opts=7)
+        problem = MixedDiscretizerProblemBase(OmniTest(n_var=6), n_opts=5)
+        super().__init__(problem, n_parts=2, n_sel_dv=5, sep_power=1., target_n_opts_ratio=5.)
 
 
 if __name__ == '__main__':
@@ -953,8 +954,9 @@ if __name__ == '__main__':
 
     # CombHierBranin().print_stats()
     # CombHierBranin().plot_pf()
-    # CombHierRosenbrock().print_stats()
-    # CombHierRosenbrock().plot_pf()
-    CombHierDRosenbrock().print_stats()
-    # CombHierDRosenbrock().reset_pf_cache()
-    CombHierDRosenbrock().plot_pf()
+    # CombHierMO().print_stats()
+    # CombHierMO().reset_pf_cache()
+    # CombHierMO().plot_pf()
+    CombHierDMO().print_stats()
+    # CombHierDMO().reset_pf_cache()
+    # CombHierDMO().plot_pf()

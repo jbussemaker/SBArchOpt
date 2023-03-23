@@ -57,9 +57,11 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
     def __init__(self, open_turb_arch_problem: 'ArchitectingProblem', n_parallel=None):
         check_dependency()
         self._problem = open_turb_arch_problem
-        open_turb_arch_problem.max_iter = 10
         self.n_parallel = n_parallel
         self.verbose = False
+
+        # open_turb_arch_problem.max_iter = 10  # Leads to a high failure rate: ~88% for the simple problem
+        open_turb_arch_problem.max_iter = 30  # Used for the paper
 
         des_vars = []
         for dv in open_turb_arch_problem.free_opt_des_vars:
