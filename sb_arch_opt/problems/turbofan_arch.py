@@ -98,6 +98,9 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
     def get_failure_rate(self) -> float:
         raise NotImplementedError
 
+    def get_n_batch_evaluate(self) -> Optional[int]:
+        return self.n_parallel
+
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
 

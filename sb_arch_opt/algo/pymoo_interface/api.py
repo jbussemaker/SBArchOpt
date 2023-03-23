@@ -17,6 +17,7 @@ Contact: jasper.bussemaker@dlr.de
 import logging
 from pymoo.core.algorithm import Algorithm
 from pymoo.algorithms.moo.nsga2 import NSGA2, RankAndCrowdingSurvival
+from pymoo.termination.max_eval import MaximumFunctionCallTermination
 
 from sb_arch_opt.sampling import *
 from sb_arch_opt.util import capture_log
@@ -26,14 +27,13 @@ from sb_arch_opt.algo.pymoo_interface.md_mating import *
 from sb_arch_opt.algo.pymoo_interface.storage_restart import *
 
 __all__ = ['provision_pymoo', 'ArchOptNSGA2', 'get_nsga2', 'initialize_from_previous_results', 'ResultsStorageCallback',
-           'ExtremeBarrierEvaluator', 'get_default_termination', 'DeltaHVTermination', 'BatchResultsStorageEvaluator',
-           'load_from_previous_results']
+           'ArchOptEvaluator', 'get_default_termination', 'DeltaHVTermination', 'ArchOptEvaluator',
+           'load_from_previous_results', 'get_doe_algo']
 
 log = logging.getLogger('sb_arch_opt.pymoo')
 
 
-def provision_pymoo(algorithm: Algorithm, set_init=True, results_folder=None,
-                    enable_extreme_barrier=True):
+def provision_pymoo(algorithm: Algorithm, set_init=True, results_folder=None, enable_extreme_barrier=True):
     """
     Provisions a pymoo Algorithm to work correctly for architecture optimization:
     - Sets initializer using a repaired sampler (if `set_init = True`)
@@ -52,8 +52,8 @@ def provision_pymoo(algorithm: Algorithm, set_init=True, results_folder=None,
     if results_folder is not None:
         algorithm.callback = ResultsStorageCallback(results_folder, callback=algorithm.callback)
 
-    if enable_extreme_barrier:
-        algorithm.evaluator = ExtremeBarrierEvaluator()
+    if results_folder is not None or enable_extreme_barrier:
+        algorithm.evaluator = ArchOptEvaluator(extreme_barrier=enable_extreme_barrier, results_folder=results_folder)
 
     return algorithm
 
@@ -63,7 +63,7 @@ class ArchOptNSGA2(NSGA2):
 
     def __init__(self,
                  pop_size=100,
-                 sampling=RepairedLatinHypercubeSampling(),
+                 sampling=RepairedRandomSampling(),
                  repair=ArchOptRepair(),
                  mating=MixedDiscreteMating(repair=ArchOptRepair(), eliminate_duplicates=LargeDuplicateElimination()),
                  eliminate_duplicates=LargeDuplicateElimination(),
@@ -72,7 +72,7 @@ class ArchOptNSGA2(NSGA2):
                  results_folder=None,
                  **kwargs):
 
-        evaluator = ExtremeBarrierEvaluator()
+        evaluator = ArchOptEvaluator(extreme_barrier=True, results_folder=results_folder)
         callback = ResultsStorageCallback(results_folder) if results_folder is not None else None
 
         super().__init__(pop_size=pop_size, sampling=sampling, repair=repair, mating=mating,
@@ -80,8 +80,16 @@ class ArchOptNSGA2(NSGA2):
                          evaluator=evaluator, callback=callback, **kwargs)
 
 
-def get_nsga2(pop_size: int, results_folder=None, **kwargs) -> NSGA2:
+def get_nsga2(pop_size: int, results_folder=None, **kwargs):
     """Returns a NSGA2 algorithm preconfigured to work with mixed-discrete variables and other architecture optimization
     measures"""
     capture_log()
     return ArchOptNSGA2(pop_size=pop_size, results_folder=results_folder, **kwargs)
+
+
+def get_doe_algo(doe_size: int, results_folder=None, **kwargs):
+    """Returns an algorithm preconfigured for architecture optimization that will only run a DOE. Useful when
+    evaluations is expensive and more inspection is needed before continuing with optimization"""
+    algo = get_nsga2(pop_size=doe_size, results_folder=results_folder, **kwargs)
+    algo.termination = MaximumFunctionCallTermination(n_max_evals=doe_size)
+    return algo

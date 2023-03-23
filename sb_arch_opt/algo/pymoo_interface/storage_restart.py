@@ -32,7 +32,7 @@ from sb_arch_opt.util import capture_log
 from sb_arch_opt.problem import ArchOptProblemBase
 
 __all__ = ['load_from_previous_results', 'initialize_from_previous_results', 'ResultsStorageCallback',
-           'ExtremeBarrierEvaluator', 'BatchResultsStorageEvaluator']
+           'ArchOptEvaluator']
 
 log = logging.getLogger('sb_arch_opt.pymoo')
 
@@ -181,43 +181,53 @@ class ResultsStorageCallback(Callback):
             self.callback(*args, **kwargs)
 
 
-class ExtremeBarrierEvaluator(Evaluator):
-    """Evaluator that applies the extreme barrier approach for dealing with hidden constraints: replace NaN with Inf"""
+class ArchOptEvaluator(Evaluator):
+    """
+    Evaluate that adds some optional functionalities useful for architecture optimization:
+    - It implements the extreme barrier approach for dealing with hidden constraints: NaN outputs are replaced by Inf
+    - It stores intermediate results during evaluation, which also allows results to be stored during a large DoE for
+      example, instead of only when an algorithm makes a new iteration
+
+    Batch process size is determined using `get_n_batch_evaluate` if not specified explicitly!
+
+    Also using the ResultsStorageCallback ensures that also final problem-specific results are stored.
+    """
+
+    def __init__(self, *args, extreme_barrier=True, results_folder: str = None, n_batch=None, **kwargs):
+        self.extreme_barrier = extreme_barrier
+        self.results_folder = results_folder
+        self.n_batch = n_batch
+        super().__init__(*args, **kwargs)
 
     def _eval(self, problem, pop, evaluate_values_of, **kwargs):
-        super()._eval(problem, pop, evaluate_values_of, **kwargs)
+        if self.results_folder is None:
+            super()._eval(problem, pop, evaluate_values_of, **kwargs)
 
-        for key in ['F', 'G', 'H']:
-            values = pop.get(key)
-            values[np.isnan(values)] = np.inf
-            pop.set(key, values)
+        else:
+            # Evaluate in batch and store intermediate results
+            callback = ResultsStorageCallback(self.results_folder)
+
+            n_batch = self.n_batch
+            if n_batch is None and isinstance(problem, ArchOptProblemBase):
+                n_batch = problem.get_n_batch_evaluate()
+            if n_batch is None:
+                n_batch = 1  # Assume there is no batch processing, and we want to save after every evaluation
+
+            for i_batch in range(0, len(pop), n_batch):
+                batch_pop = pop[i_batch:i_batch+n_batch]
+                super()._eval(problem, batch_pop, evaluate_values_of, **kwargs)
+
+                callback.store_pop(self._normalize_pop(pop, evaluate_values_of))
+                callback.store_intermediate_problem(problem)
+
+        # Apply extreme barrier: replace NaN with Inf
+        if self.extreme_barrier:
+            for key in ['F', 'G', 'H']:
+                values = pop.get(key)
+                values[np.isnan(values)] = np.inf
+                pop.set(key, values)
 
         return pop
-
-
-class BatchResultsStorageEvaluator(ExtremeBarrierEvaluator):
-    """Evaluator that stores results every n evaluations. Useful when doing large, expensive DOE's."""
-
-    def __init__(self, results_folder: str, n_batch=4, **kwargs):
-        self._storage_callback = ResultsStorageCallback(results_folder)
-        self.n_batch = n_batch
-        super().__init__(**kwargs)
-
-    def _eval(self, problem, pop, evaluate_values_of, **kwargs):
-        callback = self._storage_callback
-
-        n_batch = self.n_batch
-        for i_batch in range(0, len(pop), n_batch):
-            batch_pop = pop[i_batch:i_batch+n_batch]
-            super()._eval(problem, batch_pop, evaluate_values_of, **kwargs)
-
-            callback.store_pop(self._normalize_pop(pop, evaluate_values_of))
-            callback.store_intermediate_problem(problem)
-
-        callback.store_intermediate_problem(problem, final=True)
-
-    def load_from_previous_results(self, problem):
-        return load_from_previous_results(problem, self._storage_callback.results_folder)
 
     @staticmethod
     def _normalize_pop(pop: Population, evaluate_values_of) -> Population:

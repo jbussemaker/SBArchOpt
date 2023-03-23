@@ -97,6 +97,8 @@ def test_store_results_restart():
     with tempfile.TemporaryDirectory() as tmp_folder:
         for i in range(5):
             nsga2 = get_nsga2(pop_size=100, results_folder=tmp_folder)
+            assert isinstance(nsga2.evaluator, ArchOptEvaluator)
+            nsga2.evaluator.n_batch = 500
             assert isinstance(nsga2.callback, ResultsStorageCallback)
 
             if i > 2:
@@ -112,7 +114,7 @@ def test_store_results_restart():
             assert os.path.exists(os.path.join(tmp_folder, 'pymoo_population.csv'))
 
             assert problem.n_eval == 3+2*i  # 3 for initial population, 2 for next because the first is a restart
-            assert problem.n_stored == 3*(i+1)
+            assert problem.n_stored == 6+5*i
             assert problem.n_stored_final == 2*(i+1)  # because pymoo calls result() twice in the end
 
 
@@ -121,7 +123,7 @@ def test_batch_storage_evaluator(problem: ArchOptProblemBase):
         pop = RepairedRandomSampling().do(problem, 110)
         assert pop.get('F').shape == (110, 0)
 
-        evaluator = BatchResultsStorageEvaluator(tmp_folder, n_batch=20)
+        evaluator = ArchOptEvaluator(results_folder=tmp_folder, n_batch=20)
         pop = evaluator.eval(problem, pop)
         assert len(pop) == 110
         assert pop.get('F').shape == (110, 2)
@@ -130,6 +132,23 @@ def test_batch_storage_evaluator(problem: ArchOptProblemBase):
         assert np.all(pop_loaded.get('X') == pop.get('X'))
         assert np.all(pop_loaded.get('F') == pop.get('F'))
 
-        pop_loaded2 = evaluator.load_from_previous_results(problem)
-        assert np.all(pop_loaded2.get('X') == pop.get('X'))
-        assert np.all(pop_loaded2.get('F') == pop.get('F'))
+
+def test_doe_algo(problem: ArchOptProblemBase):
+    with tempfile.TemporaryDirectory() as tmp_folder:
+        doe_algo = get_doe_algo(doe_size=100)
+        doe_algo.setup(problem)
+        doe_algo.run()
+        pop = doe_algo.pop
+        assert len(pop) == 100
+        assert not os.path.exists(os.path.join(tmp_folder, 'pymoo_population.csv'))
+
+        doe_algo = get_doe_algo(doe_size=100, results_folder=tmp_folder)
+        doe_algo.setup(problem)
+        doe_algo.run()
+        pop = doe_algo.pop
+        assert len(pop) == 100
+        assert os.path.exists(os.path.join(tmp_folder, 'pymoo_population.csv'))
+
+        pop_loaded = load_from_previous_results(problem, tmp_folder)
+        assert np.all(pop_loaded.get('X') == pop.get('X'))
+        assert np.all(pop_loaded.get('F') == pop.get('F'))

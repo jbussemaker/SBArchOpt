@@ -206,6 +206,9 @@ class DemoArchOptProblem(CachedParetoFrontMixin, ArchOptProblemBase):
     def get_failure_rate(self) -> float:  # Optional
         """Estimate the failure rate: the fraction of randomly-sampled points of which evaluation will fail"""
 
+    def get_n_batch_evaluate(self) -> int:  # Optional
+        """If the problem evaluation benefits from parallel batch process, return the appropriate batch size here"""
+
     def __repr__(self):
         """repr() of the class, should be unique for unique Pareto fronts"""
         return f'{self.__class__.__name__}()'

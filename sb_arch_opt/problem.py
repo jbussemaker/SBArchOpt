@@ -322,6 +322,9 @@ class ArchOptProblemBase(Problem):
     def _print_extra_stats(self):
         """Print extra statistics when the print_stats() function is used"""
 
+    def get_n_batch_evaluate(self) -> Optional[int]:
+        """If the problem evaluation benefits from parallel batch process, return the appropriate batch size here"""
+
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
         """

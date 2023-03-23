@@ -328,6 +328,8 @@ class RepairedRandomSampling(FloatRandomSampling):
         Randomly choose n_choose from n_from values, optionally replacing (i.e. allow choosing values multiple times).
         If n_choose > n_from
         """
+        if n_choose <= 0:
+            return np.zeros((0,), dtype=int)
 
         # If replace (i.e. values can be chosen multiple times)
         if replace:
