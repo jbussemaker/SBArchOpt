@@ -31,23 +31,23 @@ from pymoo.operators.sampling.lhs import LatinHypercubeSampling, sampling_lhs_un
 
 from sb_arch_opt.problem import ArchOptRepair
 
-__all__ = ['RepairedExhaustiveSampling', 'RepairedLatinHypercubeSampling', 'RepairedRandomSampling', 'get_init_sampler',
-           'LargeDuplicateElimination']
+__all__ = ['HierarchicalExhaustiveSampling', 'HierarchicalLatinHypercubeSampling', 'HierarchicalRandomSampling',
+           'get_init_sampler', 'LargeDuplicateElimination']
 
 
 def get_init_sampler(repair: Repair = None, remove_duplicates=True):
-    """Helper function to get an Initialization class with repaired sampling"""
+    """Helper function to get an Initialization class with hierarchical sampling"""
 
     if repair is None:
         repair = ArchOptRepair()
-    sampling = RepairedRandomSampling(repair=repair, sobol=True)
+    sampling = HierarchicalRandomSampling(repair=repair, sobol=True)
 
-    # Samples are already repaired because we're using the repaired samplers
+    # Samples are already repaired because we're using the hierarchical samplers
     eliminate_duplicates = LargeDuplicateElimination() if remove_duplicates else None
     return Initialization(sampling, eliminate_duplicates=eliminate_duplicates)
 
 
-class RepairedExhaustiveSampling(Sampling):
+class HierarchicalExhaustiveSampling(Sampling):
     """Exhaustively samples the design space, taking n_cont samples for each continuous variable.
     Can take a long time if the design space is large, and doesn't work well for purely continuous problems."""
 
@@ -168,10 +168,10 @@ class RepairedExhaustiveSampling(Sampling):
         return f'{self.__class__.__name__}()'
 
 
-class RepairedLatinHypercubeSampling(LatinHypercubeSampling):
+class HierarchicalLatinHypercubeSampling(LatinHypercubeSampling):
     """
-    Latin hypercube sampling only returning repaired samples. Additionally, the repaired random sampling procedure is
-    used to get the best distribution corresponding to the real distribution of hierarchical variables.
+    Latin hypercube sampling only returning repaired samples. Additionally, the hierarchical random sampling procedure
+    is used to get the best distribution corresponding to the real distribution of hierarchical variables.
     """
 
     def __init__(self, repair: Repair = None, **kwargs):
@@ -185,13 +185,13 @@ class RepairedLatinHypercubeSampling(LatinHypercubeSampling):
             return super()._do(problem, n_samples, **kwargs)
 
         # Prepare sampling
-        x_all = RepairedRandomSampling.get_repaired_cartesian_product(problem, self._repair)
+        x_all = HierarchicalRandomSampling.get_hierarchical_cartesian_product(problem, self._repair)
         xl, xu = problem.bounds()
 
         # Sample several times to find the best-scored samples
         best_x = best_score = None
         for _ in range(self.iterations):
-            x = RepairedRandomSampling.randomly_sample(problem, n_samples, self._repair, x_all, lhs=True)
+            x = HierarchicalRandomSampling.randomly_sample(problem, n_samples, self._repair, x_all, lhs=True)
             if self.criterion is None:
                 return x
 
@@ -207,9 +207,9 @@ class RepairedLatinHypercubeSampling(LatinHypercubeSampling):
         return f'{self.__class__.__name__}()'
 
 
-class RepairedRandomSampling(FloatRandomSampling):
+class HierarchicalRandomSampling(FloatRandomSampling):
     """
-    Repaired float sampling with architecture repair. There are two ways the random sampling is done:
+    Hierarchical float sampling with architecture repair. There are two ways the random sampling is done:
     A: Generate and select:
        1. Generate the Cartesian product of all discrete values
        2. Repair/impute design vectors
@@ -235,14 +235,14 @@ class RepairedRandomSampling(FloatRandomSampling):
 
     def _do(self, problem, n_samples, **kwargs):
         # Get Cartesian product of all discrete design variables (only available if design space is not too large)
-        x = self.get_repaired_cartesian_product(problem, self._repair)
+        x = self.get_hierarchical_cartesian_product(problem, self._repair)
 
         return self.randomly_sample(problem, n_samples, self._repair, x, sobol=self.sobol)
 
     @classmethod
-    def get_repaired_cartesian_product(cls, problem: Problem, repair: Repair) -> Optional[np.ndarray]:
+    def get_hierarchical_cartesian_product(cls, problem: Problem, repair: Repair) -> Optional[np.ndarray]:
         # Get values to be sampled for each discrete design variable
-        opt_values = RepairedExhaustiveSampling.get_exhaustive_sample_values(problem, n_cont=1)
+        opt_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(problem, n_cont=1)
 
         # Get the number of samples in the cartesian product
         n_opt_values = int(np.prod([len(values) for values in opt_values], dtype=float))
@@ -263,7 +263,7 @@ class RepairedRandomSampling(FloatRandomSampling):
 
     @classmethod
     def randomly_sample(cls, problem, n_samples, repair: Repair, x_all: Optional[np.ndarray], lhs=False, sobol=False):
-        is_cont_mask = RepairedExhaustiveSampling.get_is_cont_mask(problem)
+        is_cont_mask = HierarchicalExhaustiveSampling.get_is_cont_mask(problem)
         xl, xu = problem.xl, problem.xu
 
         def _choice(n_choose, n_from, replace=True):
@@ -284,7 +284,7 @@ class RepairedRandomSampling(FloatRandomSampling):
 
         # If above the threshold (or a memory error occurred), sample randomly
         else:
-            opt_values = RepairedExhaustiveSampling.get_exhaustive_sample_values(problem, n_cont=1)
+            opt_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(problem, n_cont=1)
             x = np.empty((n_samples, problem.n_var))
             for i_dv in range(problem.n_var):
                 if not is_cont_mask[i_dv]:

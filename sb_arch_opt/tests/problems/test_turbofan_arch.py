@@ -2,7 +2,7 @@ import pytest
 import tempfile
 import numpy as np
 from sb_arch_opt.problems.turbofan_arch import *
-from sb_arch_opt.sampling import RepairedExhaustiveSampling
+from sb_arch_opt.sampling import HierarchicalExhaustiveSampling
 from sb_arch_opt.algo.pymoo_interface import get_nsga2
 from pymoo.optimize import minimize
 from pymoo.core.population import Population
@@ -16,7 +16,7 @@ def test_simple_problem():
     problem = SimpleTurbofanArch()
     problem.print_stats()
 
-    assert len(RepairedExhaustiveSampling(n_cont=1).do(problem, 0)) == problem.get_n_valid_discrete()
+    assert len(HierarchicalExhaustiveSampling(n_cont=1).do(problem, 0)) == problem.get_n_valid_discrete()
 
 
 @pytest.mark.skip('Takes about 1 minute')

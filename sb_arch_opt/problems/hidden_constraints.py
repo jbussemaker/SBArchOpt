@@ -25,7 +25,7 @@ from sb_arch_opt.problems.hierarchical import *
 from sb_arch_opt.problems.problems_base import *
 from sb_arch_opt.problems.continuous import Branin
 from sb_arch_opt.problem import ArchOptProblemBase
-from sb_arch_opt.sampling import RepairedRandomSampling
+from sb_arch_opt.sampling import HierarchicalRandomSampling
 from pymoo.problems.single.ackley import Ackley
 
 __all__ = ['SampledFailureRateMixin', 'Mueller01', 'Mueller02', 'Mueller08', 'Alimo', 'HCBranin',
@@ -38,7 +38,7 @@ class SampledFailureRateMixin(ArchOptProblemBase):
     n_samples_failure_rate = 10000
 
     def get_failure_rate(self) -> float:
-        x = RepairedRandomSampling().do(self, self.n_samples_failure_rate).get('X')
+        x = HierarchicalRandomSampling().do(self, self.n_samples_failure_rate).get('X')
         out = self.evaluate(x, return_as_dictionary=True)
         is_failed = self.get_failed_points(out)
         return np.sum(is_failed)/len(is_failed)
@@ -188,7 +188,7 @@ class RandomHiddenConstraintsBase(SampledFailureRateMixin, NoHierarchyProblemBas
         if self._x_failed is None:
             if self.seed is not None:
                 np.random.seed(self.seed)
-            x_failed = RepairedRandomSampling().do(self, 100).get('X')
+            x_failed = HierarchicalRandomSampling().do(self, 100).get('X')
             i_selected = np.random.choice(len(x_failed), size=int(self.density*len(x_failed)), replace=False)
 
             self._scale = 1/(self.xu-self.xl)

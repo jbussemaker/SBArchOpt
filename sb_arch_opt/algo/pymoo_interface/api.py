@@ -63,7 +63,7 @@ class ArchOptNSGA2(NSGA2):
 
     def __init__(self,
                  pop_size=100,
-                 sampling=RepairedRandomSampling(),
+                 sampling=HierarchicalRandomSampling(),
                  repair=ArchOptRepair(),
                  mating=MixedDiscreteMating(repair=ArchOptRepair(), eliminate_duplicates=LargeDuplicateElimination()),
                  eliminate_duplicates=LargeDuplicateElimination(),

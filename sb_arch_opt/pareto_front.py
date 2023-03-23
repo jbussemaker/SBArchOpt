@@ -22,7 +22,6 @@ import numpy as np
 from typing import *
 import concurrent.futures
 import matplotlib.pyplot as plt
-from assign_pymoo.sampling import *
 
 from pymoo.optimize import minimize
 from pymoo.core.variable import Real
@@ -33,7 +32,7 @@ from pymoo.core.initialization import Initialization
 from pymoo.algorithms.moo.nsga2 import calc_crowding_distance
 from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
 from pymoo.termination.default import DefaultMultiObjectiveTermination, DefaultSingleObjectiveTermination
-from sb_arch_opt.sampling import RepairedExhaustiveSampling, RepairedRandomSampling
+from sb_arch_opt.sampling import HierarchicalExhaustiveSampling, HierarchicalRandomSampling
 
 __all__ = ['CachedParetoFrontMixin']
 
@@ -73,7 +72,7 @@ class CachedParetoFrontMixin(Problem):
 
         # If the design space is smaller than the number of requested evaluations, simply evaluate all points
         if n is not None and n < pop_size*n_gen_min*n_repeat:
-            pop = RepairedExhaustiveSampling().do(self, n)
+            pop = HierarchicalExhaustiveSampling().do(self, n)
             Evaluator().eval(self, pop)
 
             pf = pop.get('F')
@@ -143,7 +142,7 @@ class CachedParetoFrontMixin(Problem):
         if show_approx_f_range:
             scatter.add(self.get_approx_f_range(), s=.1, color='white')
 
-            pop = Initialization(RepairedRandomSampling()).do(self, n_sample)
+            pop = Initialization(HierarchicalRandomSampling()).do(self, n_sample)
             Evaluator().eval(self, pop)
             scatter.add(pop.get('F'), s=5)
 
@@ -155,7 +154,7 @@ class CachedParetoFrontMixin(Problem):
         plt.close(scatter.fig)
 
     def get_approx_f_range(self, n_sample=100):
-        pop = Initialization(RepairedRandomSampling()).do(self, n_sample)
+        pop = Initialization(HierarchicalRandomSampling()).do(self, n_sample)
         Evaluator().eval(self, pop)
         f = pop.get('F')
         f_max = np.max(f, axis=0)

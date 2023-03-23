@@ -18,7 +18,7 @@ def test_provision():
     ga = GA()
     provision_pymoo(ga)
     assert isinstance(ga.repair, ArchOptRepair)
-    assert isinstance(ga.initialization.sampling, RepairedRandomSampling)
+    assert isinstance(ga.initialization.sampling, HierarchicalRandomSampling)
 
 
 def test_nsga2(problem: ArchOptProblemBase):
@@ -120,7 +120,7 @@ def test_store_results_restart():
 
 def test_batch_storage_evaluator(problem: ArchOptProblemBase):
     with tempfile.TemporaryDirectory() as tmp_folder:
-        pop = RepairedRandomSampling().do(problem, 110)
+        pop = HierarchicalRandomSampling().do(problem, 110)
         assert pop.get('F').shape == (110, 0)
 
         evaluator = ArchOptEvaluator(results_folder=tmp_folder, n_batch=20)

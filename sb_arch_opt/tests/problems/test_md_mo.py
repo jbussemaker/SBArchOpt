@@ -11,7 +11,7 @@ def test_md_base():
     assert problem.get_imputation_ratio() == 1
     problem.print_stats()
 
-    pop = RepairedExhaustiveSampling(n_cont=3).do(problem, 0)
+    pop = HierarchicalExhaustiveSampling(n_cont=3).do(problem, 0)
     assert len(pop) == (4**2)*(3**2)
     Evaluator().eval(problem, pop)
 
@@ -20,10 +20,10 @@ def run_test_no_hierarchy(problem):
     assert problem.get_imputation_ratio() == 1
     problem.print_stats()
 
-    if RepairedExhaustiveSampling.get_n_sample_exhaustive(problem, n_cont=3) < 1e3:
-        pop = RepairedExhaustiveSampling(n_cont=3).do(problem, 0)
+    if HierarchicalExhaustiveSampling.get_n_sample_exhaustive(problem, n_cont=3) < 1e3:
+        pop = HierarchicalExhaustiveSampling(n_cont=3).do(problem, 0)
     else:
-        pop = RepairedRandomSampling().do(problem, 100)
+        pop = HierarchicalRandomSampling().do(problem, 100)
     Evaluator().eval(problem, pop)
     return pop
 

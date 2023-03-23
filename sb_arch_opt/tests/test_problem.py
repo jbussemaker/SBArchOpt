@@ -195,12 +195,12 @@ def test_large_duplicate_elimination():
 
 def test_repaired_exhaustive_sampling(problem: ArchOptProblemBase):
 
-    sampling_values = RepairedExhaustiveSampling.get_exhaustive_sample_values(problem)
+    sampling_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(problem)
     assert len(sampling_values) == 5
     assert np.prod([len(values) for values in sampling_values]) == 12500
-    assert RepairedExhaustiveSampling.get_n_sample_exhaustive(problem) == 12500
+    assert HierarchicalExhaustiveSampling.get_n_sample_exhaustive(problem) == 12500
 
-    sampling = RepairedExhaustiveSampling()
+    sampling = HierarchicalExhaustiveSampling()
     assert isinstance(sampling._repair, ArchOptRepair)
     x = sampling.do(problem, 100).get('X')
     assert x.shape == (7500, 5)
@@ -231,19 +231,19 @@ class HierarchicalDummyProblem(ArchOptProblemBase):
 
 
 def test_repaired_exhaustive_sampling_hierarchical():
-    x = RepairedExhaustiveSampling(n_cont=2).do(HierarchicalDummyProblem(), 0).get('X')
+    x = HierarchicalExhaustiveSampling(n_cont=2).do(HierarchicalDummyProblem(), 0).get('X')
     assert x.shape == (31, 8)  # 2**(n+1)-1
 
 
 def test_repaired_exhaustive_sampling_hierarchical_large():
     n = 12
-    x = RepairedExhaustiveSampling(n_cont=2).do(HierarchicalDummyProblem(n=n), 0).get('X')
+    x = HierarchicalExhaustiveSampling(n_cont=2).do(HierarchicalDummyProblem(n=n), 0).get('X')
     assert x.shape == (2**(n+1)-1, n*2)
 
 
 def test_repaired_lhs_sampling(problem: ArchOptProblemBase):
 
-    sampling = RepairedLatinHypercubeSampling()
+    sampling = HierarchicalLatinHypercubeSampling()
     assert isinstance(sampling._repair, ArchOptRepair)
     x = sampling.do(problem, 1000).get('X')
     assert x.shape == (1000, 5)
@@ -257,31 +257,31 @@ def test_repaired_lhs_sampling(problem: ArchOptProblemBase):
 
 def test_repaired_random_sampling(problem: ArchOptProblemBase):
 
-    sampling_values = RepairedExhaustiveSampling.get_exhaustive_sample_values(problem)
+    sampling_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(problem)
     assert len(sampling_values) == 5
     assert np.prod([len(values) for values in sampling_values]) == 12500
 
     for _ in range(100):
-        i = RepairedRandomSampling._sobol_choice(5, 10, replace=True)
+        i = HierarchicalRandomSampling._sobol_choice(5, 10, replace=True)
         assert len(i) == 5
         assert 0 <= np.min(i) <= np.max(i) < 10
         assert len(np.unique(i)) <= 10
 
-        i = RepairedRandomSampling._sobol_choice(10, 5, replace=True)
+        i = HierarchicalRandomSampling._sobol_choice(10, 5, replace=True)
         assert len(i) == 10
         assert 0 <= np.min(i) <= np.max(i) < 5
         assert len(np.unique(i)) <= 5
 
-        i = RepairedRandomSampling._sobol_choice(5, 10, replace=False)
+        i = HierarchicalRandomSampling._sobol_choice(5, 10, replace=False)
         assert len(i) == 5
         assert 0 <= np.min(i) <= np.max(i) < 10
         assert len(np.unique(i)) == len(i)
 
     with pytest.raises(ValueError):
-        RepairedRandomSampling._sobol_choice(10, 5, replace=False)
+        HierarchicalRandomSampling._sobol_choice(10, 5, replace=False)
 
     for sobol in [False, True]:
-        sampling = RepairedRandomSampling(sobol=sobol)
+        sampling = HierarchicalRandomSampling(sobol=sobol)
         assert isinstance(sampling._repair, ArchOptRepair)
         x = sampling.do(problem, 1000).get('X')
         assert x.shape == (1000, 5)
@@ -291,22 +291,22 @@ def test_repaired_random_sampling(problem: ArchOptProblemBase):
 
 def test_repaired_random_sampling_non_exhaustive(problem: ArchOptProblemBase):
 
-    sampling_values = RepairedExhaustiveSampling.get_exhaustive_sample_values(problem)
+    sampling_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(problem)
     assert len(sampling_values) == 5
     assert np.prod([len(values) for values in sampling_values]) == 12500
 
-    limit = RepairedRandomSampling._n_comb_gen_all_max
-    RepairedRandomSampling._n_comb_gen_all_max = 10
+    limit = HierarchicalRandomSampling._n_comb_gen_all_max
+    HierarchicalRandomSampling._n_comb_gen_all_max = 10
 
     for sobol in [False, True]:
-        sampling = RepairedRandomSampling(sobol=sobol)
+        sampling = HierarchicalRandomSampling(sobol=sobol)
         assert isinstance(sampling._repair, ArchOptRepair)
         x = sampling.do(problem, 1000).get('X')
         assert x.shape == (1000, 5)
         assert np.unique(x, axis=0).shape[0] == 1000
         problem.evaluate(x)
 
-    RepairedRandomSampling._n_comb_gen_all_max = limit
+    HierarchicalRandomSampling._n_comb_gen_all_max = limit
 
 
 def test_cached_pareto_front_mixin(problem: ArchOptTestProblemBase, discrete_problem: ArchOptTestProblemBase):

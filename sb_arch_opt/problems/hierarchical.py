@@ -185,10 +185,10 @@ class HierarchicalGoldstein(HierarchyProblemBase):
     def validate_ranges(cls, n_samples=5000, show=True):
         """Compare to Pelamatti 2020, Fig. 6"""
         import matplotlib.pyplot as plt
-        from sb_arch_opt.sampling import RepairedLatinHypercubeSampling
+        from sb_arch_opt.sampling import HierarchicalLatinHypercubeSampling
 
         problem = cls()
-        x = RepairedLatinHypercubeSampling().do(problem, n_samples).get('X')
+        x = HierarchicalLatinHypercubeSampling().do(problem, n_samples).get('X')
 
         f, g = problem.evaluate(x)
         i_feasible = np.max(g, axis=1) <= 0.
@@ -334,10 +334,10 @@ class HierarchicalRosenbrock(HierarchyProblemBase):
     def validate_ranges(cls, n_samples=5000, show=True):
         """Compare to Pelamatti 2020, Fig. 13"""
         import matplotlib.pyplot as plt
-        from sb_arch_opt.sampling import RepairedLatinHypercubeSampling
+        from sb_arch_opt.sampling import HierarchicalLatinHypercubeSampling
 
         problem = cls()
-        x = RepairedLatinHypercubeSampling().do(problem, n_samples).get('X')
+        x = HierarchicalLatinHypercubeSampling().do(problem, n_samples).get('X')
 
         f, g = problem.evaluate(x)
         i_feasible = np.max(g, axis=1) <= 0.

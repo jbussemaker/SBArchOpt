@@ -6,16 +6,16 @@ from pymoo.core.evaluator import Evaluator
 
 def run_test_hierarchy(problem, imp_ratio, check_n_valid=True):
     if check_n_valid:
-        pop = RepairedExhaustiveSampling(n_cont=1).do(problem, 0)
+        pop = HierarchicalExhaustiveSampling(n_cont=1).do(problem, 0)
         assert len(pop) == problem.get_n_valid_discrete()
 
     assert problem.get_imputation_ratio() == pytest.approx(imp_ratio, rel=.02)
     problem.print_stats()
 
-    if RepairedExhaustiveSampling.get_n_sample_exhaustive(problem, n_cont=3) < 1e3:
-        pop = RepairedExhaustiveSampling(n_cont=3).do(problem, 0)
+    if HierarchicalExhaustiveSampling.get_n_sample_exhaustive(problem, n_cont=3) < 1e3:
+        pop = HierarchicalExhaustiveSampling(n_cont=3).do(problem, 0)
     else:
-        pop = RepairedRandomSampling().do(problem, 100)
+        pop = HierarchicalRandomSampling().do(problem, 100)
     Evaluator().eval(problem, pop)
     return pop
 
