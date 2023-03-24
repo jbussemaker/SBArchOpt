@@ -64,8 +64,7 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
         self.results_folder = None
 
         # open_turb_arch_problem.max_iter = 10  # Leads to a high failure rate: ~88% for the simple problem
-        # open_turb_arch_problem.max_iter = 30  # Used for the paper
-        open_turb_arch_problem.max_iter = 40  # TODO
+        open_turb_arch_problem.max_iter = 30  # Used for the paper
 
         des_vars = []
         for dv in open_turb_arch_problem.free_opt_des_vars:
@@ -92,6 +91,9 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
         self._con_factors = np.array([-1 if con.dir == ConstraintDirection.GREATER_EQUAL_THAN else 1
                                       for con in open_turb_arch_problem.opt_constraints])
         self._con_offsets = np.array([con.limit_value for con in open_turb_arch_problem.opt_constraints])
+
+    def set_max_iter(self, max_iter: int):
+        self._problem.max_iter = max_iter
 
     def might_have_hidden_constraints(self):
         return True
