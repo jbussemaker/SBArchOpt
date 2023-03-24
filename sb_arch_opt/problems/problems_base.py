@@ -14,11 +14,14 @@ limitations under the License.
 Copyright: (c) 2023, Deutsches Zentrum fuer Luft- und Raumfahrt e.V.
 Contact: jasper.bussemaker@dlr.de
 """
+import itertools
 import numpy as np
+from typing import Optional, Tuple
 from pymoo.core.problem import Problem
 from pymoo.core.variable import Real, Integer
 from sb_arch_opt.problem import ArchOptProblemBase
 from sb_arch_opt.pareto_front import CachedParetoFrontMixin
+from sb_arch_opt.sampling import HierarchicalExhaustiveSampling
 
 __all__ = ['ArchOptTestProblemBase', 'NoHierarchyProblemBase', 'NoHierarchyWrappedProblem', 'MixedDiscretizerProblemBase']
 
@@ -84,9 +87,16 @@ class ArchOptTestProblemBase(CachedParetoFrontMixin, ArchOptProblemBase):
 class NoHierarchyProblemBase(ArchOptTestProblemBase):
     """Base class for test problems that have no decision hierarchy"""
 
-    def get_n_valid_discrete(self) -> int:
+    def _get_n_valid_discrete(self) -> int:
         # No hierarchy, so the number of valid points is the same as the number of declared points
         return self.get_n_declared_discrete()
+
+    def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
+        # No hierarchy, so we can just get the Cartesian product of discrete variables
+        x_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(self, n_cont=1)
+        x_discrete = np.array(list(itertools.product(*x_values)))
+        is_active = np.ones(x_discrete.shape, dtype=bool)
+        return x_discrete, is_active
 
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
         pass  # No need to correct anything

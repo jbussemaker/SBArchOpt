@@ -193,9 +193,13 @@ class DemoArchOptProblem(CachedParetoFrontMixin, ArchOptProblemBase):
     def load_previous_results(self, results_folder):  # Optional
         """Implement this function to enable problem-specific results loading for algorithm restart"""
 
-    def get_n_valid_discrete(self) -> int:  # Optional
+    def _get_n_valid_discrete(self) -> int:  # Optional
         """Return the number of valid discrete design points (ignoring continuous dimensions); enables calculation of
         the imputation ratio"""
+
+    def _gen_all_discrete_x(self):  # -> Optional[Tuple[np.ndarray, np.ndarray]]
+        """Generate all possible discrete design vectors (if available). Returns design vectors and activeness
+        information."""
 
     def might_have_hidden_constraints(self):  # Optional
         """By default, it is assumed that at any time one or more points might fail to evaluate (i.e. return NaN).

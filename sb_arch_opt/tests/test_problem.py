@@ -115,14 +115,24 @@ def test_repair(problem: ArchOptProblemBase):
 
 def test_imputation_ratio(problem: ArchOptProblemBase, discrete_problem: ArchOptProblemBase):
     assert problem.get_n_declared_discrete() == 10*10
-    assert problem.get_n_valid_discrete() == 10*10
+    assert problem.get_n_valid_discrete() == 10 * 10
     assert problem.get_imputation_ratio() == 1
     problem.print_stats()
 
+    x_discrete, is_active_discrete = problem.all_discrete_x
+    assert x_discrete.shape[0] == problem.get_n_valid_discrete()
+    assert is_active_discrete.shape[0] == problem.get_n_valid_discrete()
+    assert np.all(~LargeDuplicateElimination.eliminate(x_discrete))
+
     assert discrete_problem.get_n_declared_discrete() == 10*10
-    assert discrete_problem.get_n_valid_discrete() == 10*5+5
+    assert discrete_problem.get_n_valid_discrete() == 10 * 5 + 5
     assert discrete_problem.get_imputation_ratio() == 1/.55
     discrete_problem.print_stats()
+
+    x_discrete, is_active_discrete = discrete_problem.all_discrete_x
+    assert x_discrete.shape[0] == discrete_problem.get_n_valid_discrete()
+    assert is_active_discrete.shape[0] == discrete_problem.get_n_valid_discrete()
+    assert np.all(~LargeDuplicateElimination.eliminate(x_discrete))
 
 
 def test_evaluate(problem: ArchOptProblemBase):
@@ -194,18 +204,24 @@ def test_large_duplicate_elimination():
 
 
 def test_repaired_exhaustive_sampling(problem: ArchOptProblemBase):
+    for has_cheap in [True, False]:
+        problem.set_provide_all_x(has_cheap)
 
-    sampling_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(problem)
-    assert len(sampling_values) == 5
-    assert np.prod([len(values) for values in sampling_values]) == 12500
-    assert HierarchicalExhaustiveSampling.get_n_sample_exhaustive(problem) == 12500
+        sampling_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(problem)
+        assert len(sampling_values) == 5
+        assert np.prod([len(values) for values in sampling_values]) == 12500
+        assert HierarchicalExhaustiveSampling.get_n_sample_exhaustive(problem) == 12500
+        assert HierarchicalExhaustiveSampling.has_cheap_all_x_discrete(problem) == has_cheap
 
-    sampling = HierarchicalExhaustiveSampling()
-    assert isinstance(sampling._repair, ArchOptRepair)
-    x = sampling.do(problem, 100).get('X')
-    assert x.shape == (7500, 5)
-    assert np.unique(x, axis=0).shape[0] == 7500
-    problem.evaluate(x)
+        sampling = HierarchicalExhaustiveSampling()
+        assert isinstance(sampling._repair, ArchOptRepair)
+        x = sampling.do(problem, 100).get('X')
+        assert x.shape == (7500, 5)
+        assert np.unique(x, axis=0).shape[0] == 7500
+        problem.evaluate(x)
+
+        x_imp, _ = problem.correct_x(x)
+        assert np.all(x_imp == x)
 
 
 class HierarchicalDummyProblem(ArchOptProblemBase):
@@ -229,16 +245,27 @@ class HierarchicalDummyProblem(ArchOptProblemBase):
                 is_active[i, j+1:n] = False
                 is_active[i, n+j:] = False
 
+    def __repr__(self):
+        return f'{self.__class__.__name__}()'
+
 
 def test_repaired_exhaustive_sampling_hierarchical():
-    x = HierarchicalExhaustiveSampling(n_cont=2).do(HierarchicalDummyProblem(), 0).get('X')
+    problem = HierarchicalDummyProblem()
+    x = HierarchicalExhaustiveSampling(n_cont=2).do(problem, 0).get('X')
     assert x.shape == (31, 8)  # 2**(n+1)-1
+
+    x_imp, _ = problem.correct_x(x)
+    assert np.all(x_imp == x)
 
 
 def test_repaired_exhaustive_sampling_hierarchical_large():
     n = 12
-    x = HierarchicalExhaustiveSampling(n_cont=2).do(HierarchicalDummyProblem(n=n), 0).get('X')
+    problem = HierarchicalDummyProblem(n=n)
+    x = HierarchicalExhaustiveSampling(n_cont=2).do(problem, 0).get('X')
     assert x.shape == (2**(n+1)-1, n*2)
+
+    x_imp, _ = problem.correct_x(x)
+    assert np.all(x_imp == x)
 
 
 def test_repaired_lhs_sampling(problem: ArchOptProblemBase):
@@ -250,17 +277,15 @@ def test_repaired_lhs_sampling(problem: ArchOptProblemBase):
     assert np.unique(x, axis=0).shape[0] == 1000
     problem.evaluate(x)
 
+    x_imp, _ = problem.correct_x(x)
+    assert np.all(x_imp == x)
+
     init = get_init_sampler()
     x = init.do(problem, 1000).get('X')
     assert x.shape == (1000, 5)
 
 
-def test_repaired_random_sampling(problem: ArchOptProblemBase):
-
-    sampling_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(problem)
-    assert len(sampling_values) == 5
-    assert np.prod([len(values) for values in sampling_values]) == 12500
-
+def test_sobol_sampling():
     for _ in range(100):
         i = HierarchicalRandomSampling._sobol_choice(5, 10, replace=True)
         assert len(i) == 5
@@ -280,6 +305,13 @@ def test_repaired_random_sampling(problem: ArchOptProblemBase):
     with pytest.raises(ValueError):
         HierarchicalRandomSampling._sobol_choice(10, 5, replace=False)
 
+
+def test_repaired_random_sampling(problem: ArchOptProblemBase):
+
+    sampling_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(problem)
+    assert len(sampling_values) == 5
+    assert np.prod([len(values) for values in sampling_values]) == 12500
+
     for sobol in [False, True]:
         sampling = HierarchicalRandomSampling(sobol=sobol)
         assert isinstance(sampling._repair, ArchOptRepair)
@@ -287,6 +319,9 @@ def test_repaired_random_sampling(problem: ArchOptProblemBase):
         assert x.shape == (1000, 5)
         assert np.unique(x, axis=0).shape[0] == 1000
         problem.evaluate(x)
+
+        x_imp, _ = problem.correct_x(x)
+        assert np.all(x_imp == x)
 
 
 def test_repaired_random_sampling_non_exhaustive(problem: ArchOptProblemBase):
@@ -305,6 +340,9 @@ def test_repaired_random_sampling_non_exhaustive(problem: ArchOptProblemBase):
         assert x.shape == (1000, 5)
         assert np.unique(x, axis=0).shape[0] == 1000
         problem.evaluate(x)
+
+        x_imp, _ = problem.correct_x(x)
+        assert np.all(x_imp == x)
 
     HierarchicalRandomSampling._n_comb_gen_all_max = limit
 

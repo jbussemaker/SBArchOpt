@@ -15,7 +15,8 @@ Copyright: (c) 2023, Deutsches Zentrum fuer Luft- und Raumfahrt e.V.
 Contact: jasper.bussemaker@dlr.de
 """
 import numpy as np
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Tuple
+from cached_property import cached_property
 from pymoo.core.repair import Repair
 from pymoo.core.problem import Problem
 from pymoo.core.population import Population
@@ -125,7 +126,7 @@ class ArchOptProblemBase(Problem):
             values[x_values == i_cat] = value
         return values
 
-    def correct_x(self, x: np.ndarray):
+    def correct_x(self, x: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """Imputes design vectors and returns activeness vectors"""
         x_imputed = x.copy()
         self._correct_x_discrete(x_imputed)
@@ -136,7 +137,7 @@ class ArchOptProblemBase(Problem):
 
     def _correct_x_impute(self, x: np.ndarray, is_active: np.ndarray):
         self._correct_x(x, is_active)
-        self._impute_x(x, is_active)
+        self.impute_x(x, is_active)
 
     def _correct_x_discrete(self, x: np.ndarray):
         """
@@ -161,7 +162,7 @@ class ArchOptProblemBase(Problem):
 
         x[:, self._is_discrete_mask] = x_rounded
 
-    def _impute_x(self, x: np.ndarray, is_active: np.ndarray):
+    def impute_x(self, x: np.ndarray, is_active: np.ndarray):
         """
         Applies the default imputation to design vectors:
         - Sets inactive discrete design variables to 0
@@ -175,6 +176,41 @@ class ArchOptProblemBase(Problem):
         # Impute inactive continuous design variables
         for i_cont, i_dv in enumerate(np.where(self.is_cont_mask)[0]):
             x[~is_active[:, i_dv], i_dv] = self._x_cont_mid[i_cont]
+
+    def get_n_valid_discrete(self) -> Optional[int]:
+        """Return the number of valid discrete design points (ignoring continuous dimensions); enables calculation of
+        the imputation ratio"""
+        n_valid = self._get_n_valid_discrete()
+        if n_valid is not None:
+            return n_valid
+
+        x_discrete, _ = self.all_discrete_x
+        if x_discrete is not None:
+            return x_discrete.shape[0]
+
+    @cached_property
+    def all_discrete_x(self) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
+        """Generate all possible discrete design vectors, if the problem provides this function. Returns both the design
+        vectors and activeness information. Continuous variables are initialized at the mid of their bounds."""
+
+        # Check if this problem implements discrete design vector generation
+        discrete_x = self._gen_all_discrete_x()
+        if discrete_x is None:
+            return None, None
+
+        # Impute values (mostly for continuous dimensions)
+        x, is_active = discrete_x
+        if x.shape[1] != self.n_var or is_active.shape[1] != self.n_var:
+            raise RuntimeError(f'Inconsistent design vector dimensions: {x.shape[1]} != {self.n_var}')
+        x = x.astype(float)  # Otherwise continuous variables cannot be imputed
+        self.impute_x(x, is_active)
+
+        # Cross-check with numerical estimate
+        n_valid = self._get_n_valid_discrete()
+        if n_valid is not None and (n_valid != x.shape[0] or n_valid != is_active.shape[0]):
+            raise RuntimeError(f'Inconsistent estimation of nr of discrete design vectors: {n_valid} != {x.shape[0]}')
+
+        return x, is_active
 
     def _evaluate(self, x, out, *args, **kwargs):
         """
@@ -297,9 +333,13 @@ class ArchOptProblemBase(Problem):
     ### IMPLEMENT FUNCTIONS BELOW ###
     ##############################"""
 
-    def get_n_valid_discrete(self) -> int:
+    def _get_n_valid_discrete(self) -> int:
         """Return the number of valid discrete design points (ignoring continuous dimensions); enables calculation of
         the imputation ratio"""
+
+    def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
+        """Generate all possible discrete design vectors (if available). Returns design vectors and activeness
+        information."""
 
     def store_results(self, results_folder, final=False):
         """Callback function to store intermediate or final results in some results folder"""

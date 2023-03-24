@@ -16,7 +16,7 @@ def test_simple_problem():
     problem = SimpleTurbofanArch()
     problem.print_stats()
 
-    assert len(HierarchicalExhaustiveSampling(n_cont=1).do(problem, 0)) == problem.get_n_valid_discrete()
+    assert len(HierarchicalExhaustiveSampling(n_cont=1).do(problem, 0)) == problem._get_n_valid_discrete()
 
 
 @pytest.mark.skip('Takes about 1 minute')
@@ -50,4 +50,4 @@ def test_realistic_problem():
     problem = RealisticTurbofanArch()
     problem.print_stats()
 
-    assert problem.get_n_valid_discrete() == 1163
+    assert problem._get_n_valid_discrete() == 1163

@@ -63,7 +63,7 @@ class GNCProblemBase(HierarchyProblemBase):
         des_vars = self._get_des_vars()
         super().__init__(des_vars, n_obj=n_obj)
 
-    def get_n_valid_discrete(self) -> int:
+    def _get_n_valid_discrete(self) -> int:
         # Pre-count the number of possible connections, taking into account that each connector at least needs one
         # We can ignore any combinations where there are either 1 sources or targets, as there there is only 1
         # connection possibility (namely all-to-one or one-to-all)

@@ -1,13 +1,24 @@
 import pytest
+import numpy as np
 from sb_arch_opt.sampling import *
 from sb_arch_opt.problems.hierarchical import *
 from pymoo.core.evaluator import Evaluator
 
 
-def run_test_hierarchy(problem, imp_ratio, check_n_valid=True):
-    if check_n_valid:
+def run_test_hierarchy(problem, imp_ratio, check_n_valid=True, validate_exhaustive=False):
+    x_discrete, is_act_discrete = problem.all_discrete_x
+    if check_n_valid or x_discrete is not None:
+        if x_discrete is not None:
+            assert np.all(~LargeDuplicateElimination.eliminate(x_discrete))
+            assert x_discrete.shape[0] == problem.get_n_valid_discrete()
+
+            if validate_exhaustive:
+                x_trail_repair, _ = HierarchicalExhaustiveSampling().get_all_x_discrete_by_trial_and_repair(problem)
+                assert {tuple(ix) for ix in x_trail_repair} == {tuple(ix) for ix in x_discrete}
+
         pop = HierarchicalExhaustiveSampling(n_cont=1).do(problem, 0)
         assert len(pop) == problem.get_n_valid_discrete()
+    assert HierarchicalExhaustiveSampling.has_cheap_all_x_discrete(problem) == (x_discrete is not None)
 
     assert problem.get_imputation_ratio() == pytest.approx(imp_ratio, rel=.02)
     problem.print_stats()
@@ -49,12 +60,12 @@ def test_jenatton():
 
 
 def test_comb_hier_branin():
-    run_test_hierarchy(CombHierBranin(), 6.72)
+    run_test_hierarchy(CombHierBranin(), 6.72, validate_exhaustive=True)
 
 
 def test_comb_hier_mo():
-    run_test_hierarchy(CombHierMO(), 6.17, check_n_valid=False)
+    run_test_hierarchy(CombHierMO(), 6.17, validate_exhaustive=True)
 
 
 def test_comb_hier_discr_mo():
-    run_test_hierarchy(CombHierDMO(), 13.69, check_n_valid=False)
+    run_test_hierarchy(CombHierDMO(), 13.69)

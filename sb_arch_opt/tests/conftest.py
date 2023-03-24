@@ -1,5 +1,7 @@
 import pytest
+import itertools
 import numpy as np
+from typing import Optional, Tuple
 from sb_arch_opt.problems.problems_base import *
 from pymoo.core.variable import Real, Integer, Choice
 from pymoo.problems.multi.zdt import ZDT1
@@ -18,16 +20,38 @@ class DummyProblem(ArchOptTestProblemBase):
                          for i in range(problem.n_var)]
         self.only_discrete = only_discrete
         self.fail = fail
+        self._provide_all_x = True
         self._i_eval = 0
         super().__init__(des_vars, n_obj=problem.n_obj)
 
     def might_have_hidden_constraints(self):
         return self.fail
 
-    def get_n_valid_discrete(self) -> int:
+    def _get_n_valid_discrete(self) -> int:
         if self.only_discrete:
             return 10*5 + 5
         return 10*10
+
+    def set_provide_all_x(self, provide_all_x):
+        self._provide_all_x = provide_all_x
+        if 'all_discrete_x' in self.__dict__:
+            del self.__dict__['all_discrete_x']
+
+    def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
+        if not self._provide_all_x:
+            return
+        x, is_active = [], []
+        if self.only_discrete:
+            for x_dv in itertools.product(*[list(range(10)) for _ in range(2)]):
+                if x_dv[0] >= 5 and x_dv[1] != 0:
+                    continue
+                x.append(x_dv)
+                is_active.append([True, x_dv[0] < 5])
+        else:
+            for x_dv in itertools.product(*[[0] if i % 2 == 0 else list(range(10)) for i in range(5)]):
+                x.append(x_dv)
+                is_active.append([True]*4+[x_dv[1] < 5])
+        return np.array(x), np.array(is_active)
 
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):

@@ -24,6 +24,8 @@ import concurrent.futures
 from pymoo.core.variable import Real, Integer, Choice
 from sb_arch_opt.problems.hierarchical import HierarchyProblemBase
 
+import os
+os.environ['OPENMDAO_REQUIRE_MPI'] = 'false'  # Suppress OpenMDAO MPI import warnings
 try:
     from open_turb_arch.architecting.architecting_problem import get_architecting_problem
     from open_turb_arch.architecting.problem import ArchitectingProblem
@@ -59,9 +61,11 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
         self._problem = open_turb_arch_problem
         self.n_parallel = n_parallel
         self.verbose = False
+        self.results_folder = None
 
         # open_turb_arch_problem.max_iter = 10  # Leads to a high failure rate: ~88% for the simple problem
-        open_turb_arch_problem.max_iter = 30  # Used for the paper
+        # open_turb_arch_problem.max_iter = 30  # Used for the paper
+        open_turb_arch_problem.max_iter = 40  # TODO
 
         des_vars = []
         for dv in open_turb_arch_problem.free_opt_des_vars:
@@ -92,7 +96,7 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
     def might_have_hidden_constraints(self):
         return True
 
-    def get_n_valid_discrete(self) -> int:
+    def _get_n_valid_discrete(self) -> int:
         raise NotImplementedError
 
     def get_failure_rate(self) -> float:
@@ -120,6 +124,9 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
 
     def _arch_evaluate_x(self, x: np.ndarray):
         self._problem.verbose = self.verbose
+        self._problem.save_results_folder = self.results_folder
+        self._problem.save_results_combined = self.results_folder is not None
+
         x_imp, f, g, _ = self._problem.evaluate(self._convert_x(x))
         is_active = self._problem.get_last_is_active()
         return x_imp, f, g, is_active
@@ -150,7 +157,7 @@ class SimpleTurbofanArch(OpenTurbArchProblemWrapper):
         check_dependency()
         super().__init__(get_simple_architecting_problem(), n_parallel=n_parallel)
 
-    def get_n_valid_discrete(self) -> int:
+    def _get_n_valid_discrete(self) -> int:
         n_valid_no_fan = 1
         n_valid_fan = 1
 
@@ -189,7 +196,7 @@ class RealisticTurbofanArch(OpenTurbArchProblemWrapper):
         check_dependency()
         super().__init__(get_architecting_problem(), n_parallel=n_parallel)
 
-    def get_n_valid_discrete(self) -> int:
+    def _get_n_valid_discrete(self) -> int:
         n_valid_no_fan = 1
         n_valid_fan = 1
 

@@ -14,9 +14,10 @@ limitations under the License.
 Copyright: (c) 2023, Deutsches Zentrum fuer Luft- und Raumfahrt e.V.
 Contact: jasper.bussemaker@dlr.de
 """
+import logging
 import itertools
 import numpy as np
-from typing import Optional
+from typing import Optional, Tuple
 from scipy.stats.qmc import Sobol
 from scipy.spatial import distance
 
@@ -29,10 +30,12 @@ from pymoo.operators.sampling.rnd import FloatRandomSampling
 from pymoo.core.duplicate import DefaultDuplicateElimination
 from pymoo.operators.sampling.lhs import LatinHypercubeSampling, sampling_lhs_unit
 
-from sb_arch_opt.problem import ArchOptRepair
+from sb_arch_opt.problem import ArchOptProblemBase, ArchOptRepair
 
 __all__ = ['HierarchicalExhaustiveSampling', 'HierarchicalLatinHypercubeSampling', 'HierarchicalRandomSampling',
            'get_init_sampler', 'LargeDuplicateElimination']
+
+log = logging.getLogger('sb_arch_opt.sampling')
 
 
 def get_init_sampler(repair: Repair = None, remove_duplicates=True):
@@ -49,7 +52,8 @@ def get_init_sampler(repair: Repair = None, remove_duplicates=True):
 
 class HierarchicalExhaustiveSampling(Sampling):
     """Exhaustively samples the design space, taking n_cont samples for each continuous variable.
-    Can take a long time if the design space is large, and doesn't work well for purely continuous problems."""
+    Can take a long time if the design space is large and the problem doesn't provide a way to generate all discrete
+    design vectors, and doesn't work well for purely continuous problems."""
 
     def __init__(self, repair: Repair = None, n_cont=5):
         super().__init__()
@@ -59,6 +63,61 @@ class HierarchicalExhaustiveSampling(Sampling):
         self._n_cont = n_cont
 
     def _do(self, problem: Problem, n_samples, **kwargs):
+        return self.do_sample(problem)
+
+    def do_sample(self, problem: Problem):
+        # First sample only discrete dimensions
+        x_discr, is_act_discr = self.get_all_x_discrete(problem)
+
+        # Expand along continuous dimensions
+        n_cont = self._n_cont
+        is_cont_mask = self.get_is_cont_mask(problem)
+        if n_cont > 1 and np.any(is_cont_mask):
+            x = x_discr
+            is_act = is_act_discr
+            for i_dv in np.where(is_cont_mask)[0]:
+                # Expand when continuous variable is active
+                is_act_i = is_act[:, i_dv]
+                n_repeat = np.ones(len(is_act_i), dtype=int)
+                n_repeat[is_act_i] = n_cont
+
+                x = np.repeat(x, n_repeat, axis=0)
+                is_act = np.repeat(is_act, n_repeat, axis=0)
+
+                # Fill sampled values
+                rep_idx = np.cumsum([0]+list(n_repeat))[:-1]
+                dv_sampled = np.linspace(problem.xl[i_dv], problem.xu[i_dv], n_cont)
+                for i in np.where(is_act_i)[0]:
+                    x[rep_idx[i]:rep_idx[i]+n_cont, i_dv] = dv_sampled
+
+        else:
+            x = x_discr
+
+        return x
+
+    @staticmethod
+    def has_cheap_all_x_discrete(problem: Problem):
+        if isinstance(problem, ArchOptProblemBase):
+            # Check if the problem itself provides all discrete design vectors
+            x_discrete, _ = problem.all_discrete_x
+            if x_discrete is not None:
+                return True
+
+        return False
+
+    def get_all_x_discrete(self, problem: Problem):
+        # Check if the problem itself can provide all discrete design vectors
+        if isinstance(problem, ArchOptProblemBase):
+            x_discr, is_act_discr = problem.all_discrete_x
+            if x_discr is not None:
+                return x_discr, is_act_discr
+
+        # Otherwise, use trail and repair (costly!)
+        log.info(f'Generating hierarchical discrete samples by trial and repair for {problem!r}! '
+                 f'Consider implementing `_gen_all_discrete_x`')
+        return self.get_all_x_discrete_by_trial_and_repair(problem)
+
+    def get_all_x_discrete_by_trial_and_repair(self, problem: Problem):
         # First sample only discrete dimensions
         opt_values = self.get_exhaustive_sample_values(problem, 1)
         x = np.array(list(itertools.product(*opt_values)))
@@ -114,32 +173,14 @@ class HierarchicalExhaustiveSampling(Sampling):
                 if x_later.shape[0] == 0:
                     break
 
-        # Expand along continuous dimensions
         x_discr = np.row_stack(x_repaired)
         is_act_discr = np.row_stack(is_active_repaired)
-        n_cont = self._n_cont
-        if n_cont > 1 and np.any(is_cont_mask):
-            x = x_discr
-            is_act = is_act_discr
-            for i_dv in np.where(is_cont_mask)[0]:
-                # Expand when continuous variable is active
-                is_act_i = is_act[:, i_dv]
-                n_repeat = np.ones(len(is_act_i), dtype=int)
-                n_repeat[is_act_i] = n_cont
 
-                x = np.repeat(x, n_repeat, axis=0)
-                is_act = np.repeat(is_act, n_repeat, axis=0)
+        # Impute continuous values
+        if isinstance(problem, ArchOptProblemBase):
+            problem.impute_x(x_discr, is_act_discr)
 
-                # Fill sampled values
-                rep_idx = np.cumsum([0]+list(n_repeat))[:-1]
-                dv_sampled = np.linspace(problem.xl[i_dv], problem.xu[i_dv], n_cont)
-                for i in np.where(is_act_i)[0]:
-                    x[rep_idx[i]:rep_idx[i]+n_cont, i_dv] = dv_sampled
-
-        else:
-            x = x_discr
-
-        return x
+        return x_discr, is_act_discr
 
     @classmethod
     def get_exhaustive_sample_values(cls, problem: Problem, n_cont=5):
@@ -152,6 +193,9 @@ class HierarchicalExhaustiveSampling(Sampling):
 
     @staticmethod
     def get_is_cont_mask(problem: Problem):
+        if isinstance(problem, ArchOptProblemBase):
+            return problem.is_cont_mask
+
         is_cont = np.ones((problem.n_var,), dtype=bool)
         if problem.vars is not None:
             for i, var in enumerate(problem.vars.values()):
@@ -185,13 +229,13 @@ class HierarchicalLatinHypercubeSampling(LatinHypercubeSampling):
             return super()._do(problem, n_samples, **kwargs)
 
         # Prepare sampling
-        x_all = HierarchicalRandomSampling.get_hierarchical_cartesian_product(problem, self._repair)
+        x_all, is_act = HierarchicalRandomSampling.get_hierarchical_cartesian_product(problem, self._repair)
         xl, xu = problem.bounds()
 
         # Sample several times to find the best-scored samples
         best_x = best_score = None
         for _ in range(self.iterations):
-            x = HierarchicalRandomSampling.randomly_sample(problem, n_samples, self._repair, x_all, lhs=True)
+            x = HierarchicalRandomSampling.randomly_sample(problem, n_samples, self._repair, x_all, is_act, lhs=True)
             if self.criterion is None:
                 return x
 
@@ -235,36 +279,38 @@ class HierarchicalRandomSampling(FloatRandomSampling):
 
     def _do(self, problem, n_samples, **kwargs):
         # Get Cartesian product of all discrete design variables (only available if design space is not too large)
-        x = self.get_hierarchical_cartesian_product(problem, self._repair)
+        x, is_active = self.get_hierarchical_cartesian_product(problem, self._repair)
 
-        return self.randomly_sample(problem, n_samples, self._repair, x, sobol=self.sobol)
+        return self.randomly_sample(problem, n_samples, self._repair, x, is_active, sobol=self.sobol)
 
     @classmethod
-    def get_hierarchical_cartesian_product(cls, problem: Problem, repair: Repair) -> Optional[np.ndarray]:
+    def get_hierarchical_cartesian_product(cls, problem: Problem, repair: Repair) \
+            -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
         # Get values to be sampled for each discrete design variable
-        opt_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(problem, n_cont=1)
+        exhaustive_sampling = HierarchicalExhaustiveSampling(repair=repair, n_cont=1)
+        opt_values = exhaustive_sampling.get_exhaustive_sample_values(problem, n_cont=1)
 
         # Get the number of samples in the cartesian product
         n_opt_values = int(np.prod([len(values) for values in opt_values], dtype=float))
 
         # If less than some threshold, sample all and then select (this gives a better distribution)
-        if n_opt_values < cls._n_comb_gen_all_max:
+        if n_opt_values < cls._n_comb_gen_all_max or exhaustive_sampling.has_cheap_all_x_discrete(problem):
             try:
-                # Get cartesian product of all values
-                x = np.array([np.array(dv) for dv in itertools.product(*opt_values)])
-
-                # Repair sampled population and remove duplicates
-                x = repair.do(problem, x)
-                is_duplicate = LargeDuplicateElimination.eliminate(x)
-                return x[~is_duplicate, :]
-
+                x, is_active = exhaustive_sampling.get_all_x_discrete(problem)
+                return x, is_active
             except MemoryError:
                 pass
 
+        log.info(f'Hierarchical sampling is not possible for {problem!r}, falling back to non-hierarchical sampling! '
+                 f'Consider implementing `_gen_all_discrete_x`')
+        return None, None
+
     @classmethod
-    def randomly_sample(cls, problem, n_samples, repair: Repair, x_all: Optional[np.ndarray], lhs=False, sobol=False):
+    def randomly_sample(cls, problem, n_samples, repair: Repair, x_all: Optional[np.ndarray],
+                        is_act_all: Optional[np.ndarray], lhs=False, sobol=False):
         is_cont_mask = HierarchicalExhaustiveSampling.get_is_cont_mask(problem)
         xl, xu = problem.xl, problem.xu
+        needs_repair = False
 
         def _choice(n_choose, n_from, replace=True):
             if sobol:
@@ -272,6 +318,7 @@ class HierarchicalRandomSampling(FloatRandomSampling):
             return np.random.choice(n_from, n_choose, replace=replace)
 
         # If the population of all available discrete design vectors is available, sample from there
+        is_active = is_act_all
         if x_all is not None:
             # Randomly select values
             x = x_all
@@ -281,9 +328,11 @@ class HierarchicalRandomSampling(FloatRandomSampling):
                 i_x_add = _choice(n_samples-x.shape[0], x.shape[0])
                 i_x = np.sort(np.concatenate([np.arange(x.shape[0]), i_x_add]))
             x = x[i_x, :]
+            is_active = is_act_all[i_x, :]
 
         # If above the threshold (or a memory error occurred), sample randomly
         else:
+            needs_repair = True
             opt_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(problem, n_cont=1)
             x = np.empty((n_samples, problem.n_var))
             for i_dv in range(problem.n_var):
@@ -293,6 +342,10 @@ class HierarchicalRandomSampling(FloatRandomSampling):
 
         # Randomize continuous variables
         if np.any(is_cont_mask):
+            if is_active is None:
+                needs_repair = True
+                is_active = np.ones(x.shape, dtype=bool)
+
             nx_cont = len(np.where(is_cont_mask)[0])
             if lhs:
                 x_unit = sampling_lhs_unit(x.shape[0], nx_cont)
@@ -301,10 +354,17 @@ class HierarchicalRandomSampling(FloatRandomSampling):
             else:
                 x_unit = np.random.random((x.shape[0], nx_cont))
 
-            x[:, is_cont_mask] = x_unit*(xu[is_cont_mask]-xl[is_cont_mask])+xl[is_cont_mask]
+            x_unit_abs = x_unit*(xu[is_cont_mask]-xl[is_cont_mask])+xl[is_cont_mask]
+
+            # Do not overwrite inactive imputed continuous variables
+            is_inactive_override = ~is_active[:, is_cont_mask]
+            x_unit_abs[is_inactive_override] = x[:, is_cont_mask][is_inactive_override]
+
+            x[:, is_cont_mask] = x_unit_abs
 
         # Repair
-        x = repair.do(problem, x)
+        if needs_repair:
+            x = repair.do(problem, x)
         return x
 
     @staticmethod

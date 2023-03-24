@@ -39,6 +39,7 @@ if __name__ == '__main__':
             'scipy',
             'deprecated',
             'pandas',
+            'cached-property~=1.5',
         ],
         extras_require={
             'simple_sbo': [

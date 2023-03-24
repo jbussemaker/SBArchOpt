@@ -1,3 +1,4 @@
+import numpy as np
 from sb_arch_opt.sampling import *
 from sb_arch_opt.problems.md_mo import *
 from sb_arch_opt.problems.problems_base import MixedDiscretizerProblemBase
@@ -20,7 +21,12 @@ def run_test_no_hierarchy(problem):
     assert problem.get_imputation_ratio() == 1
     problem.print_stats()
 
-    if HierarchicalExhaustiveSampling.get_n_sample_exhaustive(problem, n_cont=3) < 1e3:
+    x_discrete, is_act_discrete = problem.all_discrete_x
+    if x_discrete is not None:
+        assert x_discrete.shape[0] == problem.get_n_valid_discrete()
+        assert np.all(~LargeDuplicateElimination.eliminate(x_discrete))
+
+    if HierarchicalExhaustiveSampling.get_n_sample_exhaustive(problem, n_cont=3) < 1e3 or x_discrete is not None:
         pop = HierarchicalExhaustiveSampling(n_cont=3).do(problem, 0)
     else:
         pop = HierarchicalRandomSampling().do(problem, 100)

@@ -66,7 +66,7 @@ class AssignmentProblemWrapper(HierarchyProblemBase):
             n_con -= 1
         super().__init__(problem.vars, n_obj=problem.n_obj, n_ieq_constr=n_con)
 
-    def get_n_valid_discrete(self) -> int:
+    def _get_n_valid_discrete(self) -> int:
         return self._problem.get_n_valid_design_points(n_cont=1)
 
     def _print_extra_stats(self):

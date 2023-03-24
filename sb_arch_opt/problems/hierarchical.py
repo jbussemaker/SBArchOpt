@@ -36,7 +36,7 @@ __all__ = ['HierarchyProblemBase', 'HierarchicalGoldstein', 'HierarchicalRosenbr
 class HierarchyProblemBase(ArchOptTestProblemBase):
     """Base class for test problems that have decision hierarchy"""
 
-    def get_n_valid_discrete(self) -> int:
+    def _get_n_valid_discrete(self) -> int:
         raise NotImplementedError
 
     def __repr__(self):
@@ -70,7 +70,7 @@ class HierarchicalGoldstein(HierarchyProblemBase):
         n_obj = 2 if self._mo else 1
         super().__init__(des_vars, n_obj=n_obj, n_ieq_constr=1)
 
-    def get_n_valid_discrete(self) -> int:
+    def _get_n_valid_discrete(self) -> int:
         # w1 and w2 determine activeness, and we can ignore continuous dimensions
         n_valid = np.ones((4, 2), dtype=int)  # w1, w2
 
@@ -260,7 +260,7 @@ class HierarchicalRosenbrock(HierarchyProblemBase):
         n_obj = 2 if self._mo else 1
         super().__init__(des_vars, n_obj=n_obj, n_constr=2)
 
-    def get_n_valid_discrete(self) -> int:
+    def _get_n_valid_discrete(self) -> int:
         n_valid = np.ones((2, 2), dtype=int)*2*2  # w1, w2 for DV 8 and 9
         n_valid[:, 1] *= 3  # DV 10 is active when w2 == 1
         return int(np.sum(n_valid))
@@ -408,7 +408,7 @@ class ZaeffererHierarchical(HierarchyProblemBase):
         des_vars = [Real(bounds=(0, 1)), Real(bounds=(0, 1))]
         super().__init__(des_vars, n_obj=1)
 
-    def get_n_valid_discrete(self) -> int:
+    def _get_n_valid_discrete(self) -> int:
         return 1
 
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
@@ -495,7 +495,7 @@ class HierarchicalMetaProblemBase(HierarchyProblemBase):
         i_rd = np.linspace(0, ref_dirs.shape[0]-1, n_maps).astype(int)
         self.f_mod = (ref_dirs[i_rd, :]-.5)*f_par_range
 
-    def get_n_valid_discrete(self) -> int:
+    def _get_n_valid_discrete(self) -> int:
         return self._problem.get_n_valid_discrete()*self.n_maps
 
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
@@ -617,7 +617,7 @@ class Jenatton(HierarchyProblemBase):
         ]
         super().__init__(des_vars)
 
-    def get_n_valid_discrete(self) -> int:
+    def _get_n_valid_discrete(self) -> int:
         return 4
 
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
@@ -713,6 +713,8 @@ class CombinatorialHierarchicalMetaProblem(HierarchyProblemBase):
 
         # Define which mapped design variables are active for each part
         self._parts_is_active = parts_is_active = np.ones((len(parts), problem.n_var), dtype=bool)
+        self._parts_is_discrete = parts_is_discrete = np.zeros((len(parts), problem.n_var), dtype=bool)
+        self._parts_n_opts = parts_n_opts = np.ones((len(parts), problem.n_var), dtype=int)
         osc_period = max(5, int(len(parts)/5))
         idx_deactivate = np.where(is_cont_mask)[0]
         if len(idx_deactivate) == 0:
@@ -721,12 +723,17 @@ class CombinatorialHierarchicalMetaProblem(HierarchyProblemBase):
         for i, part in enumerate(parts):
             # Discrete variables with one option only are inactive
             for i_dv, (is_discrete, settings) in enumerate(part):
-                if is_discrete and len(settings) < 2:
-                    parts_is_active[i, i_dv] = False
+                if is_discrete:
+                    parts_is_discrete[i, i_dv] = True
+                    parts_n_opts[i, i_dv] = len(settings)
+                    if len(settings) < 2:
+                        parts_is_active[i, i_dv] = False
 
             # Deactivate continuous variables based on an oscillating equation
             inactive_idx = idx_deactivate[len(idx_deactivate)-n_inactive[i]:]
             parts_is_active[i, inactive_idx] = False
+
+        parts_n_opts[~parts_is_active] = 1
 
         # Define selection design variables
         # Repeatedly separate the number of parts to be selected
@@ -813,18 +820,49 @@ class CombinatorialHierarchicalMetaProblem(HierarchyProblemBase):
 
         self.__correct_output = {}
 
-    def get_n_valid_discrete(self) -> int:
-        # Get nr of combinations for each part
-        parts_is_active = self._parts_is_active
-        n_part_combs = np.ones(parts_is_active.shape, dtype=int)
-        for i, part in enumerate(self._parts):
-            for i_dv, (is_discrete, settings) in enumerate(part):
-                if not parts_is_active[i, i_dv] or not is_discrete:
-                    continue
-                n_part_combs[i, i_dv] = len(settings)
-
+    def _get_n_valid_discrete(self) -> int:
         # Sum the nr of combinations for the parts
-        return int(np.sum(np.prod(n_part_combs, axis=1)))
+        return int(np.sum(np.prod(self._parts_n_opts, axis=1)))
+
+    def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
+        # We already know the possible design vectors for selecting the different parts
+        x_sel = self._x_sel
+        x_discrete = np.zeros((x_sel.shape[0], self.n_var), dtype=int)
+        n_dv_map = x_sel.shape[1]
+        x_discrete[:, :n_dv_map] = x_sel.copy()
+
+        is_act_discrete = np.ones(x_discrete.shape, dtype=bool)
+        is_act_discrete[:, :n_dv_map] = self._is_active_sel.copy()
+
+        # Expand for active discrete variables in the parts
+        x_expanded = []
+        is_act_expanded = []
+        for i, part in enumerate(self._parts):
+            # Check which discrete design variables are active, and get possible values
+            is_active_part = self._parts_is_active[i, :]
+            part_ix_discrete = np.where(self._parts_is_discrete[i, :])[0]
+            discrete_opts = [list(range(n_opts)) for n_opts in self._parts_n_opts[i, part_ix_discrete]]
+
+            x_sel_part = x_discrete[[i], :]
+            is_act_sel_part = is_act_discrete[[i], :]
+            is_act_sel_part[:, n_dv_map:] = is_active_part
+
+            # if np.sum((self._parts_n_opts[i, part_ix_discrete] > 1) & ~is_active_part[part_ix_discrete]) > 0:
+            #     raise RuntimeError(f'Inconsistent activeness vector and nr of options!')
+
+            # Get cartesian product of values and expand
+            if len(part_ix_discrete) > 0:
+                part_x_discrete = np.array(list(itertools.product(*discrete_opts)))
+                x_sel_part = np.repeat(x_sel_part, part_x_discrete.shape[0], axis=0)
+                x_sel_part[:, n_dv_map+part_ix_discrete] = part_x_discrete
+                is_act_sel_part = np.repeat(is_act_sel_part, part_x_discrete.shape[0], axis=0)
+
+            x_expanded.append(x_sel_part)
+            is_act_expanded.append(is_act_sel_part)
+
+        x_discrete_all = np.row_stack(x_expanded)
+        is_act_discrete_all = np.row_stack(is_act_expanded)
+        return x_discrete_all, is_act_discrete_all
 
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
@@ -901,8 +939,21 @@ class CombinatorialHierarchicalMetaProblem(HierarchyProblemBase):
         # Correct DVs of underlying problem and set activeness
         n_dv_map = x_sel.shape[1]
         part_is_active = self._parts_is_active
+        part_is_discrete = self._parts_is_discrete
+        part_n_opts = self._parts_n_opts
         for i, i_part in enumerate(i_part_selected):
             is_active[i, n_dv_map:] = part_is_active[i_part, :]
+
+            # Correct upper bounds of discrete variables
+            is_discrete = part_is_discrete[i_part, :]
+            n_opts = part_n_opts[i_part, is_discrete]
+            i_x_discrete = np.where(is_discrete)[0]+n_dv_map
+            x_discrete_part = x[i, i_x_discrete]
+            for i_opt, n_opt in enumerate(n_opts):
+                if x_discrete_part[i_opt] >= n_opt:
+                    x_discrete_part[i_opt] = n_opt-1
+
+            x[i, i_x_discrete] = x_discrete_part
 
         self.__correct_output = {'i_part_sel': i_part_selected}
 
