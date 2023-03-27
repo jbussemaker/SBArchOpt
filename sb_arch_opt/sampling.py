@@ -136,42 +136,20 @@ class HierarchicalExhaustiveSampling(Sampling):
             x_later = x_later[x_repair.shape[0]:, :]
             # print(f'Sampling {x_repair.shape[0]} ({x_later.shape[0]} to go; {x_repaired.shape[0]} sampled)')
 
+            x_repair_input = x_repair
             x_repair = self._repair.do(problem, x_repair)
             if isinstance(self._repair, ArchOptRepair):
                 is_active = self._repair.latest_is_active
             else:
                 is_active = np.ones(x_repair.shape, dtype=bool)
 
-            # Remove duplicates
-            is_dup_mask = LargeDuplicateElimination.eliminate(x_repair)
-            x_repair = x_repair[~is_dup_mask, :]
-            is_active = is_active[~is_dup_mask, :]
-
-            # Remove duplicates compared to previous
-            is_dup_mask = LargeDuplicateElimination.eliminate(x_repair, x_repaired)
-            x_repair = x_repair[~is_dup_mask, :]
-            is_active = is_active[~is_dup_mask, :]
+            # Remove repaired points
+            is_not_repaired = ~np.any(x_repair[:, is_discrete_mask] != x_repair_input[:, is_discrete_mask], axis=1)
+            x_repair = x_repair[is_not_repaired, :]
+            is_active = is_active[is_not_repaired, :]
 
             x_repaired = np.row_stack([x_repaired, x_repair])
-
-            # If we also have activeness information, remove duplicate design vectors from to-be-repaired vectors
-            is_active = is_active.astype(bool)
-            is_active_repaired = np.row_stack([is_active_repaired, is_active])
-            if x_later.shape[0] == 0:
-                continue
-
-            for i, xi in enumerate(x_repair):
-                is_act_i = is_active[i, :]
-                if np.all(is_act_i[is_discrete_mask]):
-                    continue
-
-                # Remove design vectors that are duplicate for the active design variables
-                is_dup_mask = LargeDuplicateElimination.eliminate(x_later[:, is_act_i & is_discrete_mask],
-                                                                  np.array([xi[is_act_i & is_discrete_mask]]))
-
-                x_later = x_later[~is_dup_mask, :]
-                if x_later.shape[0] == 0:
-                    break
+            is_active_repaired = np.row_stack([is_active_repaired, is_active.astype(bool)])
 
         x_discr = np.row_stack(x_repaired)
         is_act_discr = np.row_stack(is_active_repaired)
