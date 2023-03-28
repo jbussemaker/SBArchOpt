@@ -15,9 +15,10 @@ Copyright: (c) 2023, Deutsches Zentrum fuer Luft- und Raumfahrt e.V.
 Contact: jasper.bussemaker@dlr.de
 """
 import logging
+import warnings
 import itertools
 import numpy as np
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 from scipy.stats.qmc import Sobol
 from scipy.spatial import distance
 
@@ -33,7 +34,7 @@ from pymoo.operators.sampling.lhs import LatinHypercubeSampling, sampling_lhs_un
 from sb_arch_opt.problem import ArchOptProblemBase, ArchOptRepair
 
 __all__ = ['HierarchicalExhaustiveSampling', 'HierarchicalLatinHypercubeSampling', 'HierarchicalRandomSampling',
-           'get_init_sampler', 'LargeDuplicateElimination']
+           'get_init_sampler', 'LargeDuplicateElimination', 'TrailRepairWarning']
 
 log = logging.getLogger('sb_arch_opt.sampling')
 
@@ -48,6 +49,10 @@ def get_init_sampler(repair: Repair = None, remove_duplicates=True):
     # Samples are already repaired because we're using the hierarchical samplers
     eliminate_duplicates = LargeDuplicateElimination() if remove_duplicates else None
     return Initialization(sampling, eliminate_duplicates=eliminate_duplicates)
+
+
+class TrailRepairWarning(RuntimeWarning):
+    pass
 
 
 class HierarchicalExhaustiveSampling(Sampling):
@@ -113,8 +118,8 @@ class HierarchicalExhaustiveSampling(Sampling):
                 return x_discr, is_act_discr
 
         # Otherwise, use trail and repair (costly!)
-        log.info(f'Generating hierarchical discrete samples by trial and repair for {problem!r}! '
-                 f'Consider implementing `_gen_all_discrete_x`')
+        warnings.warn(f'Generating hierarchical discrete samples by trial and repair for {problem!r}! '
+                      f'Consider implementing `_gen_all_discrete_x`', TrailRepairWarning)
         return self.get_all_x_discrete_by_trial_and_repair(problem)
 
     def get_all_x_discrete_by_trial_and_repair(self, problem: Problem):
@@ -231,13 +236,12 @@ class HierarchicalLatinHypercubeSampling(LatinHypercubeSampling):
 
 class HierarchicalRandomSampling(FloatRandomSampling):
     """
-    Hierarchical float sampling with architecture repair. There are two ways the random sampling is done:
+    Hierarchical mixed-discrete sampling. There are two ways the random sampling is performed:
     A: Generate and select:
-       1. Generate the Cartesian product of all discrete values
-       2. Repair/impute design vectors
-       3. Randomly select from remaining design vectors
-       4. Randomize continuous variables
-       5. Repair again to impute continuous variables
+       1. Generate all possible discrete design vectors
+       2. Separate discrete design vectors by nr of active discrete variables
+       3. Within each group, uniformly sample discrete design vectors
+       4. Concatenate and randomize active continuous variables
     B: One-shot:
        1. Randomly select design variable values
        2. Repair/impute design vectors
@@ -279,36 +283,27 @@ class HierarchicalRandomSampling(FloatRandomSampling):
             except MemoryError:
                 pass
 
-        log.info(f'Hierarchical sampling is not possible for {problem!r}, falling back to non-hierarchical sampling! '
-                 f'Consider implementing `_gen_all_discrete_x`')
+        warnings.warn(f'Hierarchical sampling is not possible for {problem!r}, falling back to non-hierarchical '
+                      f'sampling! Consider implementing `_gen_all_discrete_x`', TrailRepairWarning)
         return None, None
 
     @classmethod
     def randomly_sample(cls, problem, n_samples, repair: Repair, x_all: Optional[np.ndarray],
                         is_act_all: Optional[np.ndarray], lhs=False, sobol=False):
         is_cont_mask = HierarchicalExhaustiveSampling.get_is_cont_mask(problem)
+        has_x_cont = np.any(is_cont_mask)
         xl, xu = problem.xl, problem.xu
         needs_repair = False
 
         def _choice(n_choose, n_from, replace=True):
-            if sobol:
-                return cls._sobol_choice(n_choose, n_from, replace=replace)
-            return np.random.choice(n_from, n_choose, replace=replace)
+            return cls._choice(n_choose, n_from, replace=replace, sobol=sobol)
 
         # If the population of all available discrete design vectors is available, sample from there
         is_active = is_act_all
         if x_all is not None:
-            # Randomly select values
-            x = x_all
-            if n_samples < x.shape[0]:
-                i_x = _choice(n_samples, x.shape[0], replace=False)
-            else:
-                i_x_add = _choice(n_samples-x.shape[0], x.shape[0])
-                i_x = np.sort(np.concatenate([np.arange(x.shape[0]), i_x_add]))
-            x = x[i_x, :]
-            is_active = is_act_all[i_x, :]
+            x, is_active = cls._sample_discrete_x(n_samples, is_cont_mask, x_all, is_act_all, sobol=sobol)
 
-        # If above the threshold (or a memory error occurred), sample randomly
+        # Otherwise, sample randomly
         else:
             needs_repair = True
             opt_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(problem, n_cont=1)
@@ -319,7 +314,7 @@ class HierarchicalRandomSampling(FloatRandomSampling):
                     x[:, i_dv] = opt_values[i_dv][i_opt_sampled]
 
         # Randomize continuous variables
-        if np.any(is_cont_mask):
+        if has_x_cont:
             if is_active is None:
                 needs_repair = True
                 is_active = np.ones(x.shape, dtype=bool)
@@ -345,6 +340,84 @@ class HierarchicalRandomSampling(FloatRandomSampling):
             x = repair.do(problem, x)
         return x
 
+    @classmethod
+    def _sample_discrete_x(cls, n_samples: int, is_cont_mask, x_all: np.ndarray, is_act_all: np.ndarray, sobol=False):
+
+        def _choice(n_choose, n_from, replace=True):
+            return cls._choice(n_choose, n_from, replace=replace, sobol=sobol)
+
+        # Separate by nr of active discrete variables
+        x_all_grouped, is_act_all_grouped, i_x_groups = cls.split_by_discrete_n_active(x_all, is_act_all, is_cont_mask)
+
+        # Uniformly choose from which group to sample
+        i_groups = np.sort(_choice(n_samples, len(x_all_grouped)))
+        x = []
+        is_active = []
+        has_x_cont = np.any(is_cont_mask)
+        i_x_sampled = np.ones((x_all.shape[0],), dtype=bool)
+        for i_group in range(len(x_all_grouped)):
+            i_x_group = np.where(i_groups == i_group)[0]
+            if len(i_x_group) == 0:
+                continue
+
+            # Randomly select values within group
+            x_group = x_all_grouped[i_group]
+            if len(i_x_group) < x_group.shape[0]:
+                i_x = _choice(len(i_x_group), x_group.shape[0], replace=False)
+
+            # If there are more samples requested than points available, only repeat points if there are continuous vars
+            elif has_x_cont:
+                i_x_add = _choice(len(i_x_group)-x_group.shape[0], x_group.shape[0])
+                i_x = np.sort(np.concatenate([np.arange(x_group.shape[0]), i_x_add]))
+            else:
+                i_x = np.arange(x_group.shape[0])
+
+            x.append(x_group[i_x, :])
+            is_active.append(is_act_all_grouped[i_group][i_x, :])
+            i_x_sampled[i_x_groups[i_group][i_x]] = True
+
+        x = np.row_stack(x)
+        is_active = np.row_stack(is_active)
+
+        # Uniformly add discrete vectors if there are not enough (can happen if some groups are very small and there
+        # are no continuous dimensions)
+        if x.shape[0] < n_samples:
+            n_add = n_samples-x.shape[0]
+            x_available = x_all[~i_x_sampled, :]
+            is_act_available = is_act_all[~i_x_sampled, :]
+
+            if n_add < x_available.shape[0]:
+                i_x = _choice(n_add, x_available.shape[0], replace=False)
+            else:
+                i_x = np.arange(x_available.shape[0])
+
+            x = np.row_stack([x, x_available[i_x, :]])
+            is_active = np.row_stack([is_active, is_act_available[i_x, :]])
+
+        return x, is_active
+
+    @staticmethod
+    def split_by_discrete_n_active(x_discrete: np.ndarray, is_act_discrete: np.ndarray, is_cont_mask) \
+            -> Tuple[List[np.ndarray], List[np.ndarray], List[np.ndarray]]:
+
+        # Calculate nr of active variables for each design vector
+        is_discrete_mask = ~is_cont_mask
+        n_active = np.sum(is_act_discrete[:, is_discrete_mask], axis=1)
+
+        # Sort by nr active
+        i_sorted = np.argsort(n_active)
+        x_discrete = x_discrete[i_sorted, :]
+        is_act_discrete = is_act_discrete[i_sorted, :]
+
+        # Split by nr active
+        # https://stackoverflow.com/a/43094244
+        i_split = np.unique(n_active[i_sorted], return_index=True)[1][1:]
+        x_all_grouped = np.split(x_discrete, i_split, axis=0)
+        is_act_all_grouped = np.split(is_act_discrete, i_split, axis=0)
+        i_x_groups = np.split(np.arange(x_discrete.shape[0]), i_split)
+
+        return x_all_grouped, is_act_all_grouped, i_x_groups
+
     @staticmethod
     def _sobol(n_samples, n_dims=None) -> np.ndarray:
         """
@@ -359,6 +432,12 @@ class HierarchicalRandomSampling(FloatRandomSampling):
         x = Sobol(d=n_dims or 1).random_base2(m=pow2)
         x = x[:n_samples, :]
         return x[:, 0] if n_dims is None else x
+
+    @classmethod
+    def _choice(cls, n_choose, n_from, replace=True, sobol=False):
+        if sobol:
+            return cls._sobol_choice(n_choose, n_from, replace=replace)
+        return np.random.choice(n_from, n_choose, replace=replace)
 
     @classmethod
     def _sobol_choice(cls, n_choose, n_from, replace=True):

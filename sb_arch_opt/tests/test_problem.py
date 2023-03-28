@@ -62,6 +62,12 @@ def test_rounding():
     x3_counts = x3_counts/np.sum(x3_counts)
     assert np.all(np.abs(x3_counts - np.mean(x3_counts)) <= .05)
 
+    x_out_of_bounds = np.zeros((20, 3), dtype=int)
+    x_out_of_bounds[:, 0] = np.linspace(-1, 6, 20)
+    problem._correct_x_discrete(x_out_of_bounds)
+    assert np.all(np.min(x_out_of_bounds, axis=0) == [0, 0, 2])
+    assert np.all(np.max(x_out_of_bounds, axis=0) == [5, 0, 2])
+
 
 def test_correct_x(problem: ArchOptProblemBase):
     assert problem.n_var == 5
@@ -321,6 +327,24 @@ def test_repaired_random_sampling(problem: ArchOptProblemBase):
         problem.evaluate(x)
 
         x_imp, _ = problem.correct_x(x)
+        assert np.all(x_imp == x)
+
+
+def test_repaired_random_sampling_discrete_hierarchical(discrete_problem: ArchOptProblemBase):
+
+    sampling_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(discrete_problem)
+    assert len(sampling_values) == 2
+    assert np.prod([len(values) for values in sampling_values]) == 100
+
+    for sobol in [False, True]:
+        sampling = HierarchicalRandomSampling(sobol=sobol)
+        assert isinstance(sampling._repair, ArchOptRepair)
+        x = sampling.do(discrete_problem, 1000).get('X')
+        assert x.shape == (55, 2)
+        assert np.unique(x, axis=0).shape[0] == 55
+        discrete_problem.evaluate(x)
+
+        x_imp, _ = discrete_problem.correct_x(x)
         assert np.all(x_imp == x)
 
 

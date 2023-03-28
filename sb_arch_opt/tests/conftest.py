@@ -2,6 +2,7 @@ import pytest
 import itertools
 import numpy as np
 from typing import Optional, Tuple
+from sb_arch_opt.sampling import *
 from sb_arch_opt.problems.problems_base import *
 from pymoo.core.variable import Real, Integer, Choice
 from pymoo.problems.multi.zdt import ZDT1
@@ -41,14 +42,15 @@ class DummyProblem(ArchOptTestProblemBase):
         if not self._provide_all_x:
             return
         x, is_active = [], []
+        cartesian_prod_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(self, n_cont=1)
         if self.only_discrete:
-            for x_dv in itertools.product(*[list(range(10)) for _ in range(2)]):
-                if x_dv[0] >= 5 and x_dv[1] != 0:
+            for x_dv in itertools.product(*cartesian_prod_values):
+                if x_dv[0] >= 5 and x_dv[1] != cartesian_prod_values[1][0]:
                     continue
                 x.append(x_dv)
                 is_active.append([True, x_dv[0] < 5])
         else:
-            for x_dv in itertools.product(*[[0] if i % 2 == 0 else list(range(10)) for i in range(5)]):
+            for x_dv in itertools.product(*cartesian_prod_values):
                 x.append(x_dv)
                 is_active.append([True]*4+[x_dv[1] < 5])
         return np.array(x), np.array(is_active)

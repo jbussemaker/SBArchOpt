@@ -157,8 +157,12 @@ class ArchOptProblemBase(Problem):
         xl, xu = self.xl[self._is_discrete_mask], self.xu[self._is_discrete_mask]
         diff = xu-xl
 
+        for ix in range(x_discrete.shape[1]):
+            x_discrete[x_discrete[:, ix] < xl[ix], ix] = xl[ix]
+            x_discrete[x_discrete[:, ix] > xu[ix], ix] = xu[ix]
+
         x_stretched = (x_discrete-xl)*((diff+.99)/diff)-.5
-        x_rounded = (np.abs(np.round(x_stretched))+xl).astype(np.int)
+        x_rounded = (np.round(x_stretched)+xl).astype(np.int)
 
         x[:, self._is_discrete_mask] = x_rounded
 

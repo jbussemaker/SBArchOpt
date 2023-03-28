@@ -669,9 +669,11 @@ class CombinatorialHierarchicalMetaProblem(HierarchyProblemBase):
     - target_n_opts_ratio: controls the nr of options of the last separation variable: higher reduces the imp ratio
     """
 
-    def __init__(self, problem: ArchOptTestProblemBase, n_parts=2, n_sel_dv=4, sep_power=1.2, target_n_opts_ratio=5.):
+    def __init__(self, problem: ArchOptTestProblemBase, n_parts=2, n_sel_dv=4, sep_power=1.2, target_n_opts_ratio=5.,
+                 repr_str=None):
         self._problem = problem
         self._n_parts = n_parts
+        self._repr_str = repr_str
 
         # Separate the underlying design space in different parts
         parts = []
@@ -957,6 +959,11 @@ class CombinatorialHierarchicalMetaProblem(HierarchyProblemBase):
 
         self.__correct_output = {'i_part_sel': i_part_selected}
 
+    def __repr__(self):
+        if self._repr_str is not None:
+            return self._repr_str
+        return f'{self.__class__.__name__}()'
+
 
 class CombHierBranin(CombinatorialHierarchicalMetaProblem):
     """Single-objective mixed-discrete hierarchical Branin test problem"""
@@ -977,7 +984,6 @@ class CombHierDMO(CombinatorialHierarchicalMetaProblem):
     """Multi-objective discrete hierarchical test problem"""
 
     def __init__(self):
-        # problem = MixedDiscretizerProblemBase(OmniTest(n_var=5), n_opts=7)
         problem = MixedDiscretizerProblemBase(OmniTest(n_var=6), n_opts=5)
         super().__init__(problem, n_parts=2, n_sel_dv=5, sep_power=1., target_n_opts_ratio=5.)
 
@@ -1005,7 +1011,7 @@ if __name__ == '__main__':
 
     # CombHierBranin().print_stats()
     # CombHierBranin().plot_pf()
-    # CombHierMO().print_stats()
+    CombHierMO().print_stats()
     # CombHierMO().reset_pf_cache()
     # CombHierMO().plot_pf()
     CombHierDMO().print_stats()
