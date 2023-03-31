@@ -42,8 +42,8 @@ Architecture optimization measure implementation status
 | Aspect: measure                        | pymoo     | Simple SBO | SEGOMOE   | BoTorch (Ax) | Trieste   |
 |----------------------------------------|-----------|------------|-----------|--------------|-----------|
 | MD: continuous surrogates              |           | SBArchOpt  | N         | Lib          | Lib       |
-| MD: kernels                            |           | N          | Lib       |              | N         |
-| MD: one-hot encoding                   |           | N          | Lib       |              | N         |
+| MD: kernels                            |           | N          | Lib       | Lib          | N         |
+| MD: one-hot encoding                   |           | N          | Lib       | N            | N         |
 | MD: force new infill point selection   |           | SBArchOpt  | N         | N            | N         |
 | MO: multi-objective infill             |           | SBArchOpt  | Lib       | Lib          | Lib       |
 | HIER: imputation during sampling       | SBArchOpt | SBArchOpt  | SBArchOpt | N            | NbP       |
