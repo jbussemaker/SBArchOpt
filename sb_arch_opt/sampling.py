@@ -342,81 +342,21 @@ class HierarchicalRandomSampling(FloatRandomSampling):
 
     @classmethod
     def _sample_discrete_x(cls, n_samples: int, is_cont_mask, x_all: np.ndarray, is_act_all: np.ndarray, sobol=False):
-
-        def _choice(n_choose, n_from, replace=True):
-            return cls._choice(n_choose, n_from, replace=replace, sobol=sobol)
-
-        # Separate by nr of active discrete variables
-        x_all_grouped, is_act_all_grouped, i_x_groups = cls.split_by_discrete_n_active(x_all, is_act_all, is_cont_mask)
-
-        # Uniformly choose from which group to sample
-        i_groups = np.sort(_choice(n_samples, len(x_all_grouped)))
-        x = []
-        is_active = []
         has_x_cont = np.any(is_cont_mask)
-        i_x_sampled = np.ones((x_all.shape[0],), dtype=bool)
-        for i_group in range(len(x_all_grouped)):
-            i_x_group = np.where(i_groups == i_group)[0]
-            if len(i_x_group) == 0:
-                continue
 
-            # Randomly select values within group
-            x_group = x_all_grouped[i_group]
-            if len(i_x_group) < x_group.shape[0]:
-                i_x = _choice(len(i_x_group), x_group.shape[0], replace=False)
-
+        x = x_all
+        if n_samples < x.shape[0]:
+            i_x = cls._choice(n_samples, x.shape[0], replace=False, sobol=sobol)
+        elif has_x_cont:
             # If there are more samples requested than points available, only repeat points if there are continuous vars
-            elif has_x_cont:
-                i_x_add = _choice(len(i_x_group)-x_group.shape[0], x_group.shape[0])
-                i_x = np.sort(np.concatenate([np.arange(x_group.shape[0]), i_x_add]))
-            else:
-                i_x = np.arange(x_group.shape[0])
+            i_x_add = cls._choice(n_samples-x.shape[0], x.shape[0], sobol=sobol)
+            i_x = np.sort(np.concatenate([np.arange(x.shape[0]), i_x_add]))
+        else:
+            i_x = np.arange(x.shape[0])
 
-            x.append(x_group[i_x, :])
-            is_active.append(is_act_all_grouped[i_group][i_x, :])
-            i_x_sampled[i_x_groups[i_group][i_x]] = True
-
-        x = np.row_stack(x)
-        is_active = np.row_stack(is_active)
-
-        # Uniformly add discrete vectors if there are not enough (can happen if some groups are very small and there
-        # are no continuous dimensions)
-        if x.shape[0] < n_samples:
-            n_add = n_samples-x.shape[0]
-            x_available = x_all[~i_x_sampled, :]
-            is_act_available = is_act_all[~i_x_sampled, :]
-
-            if n_add < x_available.shape[0]:
-                i_x = _choice(n_add, x_available.shape[0], replace=False)
-            else:
-                i_x = np.arange(x_available.shape[0])
-
-            x = np.row_stack([x, x_available[i_x, :]])
-            is_active = np.row_stack([is_active, is_act_available[i_x, :]])
-
+        x = x[i_x, :]
+        is_active = is_act_all[i_x, :]
         return x, is_active
-
-    @staticmethod
-    def split_by_discrete_n_active(x_discrete: np.ndarray, is_act_discrete: np.ndarray, is_cont_mask) \
-            -> Tuple[List[np.ndarray], List[np.ndarray], List[np.ndarray]]:
-
-        # Calculate nr of active variables for each design vector
-        is_discrete_mask = ~is_cont_mask
-        n_active = np.sum(is_act_discrete[:, is_discrete_mask], axis=1)
-
-        # Sort by nr active
-        i_sorted = np.argsort(n_active)
-        x_discrete = x_discrete[i_sorted, :]
-        is_act_discrete = is_act_discrete[i_sorted, :]
-
-        # Split by nr active
-        # https://stackoverflow.com/a/43094244
-        i_split = np.unique(n_active[i_sorted], return_index=True)[1][1:]
-        x_all_grouped = np.split(x_discrete, i_split, axis=0)
-        is_act_all_grouped = np.split(is_act_discrete, i_split, axis=0)
-        i_x_groups = np.split(np.arange(x_discrete.shape[0]), i_split)
-
-        return x_all_grouped, is_act_all_grouped, i_x_groups
 
     @staticmethod
     def _sobol(n_samples, n_dims=None) -> np.ndarray:
