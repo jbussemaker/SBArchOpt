@@ -68,3 +68,11 @@ def test_hier_zdt1():
     run_test_hierarchy(HierZDT1(), 4.32, validate_exhaustive=True)
     run_test_hierarchy(HierZDT1Large(), 9.84)
     run_test_hierarchy(HierDiscreteZDT1(), 3.28)
+
+
+def test_hier_cantilevered_beam():
+    run_test_hierarchy(HierCantileveredBeam(), 4.8)
+
+
+def test_hier_carside():
+    run_test_hierarchy(HierCarside(), 4.32)

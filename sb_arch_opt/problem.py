@@ -204,6 +204,8 @@ class ArchOptProblemBase(Problem):
 
         # Impute values (mostly for continuous dimensions)
         x, is_active = discrete_x
+        if x is None or is_active is None:
+            return None, None
         if x.shape[1] != self.n_var or is_active.shape[1] != self.n_var:
             raise RuntimeError(f'Inconsistent design vector dimensions: {x.shape[1]} != {self.n_var}')
         x = x.astype(float)  # Otherwise continuous variables cannot be imputed

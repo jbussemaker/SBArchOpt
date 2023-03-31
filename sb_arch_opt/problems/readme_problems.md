@@ -51,6 +51,8 @@ An overview of available test problems in `sb_arch_opt.problems` (* = recommende
 | `HierZDT1`*                       | 8       | 4      | 2     |       |     | Y   | Y   | Y    |     | 200           | 4.3       |              |                                  |
 | `HierZDT1Large`*                  | 9       | 9      | 2     |       |     | Y   | Y   | Y    |     | 2000          | 9.8       |              |                                  |
 | `HierDiscreteZDT1`*               | 8       |        | 2     |       | Y   |     | Y   | Y    |     | 2000          | 3.2       |              |                                  |
+| `HierCantileveredBeam`*           | 6       | 4      | 1     | 2     |     | Y   |     | Y    |     | 20            | 4.8       |              |                                  |
+| `HierCarside`*                    | 6       | 6      | 3     | 10    |     | Y   | Y   | Y    |     | 50            | 4.3       |              |                                  |
 | `HierarchicalRosenbrock`          | 5       | 8      | 1     | 2     |     | Y   |     | Y    |     | 32            | 1.5       |              |                                  |
 | `MOHierarchicalRosenbrock`        | 5       | 8      | 2     | 2     |     | Y   | Y   | Y    |     | 32            | 1.5       |              |                                  |
 | ~~`MOHierarchicalTestProblem`~~   | 11      | 16     | 2     | 2     |     | Y   | Y   | Y    |     | 64            | 72        |              |                                  |
@@ -66,10 +68,23 @@ An overview of available test problems in `sb_arch_opt.problems` (* = recommende
 | Module: `hidden_constraints`      |
 | `Mueller01`                       |         | 5      | 1     |       |     |     |     |      | Y   |               |           |              | fail_rate: 67%                   |
 | `Mueller02`                       |         | 4      | 1     |       |     |     |     |      | Y   |               |           |              | fail_rate: 40%                   |
+| `MDMueller02`                     | 2       | 2      | 1     |       |     | Y   |     |      | Y   | 36            |           |              | fail_rate: 37%                   |
 | `Mueller08`                       |         | 10     | 1     |       |     |     |     |      | Y   |               |           |              | fail_rate: 73%                   |
+| `MOMueller08`                     |         | 10     | 2     |       |     |     | Y   |      | Y   |               |           |              | fail_rate: 73%                   |
+| `MDMueller08`                     | 2       | 8      | 1     |       |     | Y   |     |      | Y   | 100           |           |              | fail_rate: 78%                   |
+| `MDMOMueller08`                   | 2       | 8      | 2     |       |     | Y   | Y   |      | Y   | 100           |           |              | fail_rate: 78%                   |
 | `Alimo`                           |         | 2      | 1     |       |     |     |     |      | Y   |               |           |              | fail_rate: 53%                   |
 | `HCBranin`                        |         | 2      | 1     |       |     |     |     |      | Y   |               |           |              | fail_rate: 33%                   |
 | `HCSphere`                        |         | 2      | 1     |       |     |     |     |      | Y   |               |           |              | fail_rate: 51%                   |
+| `CantileveredBeamHC`              |         | 4      | 1     | 1     |     |     |     |      | Y   |               |           |              | fail_rate: 83%                   |
+| `MDCantileveredBeamHC`            | 2       | 2      | 1     | 1     |     | Y   |     |      | Y   | 100           |           |              | fail_rate: 81%                   |
+| `CarsideHC`                       |         | 7      | 3     | 8     |     |     | Y   |      | Y   |               |           |              | fail_rate: 66%                   |
+| `CarsideHCLess`                   |         | 7      | 3     | 9     |     |     | Y   |      | Y   |               |           |              | fail_rate: 39%                   |
+| `MDCarsideHC`                     | 4       | 3      | 3     | 8     |     | Y   | Y   |      | Y   | 10000         |           |              | fail_rate: 66%                   |
+| `HierMueller02`                   | 4       | 4      | 1     |       |     |     |     | Y    | Y   | 20            | 1.2       |              | fail_rate: 40%                   |
+| `HierMueller08`                   | 4       | 10     | 1     |       |     |     |     | Y    | Y   | 20            | 1.2       |              | fail_rate: 73%                   |
+| `MOHierMueller08`                 | 4       | 10     | 2     |       |     |     | Y   | Y    | Y   | 20            | 1.2       |              | fail_rate: 73%                   |
+| `HierarchicalRosenbrockHC`        | 5       | 8      | 1     | 1     |     | Y   | Y   | Y    | Y   | 32            | 1.5       |              | fail_rate: 21%                   |
 | `MOHierarchicalRosenbrockHC`      | 5       | 8      | 2     | 1     |     | Y   | Y   | Y    | Y   | 32            | 1.5       |              | fail_rate: 60%                   |
 | ~~`HCMOHierarchicalTestProblem`~~ | 11      | 16     | 2     | 1     |     | Y   | Y   | Y    | Y   | 64            | 72        |              | fail_rate: 60%                   |
 | Module: `turbofan_arch`           |         |        |       |       |     |     |     |      |     |               |           | `ota`        |                                  |

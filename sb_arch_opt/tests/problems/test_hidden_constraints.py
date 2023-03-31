@@ -9,10 +9,17 @@ def test_mueller_01():
 
 def test_mueller_02():
     run_test_no_hierarchy(Mueller02())
+    run_test_no_hierarchy(MDMueller02())
+    run_test_hierarchy(HierMueller02(), 1.2)
 
 
 def test_mueller_08():
     run_test_no_hierarchy(Mueller08())
+    run_test_no_hierarchy(MOMueller08())
+    run_test_no_hierarchy(MDMueller08())
+    run_test_no_hierarchy(MDMOMueller08())
+    run_test_hierarchy(HierMueller08(), 1.2)
+    run_test_hierarchy(MOHierMueller08(), 1.2)
 
 
 def test_alimo():
@@ -33,3 +40,14 @@ def test_hier_rosenbrock_hc():
 
 def test_hier_test_problem_hc():
     run_test_hierarchy(HCMOHierarchicalTestProblem(), 72)
+
+
+def test_cantilevered_beam():
+    run_test_no_hierarchy(CantileveredBeamHC())
+    run_test_no_hierarchy(MDCantileveredBeamHC())
+
+
+def test_carside():
+    run_test_no_hierarchy(CarsideHC())
+    run_test_no_hierarchy(CarsideHCLess())
+    run_test_no_hierarchy(MDCarsideHC())

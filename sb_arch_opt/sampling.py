@@ -18,7 +18,7 @@ import logging
 import warnings
 import itertools
 import numpy as np
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple
 from scipy.stats.qmc import Sobol
 from scipy.spatial import distance
 

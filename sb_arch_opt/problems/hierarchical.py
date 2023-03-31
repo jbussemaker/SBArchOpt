@@ -25,15 +25,15 @@ from scipy.spatial import distance
 from sb_arch_opt.sampling import *
 from pymoo.problems.multi.zdt import ZDT1
 from sb_arch_opt.problems.discrete import *
+from sb_arch_opt.problems.constrained import *
 from sb_arch_opt.problems.problems_base import *
-from pymoo.problems.multi.omnitest import OmniTest
 from pymoo.core.variable import Real, Integer, Choice
 from pymoo.util.ref_dirs import get_reference_directions
 
 __all__ = ['HierarchyProblemBase', 'HierarchicalGoldstein', 'HierarchicalRosenbrock', 'ZaeffererHierarchical',
            'ZaeffererProblemMode', 'MOHierarchicalGoldstein', 'MOHierarchicalRosenbrock', 'HierarchicalMetaProblemBase',
            'MOHierarchicalTestProblem', 'Jenatton', 'TunableHierarchicalMetaProblem', 'TunableZDT1', 'HierZDT1',
-           'HierZDT1Small', 'HierZDT1Large', 'HierDiscreteZDT1', 'HierBranin']
+           'HierZDT1Small', 'HierZDT1Large', 'HierDiscreteZDT1', 'HierBranin', 'HierCantileveredBeam', 'HierCarside']
 
 
 class HierarchyProblemBase(ArchOptTestProblemBase):
@@ -795,8 +795,9 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
         self._is_act_sub = is_act_discrete
 
         # Initialize underlying problem
-        self._n_cont = n_cont = max(0, int(x_discrete.shape[1]*cont_ratio))
+        n_cont = max(0, int(x_discrete.shape[1]*cont_ratio))
         self._problem = problem = problem_factory(max(2, n_cont))
+        self._n_cont = n_cont = 0 if n_cont == 0 else problem.n_var
         pf: np.ndarray = problem.pareto_front()
         pf_min, pf_max = np.min(pf, axis=0), np.max(pf, axis=0)
         is_same = np.abs(pf_max-pf_min) < 1e-10
@@ -841,6 +842,15 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
     def _get_n_valid_discrete(self) -> int:
         n_discrete_underlying = self._problem.get_n_valid_discrete()
         return n_discrete_underlying*self._x_sub.shape[0]
+
+    def might_have_hidden_constraints(self):
+        return self._problem.might_have_hidden_constraints()
+
+    def get_failure_rate(self) -> float:
+        return self._problem.get_failure_rate()
+
+    def get_n_batch_evaluate(self) -> Optional[int]:
+        return self._problem.get_n_batch_evaluate()
 
     def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
         x_sub, is_act_sub = self._x_sub, self._is_act_sub
@@ -1004,6 +1014,20 @@ class HierDiscreteZDT1(TunableZDT1):
         super().__init__(imp_ratio=5., n_subproblem=2000, n_opts=4, cont_ratio=0)
 
 
+class HierCantileveredBeam(TunableHierarchicalMetaProblem):
+
+    def __init__(self):
+        factory = lambda n: ArchCantileveredBeam()
+        super().__init__(factory, imp_ratio=5., n_subproblem=20)
+
+
+class HierCarside(TunableHierarchicalMetaProblem):
+
+    def __init__(self):
+        factory = lambda n: ArchCarside()
+        super().__init__(factory, imp_ratio=5., n_subproblem=50)
+
+
 if __name__ == '__main__':
     # HierarchicalGoldstein().print_stats()
     # MOHierarchicalGoldstein().print_stats()
@@ -1026,10 +1050,12 @@ if __name__ == '__main__':
     # # Jenatton().plot_pf()
 
     # p = HierBranin()
-    p = HierZDT1Small()
+    # p = HierZDT1Small()
     # p = HierZDT1()
     # p = HierZDT1Large()
     # p = HierDiscreteZDT1()
+    # p = HierCantileveredBeam()
+    p = HierCarside()
     p.print_stats()
     # p.reset_pf_cache()
     # p.plot_pf()

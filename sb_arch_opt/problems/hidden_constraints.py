@@ -21,6 +21,7 @@ import numpy as np
 from deprecated import deprecated
 from scipy.spatial import distance
 from pymoo.core.variable import Real
+from sb_arch_opt.problems.constrained import *
 from sb_arch_opt.problems.hierarchical import *
 from sb_arch_opt.problems.problems_base import *
 from sb_arch_opt.problems.continuous import Branin
@@ -28,8 +29,11 @@ from sb_arch_opt.problem import ArchOptProblemBase
 from sb_arch_opt.sampling import HierarchicalRandomSampling
 from pymoo.problems.single.ackley import Ackley
 
-__all__ = ['SampledFailureRateMixin', 'Mueller01', 'Mueller02', 'Mueller08', 'Alimo', 'HCBranin',
-           'MOHierarchicalRosenbrockHC', 'HCMOHierarchicalTestProblem', 'RandomHiddenConstraintsBase', 'HCSphere']
+__all__ = ['SampledFailureRateMixin', 'Mueller01', 'Mueller02', 'Mueller08', 'MOMueller08', 'Alimo', 'HCBranin',
+           'MOHierarchicalRosenbrockHC', 'HCMOHierarchicalTestProblem', 'RandomHiddenConstraintsBase', 'HCSphere',
+           'HierarchicalRosenbrockHC', 'ConstraintHiderMetaProblem', 'CantileveredBeamHC', 'MDCantileveredBeamHC',
+           'CarsideHC', 'MDCarsideHC', 'CarsideHCLess', 'MDMueller02', 'MDMueller08', 'MDMOMueller08',
+           'HierMueller02', 'HierMueller08', 'MOHierMueller08']
 
 
 class SampledFailureRateMixin(ArchOptProblemBase):
@@ -106,28 +110,81 @@ class Mueller02(SampledFailureRateMixin, NoHierarchyProblemBase):
         f_out[cx > 0, :] = np.nan
 
 
+class MDMueller02(SampledFailureRateMixin, MixedDiscretizerProblemBase):
+    """Mixed-discrete version of the Mueller 2 problem"""
+
+    def __init__(self):
+        super().__init__(Mueller02(), n_opts=6, n_vars_int=2)
+
+
+class HierMueller02(SampledFailureRateMixin, TunableHierarchicalMetaProblem):
+    """Hierarchical Mueller 2 problem"""
+
+    def __init__(self):
+        super().__init__(lambda n: Mueller02(), imp_ratio=2., n_subproblem=20)
+
+
 class Mueller08(SampledFailureRateMixin, NoHierarchyProblemBase):
     """
     Test problem 8 (one failure region) of:
     https://pubsonline.informs.org/doi/suppl/10.1287/ijoc.2018.0864/suppl_file/ijoc.2018.0864.sm1.pdf
 
-    Equation (8c) is modified a bit to make the non-failed region a larger
+    Equation (8c) is modified a bit to make the non-failed region a bit larger.
 
     Citation: Mueller, J., Day, M. "Surrogate Optimization of Computationally Expensive Black-Box Problems with Hidden
     Constraints", 2019, DOI: https://doi.org/10.1287/ijoc.2018.0864
     """
 
+    _mo = False
+
     def __init__(self, n_var=10):
         des_vars = [Real(bounds=(-10, 10)) for _ in range(n_var)]
-        super().__init__(des_vars)
+        super().__init__(des_vars, n_obj=2 if self._mo else 1)
 
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
         inner_sum = [np.sum(j*np.sin((j+1)*x) + j, axis=1) for j in range(1, 6)]
         f_out[:, 0] = np.sum(np.column_stack(inner_sum), axis=1)
+        if self._mo:
+            inner_sum = [np.sum(j*np.cos((j+1)*x[:, :-1]) + j, axis=1) for j in range(1, 6)]
+            f_out[:, 1] = np.sum(np.column_stack(inner_sum), axis=1)
 
         cx = np.sum(x**4 - 16*x**2 + 5*x, axis=1) - 1000*self.n_var
         f_out[cx > 0, :] = np.nan
+
+
+class MOMueller08(Mueller08):
+    """Multi-objective version of the Mueller 8 test problem"""
+
+    _mo = True
+
+
+class MDMueller08(SampledFailureRateMixin, MixedDiscretizerProblemBase):
+    """Mixed-discrete version of the Mueller 8 problem"""
+
+    def __init__(self):
+        super().__init__(Mueller08(), n_opts=10, n_vars_int=2)
+
+
+class MDMOMueller08(SampledFailureRateMixin, MixedDiscretizerProblemBase):
+    """Mixed-discrete, multi-objective version of the Mueller 8 problem"""
+
+    def __init__(self):
+        super().__init__(MOMueller08(), n_opts=10, n_vars_int=2)
+
+
+class HierMueller08(SampledFailureRateMixin, TunableHierarchicalMetaProblem):
+    """Hierarchical Mueller 8 problem"""
+
+    def __init__(self):
+        super().__init__(lambda n: Mueller08(), imp_ratio=2., n_subproblem=20)
+
+
+class MOHierMueller08(SampledFailureRateMixin, TunableHierarchicalMetaProblem):
+    """Multi-objective hierarchical Mueller 8 problem"""
+
+    def __init__(self):
+        super().__init__(lambda n: MOMueller08(), imp_ratio=2., n_subproblem=20)
 
 
 class Alimo(SampledFailureRateMixin, NoHierarchyProblemBase):
@@ -249,6 +306,12 @@ class MOHierarchicalRosenbrockHC(SampledFailureRateMixin, MOHierarchicalRosenbro
         g_out[:, 0] = g[:, 0]
 
 
+class HierarchicalRosenbrockHC(MOHierarchicalRosenbrockHC):
+    """Single-objective hierarchical hidden-constraints Rosenbrock problem"""
+
+    _mo = False
+
+
 @deprecated(reason='Not realistic (see HierarchicalMetaProblemBase docstring)')
 class HCMOHierarchicalTestProblem(SampledFailureRateMixin, HierarchicalMetaProblemBase):
     """
@@ -264,8 +327,81 @@ class HCMOHierarchicalTestProblem(SampledFailureRateMixin, HierarchicalMetaProbl
         return f'{self.__class__.__name__}()'
 
 
+class ConstraintHiderMetaProblem(SampledFailureRateMixin, ArchOptTestProblemBase):
+    """Meta problem that turns one or more constraints of an underlying problem into hidden constraints"""
+
+    def __init__(self, problem: ArchOptTestProblemBase, i_g_hc):
+        self._problem = problem
+        self._i_g_hc = i_g_hc = np.array(i_g_hc)
+
+        n_constr = problem.n_ieq_constr
+        if not np.all(i_g_hc < n_constr):
+            raise RuntimeError(f'Unavailable constraints: {i_g_hc}')
+        n_constr -= len(i_g_hc)
+
+        super().__init__(problem.des_vars, n_obj=problem.n_obj, n_ieq_constr=n_constr, n_eq_constr=problem.n_eq_constr)
+
+    def _get_n_valid_discrete(self) -> int:
+        return self._problem.get_n_valid_discrete()
+
+    def _gen_all_discrete_x(self):
+        return self._problem.all_discrete_x
+
+    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
+                       h_out: np.ndarray, *args, **kwargs):
+        self._correct_x_impute(x, is_active_out)
+        out = self._problem.evaluate(x, return_as_dictionary=True)
+        f_out[:, :] = out['F']
+        if 'H' in out:
+            h_out[:, :] = out['H']
+
+        g = out['G']
+        g_out[:, :] = np.delete(g, self._i_g_hc, axis=1)
+
+        is_failed = np.any(g[:, self._i_g_hc] < 0, axis=1)
+        f_out[is_failed, :] = np.nan
+        g_out[is_failed, :] = np.nan
+
+    def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
+        x[:, :], is_active[:, :] = self._problem.correct_x(x)
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}()'
+
+
+class CantileveredBeamHC(ConstraintHiderMetaProblem):
+
+    def __init__(self):
+        super().__init__(ArchCantileveredBeam(), i_g_hc=[1])
+
+
+class MDCantileveredBeamHC(ConstraintHiderMetaProblem):
+
+    def __init__(self):
+        super().__init__(MDCantileveredBeam(), i_g_hc=[1])
+
+
+class CarsideHC(ConstraintHiderMetaProblem):
+
+    def __init__(self):
+        super().__init__(ArchCarside(), i_g_hc=[3, 7])
+
+
+class CarsideHCLess(ConstraintHiderMetaProblem):
+
+    def __init__(self):
+        super().__init__(ArchCarside(), i_g_hc=[6])
+
+
+class MDCarsideHC(ConstraintHiderMetaProblem):
+
+    def __init__(self):
+        super().__init__(MDCarside(), i_g_hc=[3, 7])
+
+
 if __name__ == '__main__':
     # MOHierarchicalRosenbrockHC().print_stats()
+    # HierarchicalRosenbrockHC().print_stats()
     # MOHierarchicalRosenbrockHC().plot_pf()
 
     # HCMOHierarchicalTestProblem().print_stats()
@@ -281,9 +417,26 @@ if __name__ == '__main__':
     # Mueller08().plot_pf()
     # Mueller08().plot_design_space()
 
+    # MOMueller08().print_stats()
+    # MOMueller08().plot_pf()
+    # MDMueller02().print_stats()
+    # MDMueller02().plot_pf()
+    # MDMueller08().print_stats()
+    # MDMOMueller08().print_stats()
+    # MDMOMueller08().plot_pf()
+    # HierMueller02().print_stats()
+    HierMueller08().print_stats()
+    MOHierMueller08().print_stats()
+
     # Alimo().print_stats()
     # Alimo().plot_design_space()
     # HCBranin().print_stats()
     # HCBranin().plot_design_space()
-    HCSphere().print_stats()
+    # HCSphere().print_stats()
     # HCSphere().plot_design_space()
+
+    # CantileveredBeamHC().print_stats()
+    # MDCantileveredBeamHC().print_stats()
+    # CarsideHC().print_stats()
+    # CarsideHCLess().print_stats()
+    # MDCarsideHC().print_stats()
