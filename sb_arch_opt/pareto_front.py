@@ -48,10 +48,27 @@ class CachedParetoFrontMixin(Problem):
         if os.path.exists(cache_path):
             os.remove(cache_path)
 
+        # pymoo's implementation of function result caching
+        if 'cache' in self.__dict__:
+            for key in ['pareto_front', 'pareto_set']:
+                if key in self.__dict__['cache']:
+                    del self.__dict__['cache'][key]
+
     def calc_pareto_front(self, **kwargs):
         return self._calc_pareto_front(force=True, **kwargs)
 
-    def _calc_pareto_front(self, *_, pop_size=200, n_gen_min=10, n_repeat=12, n_pts_keep=100, force=False, **kwargs):
+    def _calc_pareto_front(self, *_, **kwargs):
+        _, pf = self._calc_pareto_set_front(**kwargs)
+        return pf
+
+    def calc_pareto_set(self, *_, **kwargs):
+        return self._calc_pareto_set(force=True, **kwargs)
+
+    def _calc_pareto_set(self, *_, **kwargs):
+        ps, _ = self._calc_pareto_set_front(**kwargs)
+        return ps
+
+    def _calc_pareto_set_front(self, *_, pop_size=200, n_gen_min=10, n_repeat=12, n_pts_keep=100, force=False, **__):
         if not force and not self.default_enable_pf_calc:
             raise RuntimeError('On-demand PF calc is disabled, use calc_pareto_front instead')
 
@@ -64,7 +81,7 @@ class CachedParetoFrontMixin(Problem):
         # Get an approximation of the combinatorial design space size, only relevant if there are no continuous vars
         n = 1
         xl, xu = self.bounds()
-        for i, var in enumerate(self.vars):
+        for i, var in enumerate(self.vars.values()):
             if isinstance(var, Real):
                 n = None
                 break
@@ -75,8 +92,10 @@ class CachedParetoFrontMixin(Problem):
             pop = HierarchicalExhaustiveSampling().do(self, n)
             Evaluator().eval(self, pop)
 
+            ps = pop.get('X')
             pf = pop.get('F')
             i_non_dom = NonDominatedSorting().do(pf, only_non_dominated_front=True)
+            ps = ps[i_non_dom, :]
             pf = pf[i_non_dom, :]
 
         # Otherwise, execute NSGA2 in parallel and merge resulting Pareto fronts
@@ -86,33 +105,37 @@ class CachedParetoFrontMixin(Problem):
                            for i in range(n_repeat)]
                 concurrent.futures.wait(futures)
 
-                pf = None
+                ps = pf = None
                 for i in range(n_repeat):
                     res = futures[i].result()
                     if res.F is None:
                         continue
                     if pf is None:
+                        ps = res.X
                         pf = res.F
                     else:
                         pf_merged = np.row_stack([pf, res.F])
                         i_non_dom = NonDominatedSorting().do(pf_merged, only_non_dominated_front=True)
+                        ps = np.row_stack([ps, res.X])[i_non_dom, :]
                         pf = pf_merged[i_non_dom, :]
 
         # Reduce size of Pareto front to a predetermined amount to ease Pareto-front-related calculations
         if pf is None or pf.shape[0] == 0:
             raise RuntimeError('Could not find Pareto front')
-        pf = np.unique(pf, axis=0)
+        pf, i_unique = np.unique(pf, axis=0, return_index=True)
+        ps = ps[i_unique, :]
         if n_pts_keep is not None and pf.shape[0] > n_pts_keep:
             for _ in range(pf.shape[0]-n_pts_keep):
                 crowding_of_front = calc_crowding_distance(pf)
                 i_max_crowding = np.argsort(crowding_of_front)[1:]
+                ps = ps[i_max_crowding, :]
                 pf = pf[i_max_crowding, :]
 
         # Store in cache
         os.makedirs(os.path.dirname(cache_path), exist_ok=True)
         with open(cache_path, 'wb') as fp:
-            pickle.dump(pf, fp)
-        return pf
+            pickle.dump((ps, pf), fp)
+        return ps, pf
 
     def _run_minimize(self, pop_size, n_gen, i, n):
         from sb_arch_opt.algo.pymoo_interface import get_nsga2
@@ -170,4 +193,4 @@ class CachedParetoFrontMixin(Problem):
         if len(class_str) > 20:
             class_str = hashlib.md5(class_str.encode('utf-8')).hexdigest()[:20]
 
-        return os.path.expanduser(os.path.join('~', '.arch_opt_pf_cache', class_str+'.pkl'))
+        return os.path.expanduser(os.path.join('~', '.arch_opt_pf_cache', '2_'+class_str+'.pkl'))

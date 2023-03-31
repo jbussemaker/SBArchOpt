@@ -59,13 +59,12 @@ def test_jenatton():
     run_test_hierarchy(Jenatton(), 2)
 
 
-def test_comb_hier_branin():
-    run_test_hierarchy(CombHierBranin(), 6.72, validate_exhaustive=True)
+def test_hier_branin():
+    run_test_hierarchy(HierBranin(), 4.32, validate_exhaustive=True)
 
 
-def test_comb_hier_mo():
-    run_test_hierarchy(CombHierMO(), 6.17, validate_exhaustive=True)
-
-
-def test_comb_hier_discr_mo():
-    run_test_hierarchy(CombHierDMO(), 13.69)
+def test_hier_zdt1():
+    run_test_hierarchy(HierZDT1Small(), 1.2, validate_exhaustive=True)
+    run_test_hierarchy(HierZDT1(), 4.32, validate_exhaustive=True)
+    run_test_hierarchy(HierZDT1Large(), 9.84)
+    run_test_hierarchy(HierDiscreteZDT1(), 3.28)

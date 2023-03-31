@@ -376,9 +376,22 @@ def test_cached_pareto_front_mixin(problem: ArchOptTestProblemBase, discrete_pro
     assert not os.path.exists(problem._pf_cache_path())
 
     for _ in range(2):
-        pf = problem.pareto_front(pop_size=200, n_gen_min=3, n_repeat=4)
+        pf = problem.pareto_front(pop_size=20, n_gen_min=3, n_repeat=4)
         assert pf.shape[1] == 2
         assert os.path.exists(problem._pf_cache_path())
+
+    problem.reset_pf_cache()
+    assert not os.path.exists(problem._pf_cache_path())
+
+    for _ in range(2):
+        assert problem.pareto_set(pop_size=20, n_gen_min=3, n_repeat=4) is not None
+        assert os.path.exists(problem._pf_cache_path())
+
+    ps, pf = problem.pareto_set(), problem.pareto_front()
+    assert ps.shape[0] == pf.shape[0]
+    out = problem.evaluate(ps, return_as_dictionary=True)
+    assert np.all(np.abs(out['X']-ps) < 1e-10)
+    assert np.all(np.abs(out['F']-pf) < 1e-10)
 
     discrete_problem.reset_pf_cache()
     assert not os.path.exists(discrete_problem._pf_cache_path())

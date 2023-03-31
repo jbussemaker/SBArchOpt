@@ -21,6 +21,9 @@ import itertools
 import numpy as np
 from typing import *
 from deprecated import deprecated
+from scipy.spatial import distance
+from sb_arch_opt.sampling import *
+from pymoo.problems.multi.zdt import ZDT1
 from sb_arch_opt.problems.discrete import *
 from sb_arch_opt.problems.problems_base import *
 from pymoo.problems.multi.omnitest import OmniTest
@@ -29,8 +32,8 @@ from pymoo.util.ref_dirs import get_reference_directions
 
 __all__ = ['HierarchyProblemBase', 'HierarchicalGoldstein', 'HierarchicalRosenbrock', 'ZaeffererHierarchical',
            'ZaeffererProblemMode', 'MOHierarchicalGoldstein', 'MOHierarchicalRosenbrock', 'HierarchicalMetaProblemBase',
-           'MOHierarchicalTestProblem', 'Jenatton', 'CombinatorialHierarchicalMetaProblem', 'CombHierBranin',
-           'CombHierMO', 'CombHierDMO']
+           'MOHierarchicalTestProblem', 'Jenatton', 'TunableHierarchicalMetaProblem', 'TunableZDT1', 'HierZDT1',
+           'HierZDT1Small', 'HierZDT1Large', 'HierDiscreteZDT1', 'HierBranin']
 
 
 class HierarchyProblemBase(ArchOptTestProblemBase):
@@ -646,174 +649,187 @@ class Jenatton(HierarchyProblemBase):
         is_active[(x[:, 0] == 1) & (x[:, 2] == 1), 5] = False  # x3 = 1: x6 inactive
 
 
-class CombinatorialHierarchicalMetaProblem(HierarchyProblemBase):
+class TunableHierarchicalMetaProblem(HierarchyProblemBase):
     """
-    Meta problem that turns any (mixed-discrete, multi-objective) problem into a realistically-behaving hierarchical
-    optimization problem:
-    - The problem is separated into n_parts per dimension:
-      - Continuous variables are simply separated linearly
-      - Discrete variables are separated such that there are at least 2 options in each part
-    - Categorical selection variables are added to select subparts to apply divided variables to
-      - Parts are selected ordinally (i.e. not per dimension, but from "one big list"); orders are randomized
-      - For each subpart one or more original dimensions are deactivated
-      - Selection variables are added for selecting which subpart to evaluate, but repeated separation into groups
+    Meta problem that turns any problem into a realistically-behaving hierarchical optimization problem with directly
+    tunable properties: imputation ratio, nr of subproblems, options per discrete variable, ratio between continuous and
+    discrete variables. Note that these properties assume a non-hierarchical underlying problem.
 
-    Note: the underlying problem should not be hierarchical!
-
-    Settings:
-    - n_parts: number of parts to separate each dimension; increases the nr of possible discrete design points
-    - n_sel_dv: number of design variables to use for selecting which part to evaluate; higher values increase the
-                imputation ratio, reduce the nr of options for each selection design variable
-    - sep_power: controls how non-uniform the selection subdivisions are: higher than 1 increases imputation ratio and
-                 difference between occurrence rates
-    - target_n_opts_ratio: controls the nr of options of the last separation variable: higher reduces the imp ratio
+    It does this by:
+    - Determining the best nr of design variables and options per design variable to get the requested nr of subproblems
+    - Creating all design vectors using the Cartesian product
+    - Removing design vectors until the desired nr of subproblems is achieved, without increasing imp ratio too much
+    - Splitting design variables until the desired imputation ratio is achieved
+    - Initialize the underlying test problem with enough continuous vars to satisfy the continuous-to-discrete ratio
+    - Define how each subproblem modifies the underlying problem's objectives and constraints
     """
 
-    def __init__(self, problem: ArchOptTestProblemBase, n_parts=2, n_sel_dv=4, sep_power=1.2, target_n_opts_ratio=5.,
-                 repr_str=None):
-        self._problem = problem
-        self._n_parts = n_parts
+    def __init__(self, problem_factory: Callable[[int], ArchOptTestProblemBase], imp_ratio: float, n_subproblem: int,
+                 n_opts=3, cont_ratio=1., repr_str=None):
         self._repr_str = repr_str
 
-        # Separate the underlying design space in different parts
-        parts = []
-        is_cont_mask, xl, xu = problem.is_cont_mask, problem.xl, problem.xu
-        div_bounds = 1/n_parts
-        n_opts_max = np.zeros((problem.n_var,), dtype=int)
-        for i_div in itertools.product(*[range(n_parts) for _ in range(problem.n_var)]):
-            part = []
-            for i_dv, i in enumerate(i_div):
-                if is_cont_mask[i_dv]:
-                    # Map continuous variable to a subrange
-                    xl_i, xu_i = xl[i_dv], xu[i_dv]
-                    bounds = tuple(np.array([i, i+1])*div_bounds*(xu_i-xl_i)+xl_i)
-                    part.append((False, bounds))
+        # Create design vectors by Cartesian product to be as close to the nr of requested subproblems as possible
+        n_opt_uniform = np.ones((int(np.ceil(np.log(n_subproblem)/np.log(n_opts))),), dtype=int)*n_opts
+        n_opt_variants = [n_opt_uniform]
+        if len(n_opt_uniform) > 1:
+            n_opt_variants.append(np.array(list(n_opt_uniform[:-1])+[n_opts+1]))
+            n_opt_variants.append(np.array(list(n_opt_uniform[:-2])+[n_opts+1]))
+        if n_opts > 2:
+            for n_full in range(len(n_opt_uniform)):
+                n_remaining = n_subproblem/n_opts**n_full
+                n_one_less = np.ceil(np.log(n_remaining)/np.log(n_opts-1))
+                n_opt_variants.append(np.array([n_opts]*n_full + [n_opts-1]*int(n_one_less)))
 
-                else:
-                    # Map discrete variable to a subrange that exists of at least 2 options
-                    n_opts = int(xu[i_dv]+1)
-                    n_opt_per_div = max(2, np.ceil(n_opts / n_parts))
-                    i_opts = np.arange(n_opt_per_div*i, n_opt_per_div*(i+1))
+        n_declared = np.array([np.prod(n) for n in n_opt_variants])
+        i_variant = np.where(n_declared >= n_subproblem)[0]
+        i_variant = i_variant[np.argmin(n_declared[i_variant])]
+        n_dv_opts = n_opt_variants[i_variant]
 
-                    # Ensure that no options outside the bounds can be selected
-                    i_opts = tuple(i_opts[i_opts < n_opts])
-                    if len(i_opts) == 0:
-                        # If too far outside the bounds, retain the last option only
-                        i_opts = (n_opts-1,)
+        x_discrete = np.array(list(itertools.product(*[list(range(n)) for n in n_dv_opts])))
+        is_act_discrete = np.ones(x_discrete.shape, dtype=bool)
 
-                    # Track the maximum nr of options
-                    if len(i_opts) > n_opts_max[i_dv]:
-                        n_opts_max[i_dv] = len(i_opts)
+        # Eliminate options until we reach the desired number of subproblems
+        def _imp_ratio(x_discrete_):
+            return np.prod(np.max(x_discrete_, axis=0)+1)/x_discrete_.shape[0]
 
-                    part.append((True, i_opts))
-            parts.append(part)
+        assert _imp_ratio(x_discrete) == 1.
+        while x_discrete.shape[0] > n_subproblem:
+            n_remove = x_discrete.shape[0]-n_subproblem
+            n_remain_min = None
+            remove_mask = None
 
-        # Shuffle the parts
-        n_sel_dv = max(2, n_sel_dv)
-        rng = np.random.default_rng(problem.n_var * problem.n_obj * n_parts * n_sel_dv)
-        self._parts = parts = [parts[i] for i in rng.permutation(np.arange(len(parts)))]
+            last_init_value = sorted(list(set(x_discrete[:, 0])))[-1]
+            last_init_value_mask = x_discrete[:, 0] == last_init_value
+            ix_last_init_value = np.where(last_init_value_mask)[0]
+            x_discrete_last = x_discrete[ix_last_init_value, :]
 
-        # Define which mapped design variables are active for each part
-        self._parts_is_active = parts_is_active = np.ones((len(parts), problem.n_var), dtype=bool)
-        self._parts_is_discrete = parts_is_discrete = np.zeros((len(parts), problem.n_var), dtype=bool)
-        self._parts_n_opts = parts_n_opts = np.ones((len(parts), problem.n_var), dtype=int)
-        osc_period = max(5, int(len(parts)/5))
-        idx_deactivate = np.where(is_cont_mask)[0]
-        if len(idx_deactivate) == 0:
-            idx_deactivate = np.arange(problem.n_var)
-        n_inactive = np.floor(len(idx_deactivate)*(.5-.5*np.cos(osc_period*np.arange(len(parts))/np.pi))).astype(int)
-        for i, part in enumerate(parts):
-            # Discrete variables with one option only are inactive
-            for i_dv, (is_discrete, settings) in enumerate(part):
-                if is_discrete:
-                    parts_is_discrete[i, i_dv] = True
-                    parts_n_opts[i, i_dv] = len(settings)
-                    if len(settings) < 2:
-                        parts_is_active[i, i_dv] = False
-
-            # Deactivate continuous variables based on an oscillating equation
-            inactive_idx = idx_deactivate[len(idx_deactivate)-n_inactive[i]:]
-            parts_is_active[i, inactive_idx] = False
-
-        parts_n_opts[~parts_is_active] = 1
-
-        # Define selection design variables
-        # Repeatedly separate the number of parts to be selected
-        init_range = .65  # Directly controls the range (= difference between min and max occurrence rates) of x0
-
-        def _sep_group(n_values, n_sep):
-            return np.round((np.linspace(0, 1, n_values)**sep_power)*(n_sep-.01)-.5).astype(int)
-
-        n = len(parts)
-
-        # We define one design variable that makes the initial separation
-        init_sep_frac = .5+.5*init_range-.05+.1*rng.random()
-
-        # Determine in how many groups we should separate at each step
-        # Repeatedly subdividing the largest group determines how many values the last largest group has. We calculate
-        # for several separation numbers what the fraction of the largest group is; then calculate how big the latest
-        # largest group is. If this number is equal to the corresponding nr of separations, it means that each design
-        # variable will have the same nr of options. We choose the nr of separations where the ratio is a bit higher
-        # than 1 to introduce another source of non-uniformity in the problem formulation
-        n_sep_possible = np.arange(2, max(2, np.floor(.25*n))+1, dtype=int)
-        frac_largest_group = np.array([np.sum(_sep_group(100, n_sep) == 0)/100 for n_sep in n_sep_possible])
-        n_rel_last_group = (init_sep_frac*frac_largest_group**(n_sel_dv-2))*n/n_sep_possible
-        n_rel_lg_idx = np.where(n_rel_last_group > target_n_opts_ratio)[0]
-        n_sep_per_dv = n_sep_possible[n_rel_lg_idx[-1]] if len(n_rel_lg_idx) > 0 else n_sep_possible[0]
-
-        x_sel = np.zeros((n, n_sel_dv), dtype=int)
-        is_active_sel = np.ones((n, n_sel_dv), dtype=bool)
-        dv_groups = [np.arange(n, dtype=int)]
-        for i in range(n_sel_dv):
-            # Separate current selection groups
-            next_dv_groups = []
-            needed_separation = False
-            for group_idx in dv_groups:
-                if len(group_idx) == 1:
-                    is_active_sel[group_idx[0], i:] = False
+            for ix_check in itertools.product(*([[True]]+[[False, True] for _ in range(x_discrete.shape[1]-1)])):
+                ix_check = np.array(ix_check)
+                dv_unique, idx = np.unique(x_discrete_last[:, ix_check], axis=0, return_inverse=True)
+                dv_sub_last_mask = idx == (len(dv_unique)-1)
+                n_remain = n_remove-np.sum(dv_sub_last_mask)
+                if n_remain < 0:
                     continue
-                needed_separation = True
+                if n_remain_min is None or n_remain < n_remain_min:
+                    n_remain_min = n_remain
+                    ix_check_i = np.where(ix_check)[0]
+                    remove_mask = dv_sub_last_mask, ix_check_i
 
-                # For the last group just add uniformly increasing values to avoid needing additional groups
-                if i == n_sel_dv-1:
-                    x_sel[group_idx, i] = np.arange(len(group_idx))
-                    continue
-
-                # For the first group separate based on the initial separation fraction
-                if i == 0:
-                    x_next_group = np.ones((len(group_idx),), dtype=int)
-                    n_first_group = int(np.ceil(init_sep_frac*len(x_next_group)))
-                    x_next_group[:n_first_group] = 0
-                else:
-                    # Distribute values unevenly (raising the power results in a more uneven distribution)
-                    x_next_group = _sep_group(len(group_idx), n_sep_per_dv)
-
-                x_sel[group_idx, i] = x_next_group
-
-                # Determine next groups
-                for x_next in np.unique(x_next_group):
-                    next_dv_groups.append(group_idx[x_next_group == x_next])
-
-            dv_groups = next_dv_groups
-            if not needed_separation:
-                x_sel = x_sel[:, :i]
-                is_active_sel = is_active_sel[:, :i]
+            if n_remain_min is None:
                 break
 
-        self._x_sel = x_sel
-        self._is_active_sel = is_active_sel
-        des_vars = []
-        for i in range(x_sel.shape[1]):
-            des_vars.append(Choice(options=list(sorted(np.unique(x_sel[:, i])))))
+            # Remove the specific design vectors if thereby we do not violate the imputation ratio constraint
+            init_sub_mask, ix_check_i = remove_mask
+            mask = last_init_value_mask
+            mask[last_init_value_mask] = init_sub_mask
+            inv_mask = np.where(~mask)[0]
 
-        # Add mapped design variables
-        for i_dv, des_var in enumerate(problem.des_vars):
+            x_removed = x_discrete[mask, :]
+            x_discrete_filtered = x_discrete[inv_mask, :]
+            if _imp_ratio(x_discrete_filtered) > imp_ratio:
+                break
+            x_discrete = x_discrete_filtered
+            is_act_discrete = is_act_discrete[inv_mask, :]
+
+            # Set is_active flags
+            ix_filter, ix_options_check = ix_check_i[:-1], ix_check_i[-1]
+            if len(ix_filter) > 0:
+                remains_mask = np.all(x_discrete_filtered[:, ix_filter] == x_removed[:, ix_filter][0, :], axis=1)
+                if np.max(x_discrete_filtered[remains_mask, ix_options_check]) == 0:
+                    is_act_discrete[remains_mask, ix_options_check] = False
+
+        # Separate design variables until we meet the imputation ratio requirement
+        current_sep_mask = np.arange(x_discrete.shape[0])
+        ix_started = [set() for _ in range(x_discrete.shape[1])]
+        nothing_found_flag = False
+        while _imp_ratio(x_discrete) < imp_ratio:
+            ix_chain = []
+            for i_dv in range(x_discrete.shape[1]):
+                if np.any(~is_act_discrete[current_sep_mask, i_dv]):
+                    continue
+                x_discrete_i = x_discrete[current_sep_mask, i_dv]
+                x_unique = np.where(np.bincount(x_discrete_i) > 0)[0]
+                i_value_sel = [tuple(ix_chain+[ix]) for ix in range(len(x_unique))]
+                i_value_sel = [iv for iv in i_value_sel if iv not in ix_started[i_dv]]
+                if len(i_value_sel) > 1:
+                    next_sep_mask = current_sep_mask[x_discrete_i == i_value_sel[0][-1]]
+                    if len(next_sep_mask) > 1:
+                        ix_started[i_dv].add(i_value_sel[0])
+                        break
+                ix_chain.append(x_unique[0])
+            else:
+                if nothing_found_flag:
+                    break
+                current_sep_mask = np.arange(x_discrete.shape[0])
+                nothing_found_flag = True
+                continue
+            nothing_found_flag = False
+
+            # Determine which variable to separate
+            for i_sep in reversed(list(range(1, x_discrete.shape[1]))):
+                if np.any(~is_act_discrete[next_sep_mask, i_sep]):
+                    continue
+                break
+            else:
+                break
+
+            # Separate the selected design variable into a new variable at the end of the vector
+            x_discrete_sep = np.zeros((x_discrete.shape[0], x_discrete.shape[1]+1), dtype=int)
+            x_discrete_sep[:, :-1] = x_discrete.copy()
+            x_discrete_sep[next_sep_mask, i_sep:] = 0
+            x_discrete_sep[next_sep_mask, -1] = x_discrete[next_sep_mask, i_sep]
+
+            is_act_sep = np.column_stack([is_act_discrete, np.zeros((x_discrete.shape[0],), dtype=bool)])
+            is_act_sep[next_sep_mask, i_sep:] = False
+            is_act_sep[next_sep_mask, -1] = is_act_discrete[next_sep_mask, i_sep]
+
+            # Check imputation ratio constraint
+            if _imp_ratio(x_discrete_sep) > imp_ratio:
+                break
+            x_discrete = x_discrete_sep
+            is_act_discrete = is_act_sep
+            current_sep_mask = next_sep_mask
+            ix_started.append(set())
+
+        self._x_sub = x_discrete
+        self._is_act_sub = is_act_discrete
+
+        # Initialize underlying problem
+        self._n_cont = n_cont = max(0, int(x_discrete.shape[1]*cont_ratio))
+        self._problem = problem = problem_factory(max(2, n_cont))
+        pf: np.ndarray = problem.pareto_front()
+        pf_min, pf_max = np.min(pf, axis=0), np.max(pf, axis=0)
+        is_same = np.abs(pf_max-pf_min) < 1e-10
+        pf_max[is_same] = pf_min[is_same]+1.
+        self._pf_min, self._pf_max = pf_min, pf_max
+
+        # Define subproblem transformations
+        n_sub = x_discrete.shape[0]
+        self._transform = transform = np.zeros((n_sub, problem.n_obj*2))
+        n_trans = transform.shape[1]
+        n_cycles = np.arange(n_trans)+1
+        offset = .25*np.linspace(1, 0, n_trans+1)[:n_trans]
+        for i_trans in range(n_trans):
+            func = np.sin if i_trans % 2 == 0 else np.cos
+            transform[:, i_trans] = func((np.linspace(0, 1, n_sub+1)[:n_sub]+offset[i_trans])*2*np.pi*n_cycles[i_trans])
+
+        mutual_distance = distance.cdist(transform, transform, metric='cityblock')
+        np.fill_diagonal(mutual_distance, np.nan)
+        # if np.any(mutual_distance < 1e-10):
+        #     raise RuntimeError('Duplicate transformations!')
+
+        # Define design variables
+        des_vars = []
+        for dv_opts in (np.max(x_discrete, axis=0)+1):
+            des_vars.append(Choice(options=list(range(int(dv_opts)))))
+
+        for i_dv, des_var in enumerate(problem.des_vars[:n_cont]):
             if isinstance(des_var, Real):
                 des_vars.append(Real(bounds=des_var.bounds))
             elif isinstance(des_var, Integer):
-                des_vars.append(Integer(bounds=(0, n_opts_max[i_dv]-1)))
+                des_vars.append(Integer(bounds=des_var.bounds))
             elif isinstance(des_var, Choice):
-                des_vars.append(Choice(options=list(range(n_opts_max[i_dv]))))
+                des_vars.append(Choice(options=des_var.options))
             else:
                 raise RuntimeError(f'Design variable type not supported: {des_var!r}')
 
@@ -823,141 +839,126 @@ class CombinatorialHierarchicalMetaProblem(HierarchyProblemBase):
         self.__correct_output = {}
 
     def _get_n_valid_discrete(self) -> int:
-        # Sum the nr of combinations for the parts
-        return int(np.sum(np.prod(self._parts_n_opts, axis=1)))
+        n_discrete_underlying = self._problem.get_n_valid_discrete()
+        return n_discrete_underlying*self._x_sub.shape[0]
 
     def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
-        # We already know the possible design vectors for selecting the different parts
-        x_sel = self._x_sel
-        x_discrete = np.zeros((x_sel.shape[0], self.n_var), dtype=int)
-        n_dv_map = x_sel.shape[1]
-        x_discrete[:, :n_dv_map] = x_sel.copy()
+        x_sub, is_act_sub = self._x_sub, self._is_act_sub
+        if self._n_cont == 0:
+            return x_sub, is_act_sub
 
-        is_act_discrete = np.ones(x_discrete.shape, dtype=bool)
-        is_act_discrete[:, :n_dv_map] = self._is_active_sel.copy()
+        x_problem, is_act_problem = HierarchicalExhaustiveSampling().get_all_x_discrete(self._problem)
 
-        # Expand for active discrete variables in the parts
-        x_expanded = []
-        is_act_expanded = []
-        for i, part in enumerate(self._parts):
-            # Check which discrete design variables are active, and get possible values
-            is_active_part = self._parts_is_active[i, :]
-            part_ix_discrete = np.where(self._parts_is_discrete[i, :])[0]
-            discrete_opts = [list(range(n_opts)) for n_opts in self._parts_n_opts[i, part_ix_discrete]]
+        n_sub_select = x_sub.shape[0]
+        x_sub = np.repeat(x_sub, x_problem.shape[0], axis=0)
+        is_act_sub = np.repeat(is_act_sub, x_problem.shape[0], axis=0)
+        x_problem = np.tile(x_problem, (n_sub_select, 1))
+        is_act_problem = np.tile(is_act_problem, (n_sub_select, 1))
 
-            x_sel_part = x_discrete[[i], :]
-            is_act_sel_part = is_act_discrete[[i], :]
-            is_act_sel_part[:, n_dv_map:] = is_active_part
-
-            # if np.sum((self._parts_n_opts[i, part_ix_discrete] > 1) & ~is_active_part[part_ix_discrete]) > 0:
-            #     raise RuntimeError(f'Inconsistent activeness vector and nr of options!')
-
-            # Get cartesian product of values and expand
-            if len(part_ix_discrete) > 0:
-                part_x_discrete = np.array(list(itertools.product(*discrete_opts)))
-                x_sel_part = np.repeat(x_sel_part, part_x_discrete.shape[0], axis=0)
-                x_sel_part[:, n_dv_map+part_ix_discrete] = part_x_discrete
-                is_act_sel_part = np.repeat(is_act_sel_part, part_x_discrete.shape[0], axis=0)
-
-            x_expanded.append(x_sel_part)
-            is_act_expanded.append(is_act_sel_part)
-
-        x_discrete_all = np.row_stack(x_expanded)
-        is_act_discrete_all = np.row_stack(is_act_expanded)
-        return x_discrete_all, is_act_discrete_all
+        x_all = np.column_stack([x_sub, x_problem])
+        is_act_all = np.column_stack([is_act_sub, is_act_problem])
+        return x_all, is_act_all
 
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
         # Correct and impute
         self._correct_x_impute(x, is_active_out)
-        i_part_selected = self.__correct_output['i_part_sel']
-
-        parts = self._parts
-        parts_is_active = self._parts_is_active
-        n_dv_map = self._x_sel.shape[1]
-        xl, xu = self._problem.xl, self._problem.xu
-
-        # Map design variables to underlying problem
-        x_underlying = x[:, n_dv_map:].copy()
-        for i, i_part in enumerate(i_part_selected):
-            is_active_i = parts_is_active[i_part, :]
-            x_part = x_underlying[i, :]
-            for i_dv, (is_discrete, settings) in enumerate(parts[i_part]):
-                if is_discrete:
-                    if is_active_i[i_dv]:
-                        i_x_mapped = int(x_part[i_dv])
-                        x_part[i_dv] = settings[i_x_mapped] if i_x_mapped < len(settings) else settings[-1]
-                    else:
-                        x_part[i_dv] = 0
-                else:
-                    bnd = settings
-                    if is_active_i[i_dv]:
-                        x_part[i_dv] = bnd[0]+(bnd[1]-bnd[0])*((x_part[i_dv]-xl[i_dv])/(xu[i_dv]-xl[i_dv]))
-                    else:
-                        x_part[i_dv] = .5*np.sum(bnd)
+        i_sub_selected = self.__correct_output['i_sub_sel']
+        n_sub = self._x_sub.shape[1]
 
         # Evaluate underlying problem
+        x_underlying = self._get_x_underlying(x[:, n_sub:])
         out = self._problem.evaluate(x_underlying, return_as_dictionary=True)
-        if np.any(out['is_active'] == 0):
-            raise RuntimeError('Underlying problem should not be hierarchical!')
-
-        f_out[:, :] = out['F']
         if 'G' in out:
             g_out[:, :] = out['G']
         if 'H' in out:
             h_out[:, :] = out['H']
 
+        # Transform outputs
+        f_out[:, :] = self._transform_out(out['F'], i_sub_selected)
+
+    def _transform_out(self, f: np.ndarray, i_sub_selected: np.ndarray) -> np.ndarray:
+        pf_min, pf_max = self._pf_min, self._pf_max
+        trans = self._transform
+        f_norm = (f-pf_min)/(pf_max-pf_min)
+        for i_obj in range(f.shape[1]):
+            f_other = f_norm.copy()
+            f_other[:, i_obj] = 0
+
+            translate_shear = trans[i_sub_selected, i_obj::f.shape[1]]
+            translate, scale = translate_shear.T
+            fi_norm = f_norm[:, i_obj]
+            fi_norm += .2*translate
+            fi_norm = (fi_norm-.5)*(.5+.4*scale)+.5
+            f_norm[:, i_obj] = fi_norm
+
+        return f_norm*(pf_max-pf_min) + pf_min
+
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
-        # Match to selection design vector
-        x_sel = self._x_sel
-        is_act_sel = self._is_active_sel
-        n_dv_sel = x_sel.shape[1]
-        i_part_selected = np.zeros((x.shape[0],), dtype=int)
-        for i, xi in enumerate(x):
+        # Match sub-problem selection design variables
+        x_sub, is_act_sub = self._x_sub, self._is_act_sub
+        n_sub = x_sub.shape[1]
+        x_dist = distance.cdist(x[:, :n_sub], x_sub, metric='cityblock')
+        i_sub_selected = np.zeros((x.shape[0],), dtype=int)
+        for i in range(x.shape[0]):
+            # Get minimum distance
+            i_min_dist = np.argmin(x_dist[i, :])
+            i_sub_selected[i] = i_min_dist
 
-            # Recursively select design vectors matching ours
-            idx_match = np.arange(x_sel.shape[0], dtype=int)
-            for i_sel in range(n_dv_sel):
-                idx_match_i = idx_match[x_sel[idx_match, i_sel] == xi[i_sel]]
+            # Impute if the design vector didn't match exactly
+            if x_dist[i, i_min_dist] > 0:
+                x[i, :n_sub] = x_sub[i_min_dist, :]
+                is_active[i, :n_sub] = is_act_sub[i_min_dist, :]
 
-                # If none found, we impute
-                if len(idx_match_i) == 0:
-                    xi[i_sel] = imp_dv_value = x_sel[idx_match[-1], i_sel]
-                    idx_match_i = idx_match[x_sel[idx_match, i_sel] == imp_dv_value]
+        # Correct design vectors of underlying problem
+        n_cont = self._n_cont
+        x_underlying = self._get_x_underlying(x[:, n_sub:])
+        x_problem, is_act_problem = self._problem.correct_x(x_underlying)
+        x[:, n_sub:] = x_problem[:, :n_cont]
+        is_active[:, n_sub:] = is_act_problem[:, :n_cont]
 
-                # If one found, we have a match!
-                if len(idx_match_i) == 1:
-                    i_part = idx_match_i[0]
-                    i_part_selected[i] = i_part
-                    xi[:n_dv_sel] = x_sel[i_part, :]
-                    is_active[i, :n_dv_sel] = is_act_sel[i_part, :]
-                    break
+        self.__correct_output = {'i_sub_sel': i_sub_selected}
 
-                # Otherwise, we continue searching
-                idx_match = idx_match_i
-            else:
-                raise RuntimeError(f'Could not match design vectors: {xi[:n_dv_sel]}')
+    def _get_x_underlying(self, x_underlying):
+        if self._n_cont == 0:
+            return np.ones((x_underlying.shape[0], self._problem.n_var))*.5*(self._problem.xl+self._problem.xu)
+        return x_underlying
 
-        # Correct DVs of underlying problem and set activeness
-        n_dv_map = x_sel.shape[1]
-        part_is_active = self._parts_is_active
-        part_is_discrete = self._parts_is_discrete
-        part_n_opts = self._parts_n_opts
-        for i, i_part in enumerate(i_part_selected):
-            is_active[i, n_dv_map:] = part_is_active[i_part, :]
+    def plot_i_sub_problem(self, x: np.ndarray = None, show=True):
+        import matplotlib.pyplot as plt
+        if x is None:
+            x = self.pareto_set()
+        x, _ = self.correct_x(x)
+        f = self.evaluate(x, return_as_dictionary=True)['F']
+        i_sub_selected = self.__correct_output['i_sub_sel']
 
-            # Correct upper bounds of discrete variables
-            is_discrete = part_is_discrete[i_part, :]
-            n_opts = part_n_opts[i_part, is_discrete]
-            i_x_discrete = np.where(is_discrete)[0]+n_dv_map
-            x_discrete_part = x[i, i_x_discrete]
-            for i_opt, n_opt in enumerate(n_opts):
-                if x_discrete_part[i_opt] >= n_opt:
-                    x_discrete_part[i_opt] = n_opt-1
+        plt.figure()
+        f0 = f[:, 0]
+        f1 = f[:, 1] if f.shape[1] > 1 else f0
+        for i_sp in np.unique(i_sub_selected):
+            mask = i_sub_selected == i_sp
+            plt.scatter(f0[mask], f1[mask], s=10, marker='o', label=f'#{i_sp+1}')
+        plt.legend(loc='upper left', bbox_to_anchor=(1, 1), frameon=False)
+        plt.tight_layout()
+        if show:
+            plt.show()
 
-            x[i, i_x_discrete] = x_discrete_part
+    def plot_transformation(self, show=True):
+        import matplotlib.pyplot as plt
+        plt.figure()
+        if1 = 0 if self._problem.n_obj < 2 else 1
 
-        self.__correct_output = {'i_part_sel': i_part_selected}
+        pf = self._problem.pareto_front()
+        plt.scatter(pf[:, 0], pf[:, if1], s=10, marker='o', label='Orig')
+
+        for i_sub in range(self._x_sub.shape[0]):
+            pf_transformed = self._transform_out(pf, np.ones((pf.shape[0],), dtype=int)*i_sub)
+            plt.scatter(pf_transformed[:, 0], pf_transformed[:, if1], s=10, marker='o', label=f'#{i_sub+1}')
+
+        plt.legend(loc='upper left', bbox_to_anchor=(1, 1), frameon=False)
+        plt.tight_layout()
+        if show:
+            plt.show()
 
     def __repr__(self):
         if self._repr_str is not None:
@@ -965,27 +966,42 @@ class CombinatorialHierarchicalMetaProblem(HierarchyProblemBase):
         return f'{self.__class__.__name__}()'
 
 
-class CombHierBranin(CombinatorialHierarchicalMetaProblem):
-    """Single-objective mixed-discrete hierarchical Branin test problem"""
+class HierBranin(TunableHierarchicalMetaProblem):
 
     def __init__(self):
-        super().__init__(MDBranin(), n_parts=4, n_sel_dv=4, sep_power=1.2, target_n_opts_ratio=5.)
+        factory = lambda n: MDBranin()
+        super().__init__(factory, imp_ratio=5., n_subproblem=50, n_opts=3)
 
 
-class CombHierMO(CombinatorialHierarchicalMetaProblem):
-    """Multi-objective mixed-discrete hierarchical test problem"""
+class TunableZDT1(TunableHierarchicalMetaProblem):
+
+    def __init__(self, imp_ratio=1., n_subproblem=100, n_opts=3, cont_ratio=1.):
+        factory = lambda n: NoHierarchyWrappedProblem(ZDT1(n_var=n))
+        super().__init__(factory, imp_ratio=imp_ratio, n_subproblem=n_subproblem, n_opts=n_opts, cont_ratio=cont_ratio)
+
+
+class HierZDT1Small(TunableZDT1):
 
     def __init__(self):
-        problem = MixedDiscretizerProblemBase(OmniTest(n_var=6), n_opts=3, n_vars_int=2)
-        super().__init__(problem, n_parts=3, n_sel_dv=5, sep_power=1.1, target_n_opts_ratio=1.)
+        super().__init__(imp_ratio=2., n_subproblem=10, n_opts=3, cont_ratio=1)
 
 
-class CombHierDMO(CombinatorialHierarchicalMetaProblem):
-    """Multi-objective discrete hierarchical test problem"""
+class HierZDT1(TunableZDT1):
 
     def __init__(self):
-        problem = MixedDiscretizerProblemBase(OmniTest(n_var=6), n_opts=5)
-        super().__init__(problem, n_parts=2, n_sel_dv=5, sep_power=1., target_n_opts_ratio=5.)
+        super().__init__(imp_ratio=5., n_subproblem=200, n_opts=3, cont_ratio=.5)
+
+
+class HierZDT1Large(TunableZDT1):
+
+    def __init__(self):
+        super().__init__(imp_ratio=20., n_subproblem=2000, n_opts=4, cont_ratio=1.)
+
+
+class HierDiscreteZDT1(TunableZDT1):
+
+    def __init__(self):
+        super().__init__(imp_ratio=5., n_subproblem=2000, n_opts=4, cont_ratio=0)
 
 
 if __name__ == '__main__':
@@ -1009,11 +1025,13 @@ if __name__ == '__main__':
     # Jenatton().print_stats()
     # # Jenatton().plot_pf()
 
-    # CombHierBranin().print_stats()
-    # CombHierBranin().plot_pf()
-    CombHierMO().print_stats()
-    # CombHierMO().reset_pf_cache()
-    # CombHierMO().plot_pf()
-    CombHierDMO().print_stats()
-    # CombHierDMO().reset_pf_cache()
-    # CombHierDMO().plot_pf()
+    # p = HierBranin()
+    p = HierZDT1Small()
+    # p = HierZDT1()
+    # p = HierZDT1Large()
+    # p = HierDiscreteZDT1()
+    p.print_stats()
+    # p.reset_pf_cache()
+    # p.plot_pf()
+    # p.plot_transformation(show=False)
+    # p.plot_i_sub_problem()

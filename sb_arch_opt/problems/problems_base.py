@@ -108,8 +108,9 @@ class NoHierarchyProblemBase(ArchOptTestProblemBase):
 class NoHierarchyWrappedProblem(NoHierarchyProblemBase):
     """Base class for non-hierarchical test problems that wrap an existing Problem class (to add SBArchOpt features)"""
 
-    def __init__(self, problem: Problem):
+    def __init__(self, problem: Problem, repr_str=None):
         self._problem = problem
+        self._repr_str = repr_str
         des_vars = [Real(bounds=(problem.xl[i], problem.xu[i])) for i in range(problem.n_var)]
         super().__init__(des_vars, n_obj=problem.n_obj, n_ieq_constr=problem.n_ieq_constr)
 
@@ -119,6 +120,11 @@ class NoHierarchyWrappedProblem(NoHierarchyProblemBase):
         f_out[:, :] = out['F']
         if self.n_ieq_constr > 0:
             g_out[:, :] = out['G']
+
+    def __repr__(self):
+        if self._repr_str is not None:
+            return self._repr_str
+        return f'{self.__class__.__name__}()'
 
 
 class MixedDiscretizerProblemBase(NoHierarchyProblemBase):
