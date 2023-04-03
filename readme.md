@@ -70,6 +70,8 @@ Following Python SBO frameworks are not implemented, however deserve an acknowle
 - [ParMOO](https://github.com/parmoo/parmoo)
 - [skopt](https://scikit-optimize.github.io/stable/): does not support multi-objective constrained optimization
 - [pySOT](https://pysot.readthedocs.io/): does not support mixed-discrete, multi-objective optimization
+- [MOBOpt](https://github.com/ppgaluzio/MOBOpt)
+- [Bayesian Optimization](https://github.com/fmfn/BayesianOptimization): only single-objective
 
 ## Installation
 
