@@ -18,6 +18,8 @@ def test_simple_problem():
 
     assert len(HierarchicalExhaustiveSampling(n_cont=1).do(problem, 0)) == problem._get_n_valid_discrete()
 
+    problem.get_discrete_rates(force=True, show=True)
+
 
 @pytest.mark.skip('Takes about 1 minute')
 @check_dependency()
@@ -51,3 +53,4 @@ def test_realistic_problem():
     problem.print_stats()
 
     assert problem._get_n_valid_discrete() == 1163
+    # problem.get_discrete_rates(force=True, show=True)  # Takes several minutes

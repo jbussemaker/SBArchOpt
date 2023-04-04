@@ -60,19 +60,19 @@ def test_jenatton():
 
 
 def test_hier_branin():
-    run_test_hierarchy(HierBranin(), 4.32, validate_exhaustive=True)
+    run_test_hierarchy(HierBranin(), 3.24, validate_exhaustive=True)
 
 
 def test_hier_zdt1():
-    run_test_hierarchy(HierZDT1Small(), 1.2, validate_exhaustive=True)
-    run_test_hierarchy(HierZDT1(), 4.32, validate_exhaustive=True)
-    run_test_hierarchy(HierZDT1Large(), 9.84)
-    run_test_hierarchy(HierDiscreteZDT1(), 3.28)
+    run_test_hierarchy(HierZDT1Small(), 1.8, validate_exhaustive=True)
+    run_test_hierarchy(HierZDT1(), 4.86, validate_exhaustive=True)
+    run_test_hierarchy(HierZDT1Large(), 8.19)
+    run_test_hierarchy(HierDiscreteZDT1(), 4.1)
 
 
 def test_hier_cantilevered_beam():
-    run_test_hierarchy(HierCantileveredBeam(), 4.8)
+    run_test_hierarchy(HierCantileveredBeam(), 5.4)
 
 
 def test_hier_carside():
-    run_test_hierarchy(HierCarside(), 4.32)
+    run_test_hierarchy(HierCarside(), 6.48)

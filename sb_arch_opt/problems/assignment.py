@@ -80,6 +80,8 @@ class AssignmentProblemWrapper(HierarchyProblemBase):
             if dist_corr is not None:
                 print(f'dist_corr    : {dist_corr*100:.0f}%')
 
+        super()._print_extra_stats()
+
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
         out = self._problem.evaluate(x, return_as_dictionary=True)

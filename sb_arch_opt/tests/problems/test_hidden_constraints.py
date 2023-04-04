@@ -10,7 +10,7 @@ def test_mueller_01():
 def test_mueller_02():
     run_test_no_hierarchy(Mueller02())
     run_test_no_hierarchy(MDMueller02())
-    run_test_hierarchy(HierMueller02(), 1.2)
+    run_test_hierarchy(HierMueller02(), 5.4)
 
 
 def test_mueller_08():
@@ -18,8 +18,8 @@ def test_mueller_08():
     run_test_no_hierarchy(MOMueller08())
     run_test_no_hierarchy(MDMueller08())
     run_test_no_hierarchy(MDMOMueller08())
-    run_test_hierarchy(HierMueller08(), 1.2)
-    run_test_hierarchy(MOHierMueller08(), 1.2)
+    run_test_hierarchy(HierMueller08(), 5.4)
+    run_test_hierarchy(MOHierMueller08(), 5.4)
 
 
 def test_alimo():

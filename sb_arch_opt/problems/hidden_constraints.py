@@ -121,7 +121,7 @@ class HierMueller02(SampledFailureRateMixin, TunableHierarchicalMetaProblem):
     """Hierarchical Mueller 2 problem"""
 
     def __init__(self):
-        super().__init__(lambda n: Mueller02(), imp_ratio=2., n_subproblem=20)
+        super().__init__(lambda n: Mueller02(), imp_ratio=6., n_subproblem=20, diversity_range=.5)
 
 
 class Mueller08(SampledFailureRateMixin, NoHierarchyProblemBase):
@@ -177,14 +177,14 @@ class HierMueller08(SampledFailureRateMixin, TunableHierarchicalMetaProblem):
     """Hierarchical Mueller 8 problem"""
 
     def __init__(self):
-        super().__init__(lambda n: Mueller08(), imp_ratio=2., n_subproblem=20)
+        super().__init__(lambda n: Mueller08(), imp_ratio=6., n_subproblem=20, diversity_range=.5)
 
 
 class MOHierMueller08(SampledFailureRateMixin, TunableHierarchicalMetaProblem):
     """Multi-objective hierarchical Mueller 8 problem"""
 
     def __init__(self):
-        super().__init__(lambda n: MOMueller08(), imp_ratio=2., n_subproblem=20)
+        super().__init__(lambda n: MOMueller08(), imp_ratio=6., n_subproblem=20, diversity_range=.5)
 
 
 class Alimo(SampledFailureRateMixin, NoHierarchyProblemBase):
@@ -424,7 +424,7 @@ if __name__ == '__main__':
     # MDMueller08().print_stats()
     # MDMOMueller08().print_stats()
     # MDMOMueller08().plot_pf()
-    # HierMueller02().print_stats()
+    HierMueller02().print_stats()
     HierMueller08().print_stats()
     MOHierMueller08().print_stats()
 

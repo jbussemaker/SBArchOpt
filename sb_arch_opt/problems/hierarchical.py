@@ -17,7 +17,6 @@ Contact: jasper.bussemaker@dlr.de
 This test suite contains a set of mixed-discrete, constrained, hierarchical, multi-objective problems.
 """
 import enum
-import itertools
 import numpy as np
 from typing import *
 from deprecated import deprecated
@@ -38,6 +37,10 @@ __all__ = ['HierarchyProblemBase', 'HierarchicalGoldstein', 'HierarchicalRosenbr
 
 class HierarchyProblemBase(ArchOptTestProblemBase):
     """Base class for test problems that have decision hierarchy"""
+    _force_get_discrete_rates = True
+
+    def _print_extra_stats(self):
+        self.get_discrete_rates(force=self._force_get_discrete_rates, show=True)
 
     def _get_n_valid_discrete(self) -> int:
         raise NotImplementedError
@@ -652,93 +655,87 @@ class Jenatton(HierarchyProblemBase):
 class TunableHierarchicalMetaProblem(HierarchyProblemBase):
     """
     Meta problem that turns any problem into a realistically-behaving hierarchical optimization problem with directly
-    tunable properties: imputation ratio, nr of subproblems, options per discrete variable, ratio between continuous and
-    discrete variables. Note that these properties assume a non-hierarchical underlying problem.
+    tunable properties:
+    - `imp_ratio` [1+ float] Imputation ratio: ratio between declared nr of discrete design points (Cartesian product)
+                                               and nr of valid discrete design points
+    - `n_subproblem` [1+ int] Nr of discrete subproblems to separate the underlying problem into
+    - `n_opts` [2+ int] Options per discrete selection variable
+    - `cont_ratio` [0+ float] Ratio between continuous (underlying problem) and discrete (selection) design variables
+    - `diversity_range` [0-1 float] Difference between most and least occurring value for the selection variables (note
+                                    that increasing this value also moderately increases imputation ratio)
+
+    Note that these settings assume a non-hierarchical underlying problem.
 
     It does this by:
-    - Determining the best nr of design variables and options per design variable to get the requested nr of subproblems
-    - Creating all design vectors using the Cartesian product
-    - Removing design vectors until the desired nr of subproblems is achieved, without increasing imp ratio too much
+    - Repeatedly separating the n_subproblem subproblems into n_opts options according to the provided diversity range
     - Splitting design variables until the desired imputation ratio is achieved
     - Initialize the underlying test problem with enough continuous vars to satisfy the continuous-to-discrete ratio
     - Define how each subproblem modifies the underlying problem's objectives and constraints
     """
 
     def __init__(self, problem_factory: Callable[[int], ArchOptTestProblemBase], imp_ratio: float, n_subproblem: int,
-                 n_opts=3, cont_ratio=1., repr_str=None):
+                 diversity_range: float = .25, n_opts=3, cont_ratio=1., repr_str=None):
         self._repr_str = repr_str
 
-        # Create design vectors by Cartesian product to be as close to the nr of requested subproblems as possible
-        n_opt_uniform = np.ones((int(np.ceil(np.log(n_subproblem)/np.log(n_opts))),), dtype=int)*n_opts
-        n_opt_variants = [n_opt_uniform]
-        if len(n_opt_uniform) > 1:
-            n_opt_variants.append(np.array(list(n_opt_uniform[:-1])+[n_opts+1]))
-            n_opt_variants.append(np.array(list(n_opt_uniform[:-2])+[n_opts+1]))
-        if n_opts > 2:
-            for n_full in range(len(n_opt_uniform)):
-                n_remaining = n_subproblem/n_opts**n_full
-                n_one_less = np.ceil(np.log(n_remaining)/np.log(n_opts-1))
-                n_opt_variants.append(np.array([n_opts]*n_full + [n_opts-1]*int(n_one_less)))
+        # Create design vectors by repeatedly separating with the given diversity range
+        # Variables are separated according to _sep_group: round(x**sep_power*(n_opts-.01)-.5) with x [0..1]
+        # The largest group is selected where x**sep_power*(n_opts-.01) == 1 --> x_lrg ~= (1/n_opts)**(1/sep_power)
+        # the smallest group where x**sep_power*(n_opts-.01) == n_opts-1 --> x_sml ~= (1-1/n_opts)**(1/sep_power)
+        # Here, we solve for sep_power such that x_lrg-(1-x_sml) == diversity_range
+        sep_power_try = np.linspace(1, 10, 1000)
+        div_ranges = (1/n_opts)**(1/sep_power_try) + (1-(1/n_opts))**(1/sep_power_try) - 1
+        i_power = np.argmin(np.abs(div_ranges-diversity_range))
+        sep_power = sep_power_try[i_power]
 
-        n_declared = np.array([np.prod(n) for n in n_opt_variants])
-        i_variant = np.where(n_declared >= n_subproblem)[0]
-        i_variant = i_variant[np.argmin(n_declared[i_variant])]
-        n_dv_opts = n_opt_variants[i_variant]
+        def _sep_group(n_values, sep_power_):
+            return np.round((np.linspace(0, 1, n_values)**sep_power_)*(n_opts-.01)-.5).astype(int)
 
-        x_discrete = np.array(list(itertools.product(*[list(range(n)) for n in n_dv_opts])))
-        is_act_discrete = np.ones(x_discrete.shape, dtype=bool)
+        x_columns = []
+        is_active_columns = []
+        x_groups = [np.arange(n_subproblem)]
+        diverse_separation = True
+        while True:
+            next_x_groups = []
+            needed_separation = False
+            x_column = np.zeros((n_subproblem,), dtype=int)
+            is_active_column = np.zeros((n_subproblem,), dtype=bool)
+            for i_in_group in x_groups:
+                if len(i_in_group) == 1:
+                    continue
+                needed_separation = True
 
-        # Eliminate options until we reach the desired number of subproblems
+                # Distribute values according to the desired diversity range
+                x_sep = _sep_group(len(i_in_group), sep_power if diverse_separation else 1.)
+                x_sep = np.unique(x_sep, return_inverse=True)[1]
+                x_column[i_in_group] = x_sep
+                is_active_column[i_in_group] = True
+
+                # Get next groups
+                for x_next in np.unique(x_sep):
+                    next_x_groups.append(i_in_group[x_sep == x_next])
+
+            # If no separation was needed, we stop separating
+            if not needed_separation:
+                x_discrete = np.column_stack(x_columns)
+                is_act_discrete = np.column_stack(is_active_columns)
+                break
+
+            x_columns.append(x_column)
+            is_active_columns.append(is_active_column)
+            x_groups = next_x_groups
+
+            # Stop separating according to the desired diversity range if the imputation ratio would become too large
+            if diverse_separation:
+                n_group_max = max(len(grp) for grp in next_x_groups)
+                n_dv_remain = np.ceil(np.log(n_group_max)/np.log(n_opts))+1  # the +1 is a heuristic
+                min_imp_ratio = (n_opts**(len(x_columns) + n_dv_remain))/n_subproblem
+                if min_imp_ratio > imp_ratio:
+                    diverse_separation = False
+
+        # Separate design variables until we meet the imputation ratio requirement
         def _imp_ratio(x_discrete_):
             return np.prod(np.max(x_discrete_, axis=0)+1)/x_discrete_.shape[0]
 
-        assert _imp_ratio(x_discrete) == 1.
-        while x_discrete.shape[0] > n_subproblem:
-            n_remove = x_discrete.shape[0]-n_subproblem
-            n_remain_min = None
-            remove_mask = None
-
-            last_init_value = sorted(list(set(x_discrete[:, 0])))[-1]
-            last_init_value_mask = x_discrete[:, 0] == last_init_value
-            ix_last_init_value = np.where(last_init_value_mask)[0]
-            x_discrete_last = x_discrete[ix_last_init_value, :]
-
-            for ix_check in itertools.product(*([[True]]+[[False, True] for _ in range(x_discrete.shape[1]-1)])):
-                ix_check = np.array(ix_check)
-                dv_unique, idx = np.unique(x_discrete_last[:, ix_check], axis=0, return_inverse=True)
-                dv_sub_last_mask = idx == (len(dv_unique)-1)
-                n_remain = n_remove-np.sum(dv_sub_last_mask)
-                if n_remain < 0:
-                    continue
-                if n_remain_min is None or n_remain < n_remain_min:
-                    n_remain_min = n_remain
-                    ix_check_i = np.where(ix_check)[0]
-                    remove_mask = dv_sub_last_mask, ix_check_i
-
-            if n_remain_min is None:
-                break
-
-            # Remove the specific design vectors if thereby we do not violate the imputation ratio constraint
-            init_sub_mask, ix_check_i = remove_mask
-            mask = last_init_value_mask
-            mask[last_init_value_mask] = init_sub_mask
-            inv_mask = np.where(~mask)[0]
-
-            x_removed = x_discrete[mask, :]
-            x_discrete_filtered = x_discrete[inv_mask, :]
-            if _imp_ratio(x_discrete_filtered) > imp_ratio:
-                break
-            x_discrete = x_discrete_filtered
-            is_act_discrete = is_act_discrete[inv_mask, :]
-
-            # Set is_active flags
-            ix_filter, ix_options_check = ix_check_i[:-1], ix_check_i[-1]
-            if len(ix_filter) > 0:
-                remains_mask = np.all(x_discrete_filtered[:, ix_filter] == x_removed[:, ix_filter][0, :], axis=1)
-                if np.max(x_discrete_filtered[remains_mask, ix_options_check]) == 0:
-                    is_act_discrete[remains_mask, ix_options_check] = False
-
-        # Separate design variables until we meet the imputation ratio requirement
         current_sep_mask = np.arange(x_discrete.shape[0])
         ix_started = [set() for _ in range(x_discrete.shape[1])]
         nothing_found_flag = False
@@ -765,23 +762,32 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
                 continue
             nothing_found_flag = False
 
-            # Determine which variable to separate
+            # Determine which variable to separate: separate the first variable from the end where of the remaining
+            # vectors there would be at least one active variable
             for i_sep in reversed(list(range(1, x_discrete.shape[1]))):
-                if np.any(~is_act_discrete[next_sep_mask, i_sep]):
+                is_active_remain = is_act_discrete[:, i_sep].copy()
+                is_active_remain[next_sep_mask] = False
+                to_remain_not_active = np.all(~is_active_remain)
+                if to_remain_not_active:
                     continue
                 break
             else:
                 break
 
             # Separate the selected design variable into a new variable at the end of the vector
-            x_discrete_sep = np.zeros((x_discrete.shape[0], x_discrete.shape[1]+1), dtype=int)
-            x_discrete_sep[:, :-1] = x_discrete.copy()
+            n_dv_sep = x_discrete.shape[1]-i_sep
+            x_discrete_sep = np.column_stack([x_discrete, np.zeros((x_discrete.shape[0],), dtype=int)])
             x_discrete_sep[next_sep_mask, i_sep:] = 0
-            x_discrete_sep[next_sep_mask, -1] = x_discrete[next_sep_mask, i_sep]
+            x_discrete_sep[next_sep_mask, -n_dv_sep:] = x_discrete[next_sep_mask, i_sep:]
 
             is_act_sep = np.column_stack([is_act_discrete, np.zeros((x_discrete.shape[0],), dtype=bool)])
             is_act_sep[next_sep_mask, i_sep:] = False
-            is_act_sep[next_sep_mask, -1] = is_act_discrete[next_sep_mask, i_sep]
+            is_act_sep[next_sep_mask, -n_dv_sep:] = is_act_discrete[next_sep_mask, i_sep:]
+
+            # Remove newly created columns with no active variables
+            has_active = np.any(is_act_sep, axis=0)
+            x_discrete_sep = x_discrete_sep[:, has_active]
+            is_act_sep = is_act_sep[:, has_active]
 
             # Check imputation ratio constraint
             if _imp_ratio(x_discrete_sep) > imp_ratio:
@@ -980,20 +986,21 @@ class HierBranin(TunableHierarchicalMetaProblem):
 
     def __init__(self):
         factory = lambda n: MDBranin()
-        super().__init__(factory, imp_ratio=5., n_subproblem=50, n_opts=3)
+        super().__init__(factory, imp_ratio=5., n_subproblem=50, diversity_range=.5, n_opts=3)
 
 
 class TunableZDT1(TunableHierarchicalMetaProblem):
 
-    def __init__(self, imp_ratio=1., n_subproblem=100, n_opts=3, cont_ratio=1.):
+    def __init__(self, imp_ratio=1., n_subproblem=100, diversity_range=.5, n_opts=3, cont_ratio=1.):
         factory = lambda n: NoHierarchyWrappedProblem(ZDT1(n_var=n))
-        super().__init__(factory, imp_ratio=imp_ratio, n_subproblem=n_subproblem, n_opts=n_opts, cont_ratio=cont_ratio)
+        super().__init__(factory, imp_ratio=imp_ratio, n_subproblem=n_subproblem, diversity_range=diversity_range,
+                         n_opts=n_opts, cont_ratio=cont_ratio)
 
 
 class HierZDT1Small(TunableZDT1):
 
     def __init__(self):
-        super().__init__(imp_ratio=2., n_subproblem=10, n_opts=3, cont_ratio=1)
+        super().__init__(imp_ratio=2., n_subproblem=10, diversity_range=.25, n_opts=3, cont_ratio=1)
 
 
 class HierZDT1(TunableZDT1):
@@ -1005,7 +1012,7 @@ class HierZDT1(TunableZDT1):
 class HierZDT1Large(TunableZDT1):
 
     def __init__(self):
-        super().__init__(imp_ratio=20., n_subproblem=2000, n_opts=4, cont_ratio=1.)
+        super().__init__(imp_ratio=10., n_subproblem=2000, n_opts=4, cont_ratio=1.)
 
 
 class HierDiscreteZDT1(TunableZDT1):
@@ -1018,14 +1025,14 @@ class HierCantileveredBeam(TunableHierarchicalMetaProblem):
 
     def __init__(self):
         factory = lambda n: ArchCantileveredBeam()
-        super().__init__(factory, imp_ratio=5., n_subproblem=20)
+        super().__init__(factory, imp_ratio=6., n_subproblem=20, diversity_range=.5)
 
 
 class HierCarside(TunableHierarchicalMetaProblem):
 
     def __init__(self):
         factory = lambda n: ArchCarside()
-        super().__init__(factory, imp_ratio=5., n_subproblem=50)
+        super().__init__(factory, imp_ratio=7., n_subproblem=50, diversity_range=.5)
 
 
 if __name__ == '__main__':

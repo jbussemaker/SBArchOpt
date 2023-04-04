@@ -15,6 +15,7 @@ Copyright: (c) 2023, Deutsches Zentrum fuer Luft- und Raumfahrt e.V.
 Contact: jasper.bussemaker@dlr.de
 """
 import numpy as np
+import pandas as pd
 from typing import List, Optional, Union, Tuple
 from cached_property import cached_property
 from pymoo.core.repair import Repair
@@ -323,6 +324,62 @@ class ArchOptProblemBase(Problem):
         n_declared = self.get_n_declared_discrete()
         imp_ratio = n_declared/n_valid
         return imp_ratio
+
+    def get_discrete_rates(self, force=False, show=False) -> Optional[pd.DataFrame]:
+        """Returns for each discrete value of the discrete design variables, how often the relatively occur over all
+        possible design vectors. A value of -1 represents an inactive design variable. Results are returned in a
+        pandas DataFrame with each column representing a design variable.
+        Also adds a measure of rate diversity: difference between lowest and highest occurring values."""
+
+        # Get all discrete design vectors
+        if force:
+            from sb_arch_opt.sampling import HierarchicalExhaustiveSampling
+            x_all, is_act_all = HierarchicalExhaustiveSampling().get_all_x_discrete(self)
+        else:
+            x_all, is_act_all = self.all_discrete_x
+            if x_all is None:
+                return
+
+        # Set inactive values to -1
+        x_merged = (x_all-self.xl).astype(int)
+        x_merged[~is_act_all] = -1
+        n = x_merged.shape[0]
+
+        # Count the values
+        is_discrete_mask = self.is_discrete_mask
+        counts = {}
+        i_opts = set()
+        for ix in range(len(is_discrete_mask)):
+            if not is_discrete_mask[ix]:
+                counts[f'x{ix}'] = {}
+                continue
+
+            values, counts_i = np.unique(x_merged[:, ix], return_counts=True)
+            i_opts |= set(values)
+            counts[f'x{ix}'] = {value: counts_i[iv]/n for iv, value in enumerate(values)}
+
+        df = pd.DataFrame(index=sorted(list(i_opts)), columns=list(counts.keys()), data=counts)
+        df = df.rename(index={val: 'inactive' if val == -1 else f'opt {val}' for val in df.index})
+
+        # Add a measure of diversity: the range between the lowest and highest occurring values
+        diversity = df.max(axis=0)-df.min(axis=0)
+        if -1 in i_opts:
+            df_active = df.iloc[1:, :]
+            col_sums = df_active.sum(axis=0)
+            df_active /= col_sums
+            active_diversity = df_active.max(axis=0)-df_active.min(axis=0)
+        else:
+            active_diversity = diversity
+
+        df = pd.concat([df, pd.Series(diversity, name='diversity').to_frame().T,
+                        pd.Series(active_diversity, name='active-diversity').to_frame().T], axis=0)
+
+        if show:
+            with pd.option_context('display.max_rows', None, 'display.max_columns', None,
+                                   'display.expand_frame_repr', False, 'max_colwidth', -1):
+                print(df.replace(np.nan, ''))
+
+        return df
 
     def get_n_declared_discrete(self) -> int:
         """Returns the number of declared discrete design points (ignoring continuous dimensions), calculated from the

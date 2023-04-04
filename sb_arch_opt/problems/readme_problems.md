@@ -46,13 +46,13 @@ An overview of available test problems in `sb_arch_opt.problems` (* = recommende
 | `Jenatton`                        | 3       | 6      | 1     |       |     | Y   |     | Y    |     | 4             | 2         |              |                                  |
 | `HierarchicalGoldstein`           | 6       | 5      | 1     | 1     |     | Y   |     | Y    |     | 288           | 2.25      |              |                                  |
 | `MOHierarchicalGoldstein`         | 6       | 5      | 2     | 1     |     | Y   | Y   | Y    |     | 288           | 2.25      |              |                                  |
-| `HierBranin`*                     | 8       | 2      | 1     |       |     | Y   |     | Y    |     | 200           | 4.3       |              |                                  |
-| `HierZDT1Small`*                  | 2       | 2      | 2     |       |     | Y   | Y   | Y    |     | 10            | 1.2       |              |                                  |
-| `HierZDT1`*                       | 8       | 4      | 2     |       |     | Y   | Y   | Y    |     | 200           | 4.3       |              |                                  |
-| `HierZDT1Large`*                  | 9       | 9      | 2     |       |     | Y   | Y   | Y    |     | 2000          | 9.8       |              |                                  |
-| `HierDiscreteZDT1`*               | 8       |        | 2     |       | Y   |     | Y   | Y    |     | 2000          | 3.2       |              |                                  |
-| `HierCantileveredBeam`*           | 6       | 4      | 1     | 2     |     | Y   |     | Y    |     | 20            | 4.8       |              |                                  |
-| `HierCarside`*                    | 6       | 6      | 3     | 10    |     | Y   | Y   | Y    |     | 50            | 4.3       |              |                                  |
+| `HierBranin`*                     | 8       | 2      | 1     |       |     | Y   |     | Y    |     | 200           | 3.2       |              |                                  |
+| `HierZDT1Small`*                  | 2       | 2      | 2     |       |     | Y   | Y   | Y    |     | 10            | 1.8       |              |                                  |
+| `HierZDT1`*                       | 8       | 4      | 2     |       |     | Y   | Y   | Y    |     | 200           | 4.9       |              |                                  |
+| `HierZDT1Large`*                  | 9       | 9      | 2     |       |     | Y   | Y   | Y    |     | 2000          | 8.2       |              |                                  |
+| `HierDiscreteZDT1`*               | 8       |        | 2     |       | Y   |     | Y   | Y    |     | 2000          | 4.1       |              |                                  |
+| `HierCantileveredBeam`*           | 6       | 4      | 1     | 2     |     | Y   |     | Y    |     | 20            | 5.4       |              |                                  |
+| `HierCarside`*                    | 6       | 6      | 3     | 10    |     | Y   | Y   | Y    |     | 50            | 6.5       |              |                                  |
 | `HierarchicalRosenbrock`          | 5       | 8      | 1     | 2     |     | Y   |     | Y    |     | 32            | 1.5       |              |                                  |
 | `MOHierarchicalRosenbrock`        | 5       | 8      | 2     | 2     |     | Y   | Y   | Y    |     | 32            | 1.5       |              |                                  |
 | ~~`MOHierarchicalTestProblem`~~   | 11      | 16     | 2     | 2     |     | Y   | Y   | Y    |     | 64            | 72        |              |                                  |
@@ -81,9 +81,9 @@ An overview of available test problems in `sb_arch_opt.problems` (* = recommende
 | `CarsideHC`                       |         | 7      | 3     | 8     |     |     | Y   |      | Y   |               |           |              | fail_rate: 66%                   |
 | `CarsideHCLess`                   |         | 7      | 3     | 9     |     |     | Y   |      | Y   |               |           |              | fail_rate: 39%                   |
 | `MDCarsideHC`                     | 4       | 3      | 3     | 8     |     | Y   | Y   |      | Y   | 10000         |           |              | fail_rate: 66%                   |
-| `HierMueller02`                   | 4       | 4      | 1     |       |     |     |     | Y    | Y   | 20            | 1.2       |              | fail_rate: 40%                   |
-| `HierMueller08`                   | 4       | 10     | 1     |       |     |     |     | Y    | Y   | 20            | 1.2       |              | fail_rate: 73%                   |
-| `MOHierMueller08`                 | 4       | 10     | 2     |       |     |     | Y   | Y    | Y   | 20            | 1.2       |              | fail_rate: 73%                   |
+| `HierMueller02`                   | 4       | 4      | 1     |       |     |     |     | Y    | Y   | 20            | 5.4       |              | fail_rate: 37%                   |
+| `HierMueller08`                   | 4       | 10     | 1     |       |     |     |     | Y    | Y   | 20            | 5.4       |              | fail_rate: 73%                   |
+| `MOHierMueller08`                 | 4       | 10     | 2     |       |     |     | Y   | Y    | Y   | 20            | 5.4       |              | fail_rate: 73%                   |
 | `HierarchicalRosenbrockHC`        | 5       | 8      | 1     | 1     |     | Y   | Y   | Y    | Y   | 32            | 1.5       |              | fail_rate: 21%                   |
 | `MOHierarchicalRosenbrockHC`      | 5       | 8      | 2     | 1     |     | Y   | Y   | Y    | Y   | 32            | 1.5       |              | fail_rate: 60%                   |
 | ~~`HCMOHierarchicalTestProblem`~~ | 11      | 16     | 2     | 1     |     | Y   | Y   | Y    | Y   | 64            | 72        |              | fail_rate: 60%                   |

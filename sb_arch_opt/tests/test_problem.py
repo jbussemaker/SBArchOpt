@@ -129,6 +129,7 @@ def test_imputation_ratio(problem: ArchOptProblemBase, discrete_problem: ArchOpt
     assert x_discrete.shape[0] == problem.get_n_valid_discrete()
     assert is_active_discrete.shape[0] == problem.get_n_valid_discrete()
     assert np.all(~LargeDuplicateElimination.eliminate(x_discrete))
+    problem.get_discrete_rates(show=True)
 
     assert discrete_problem.get_n_declared_discrete() == 10*10
     assert discrete_problem.get_n_valid_discrete() == 10 * 5 + 5
@@ -139,6 +140,7 @@ def test_imputation_ratio(problem: ArchOptProblemBase, discrete_problem: ArchOpt
     assert x_discrete.shape[0] == discrete_problem.get_n_valid_discrete()
     assert is_active_discrete.shape[0] == discrete_problem.get_n_valid_discrete()
     assert np.all(~LargeDuplicateElimination.eliminate(x_discrete))
+    discrete_problem.get_discrete_rates(show=True)
 
 
 def test_evaluate(problem: ArchOptProblemBase):
