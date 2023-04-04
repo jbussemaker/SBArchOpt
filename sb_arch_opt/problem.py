@@ -377,7 +377,7 @@ class ArchOptProblemBase(Problem):
         if show:
             with pd.option_context('display.max_rows', None, 'display.max_columns', None,
                                    'display.expand_frame_repr', False, 'max_colwidth', -1):
-                print(df.replace(np.nan, ''))
+                print(df.iloc[:, self.is_discrete_mask].replace(np.nan, ''))
 
         return df
 
