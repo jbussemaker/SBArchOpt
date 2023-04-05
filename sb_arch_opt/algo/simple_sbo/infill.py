@@ -254,6 +254,7 @@ class ExpectedImprovementInfill(PoFInfill):
         # Normalize current and predicted objectives
         f_pareto = cls.get_pareto_front(f_current)
         nadir_point, ideal_point = np.max(f_pareto, axis=0), np.min(f_pareto, axis=0)
+        nadir_point[nadir_point == ideal_point] = 1.
         f_pareto_norm = normalize(f_pareto, xu=nadir_point, xl=ideal_point)
         f_norm, f_var_norm = cls._normalize_f_var(f, f_var, nadir_point, ideal_point)
 
