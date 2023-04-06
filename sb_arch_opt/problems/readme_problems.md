@@ -73,7 +73,8 @@ An overview of available test problems in `sb_arch_opt.problems` (* = recommende
 | `MOMueller08`                     |         | 10     | 2     |       |     |     | Y   |      | Y   |               |           |              | fail_rate: 73%                   |
 | `MDMueller08`                     | 2       | 8      | 1     |       |     | Y   |     |      | Y   | 100           |           |              | fail_rate: 78%                   |
 | `MDMOMueller08`                   | 2       | 8      | 2     |       |     | Y   | Y   |      | Y   | 100           |           |              | fail_rate: 78%                   |
-| `Alimo`                           |         | 2      | 1     |       |     |     |     |      | Y   |               |           |              | fail_rate: 53%                   |
+| `Alimo`                           |         | 2      | 1     |       |     |     |     |      | Y   |               |           |              | fail_rate: 51%                   |
+| `AlimoEdge`                       |         | 2      | 1     |       |     |     |     |      | Y   |               |           |              | fail_rate: 53%                   |
 | `HCBranin`                        |         | 2      | 1     |       |     |     |     |      | Y   |               |           |              | fail_rate: 33%                   |
 | `HCSphere`                        |         | 2      | 1     |       |     |     |     |      | Y   |               |           |              | fail_rate: 51%                   |
 | `CantileveredBeamHC`              |         | 4      | 1     | 1     |     |     |     |      | Y   |               |           |              | fail_rate: 83%                   |

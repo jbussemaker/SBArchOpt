@@ -33,7 +33,7 @@ class ArchOptTestProblemBase(CachedParetoFrontMixin, ArchOptProblemBase):
         """For the test problems we know which ones have hidden constraints"""
         return False
 
-    def plot_design_space(self, ix_plot=None, x_base=None, n=100, show=True):
+    def plot_design_space(self, ix_plot=None, x_base=None, n=200, show=True):
         import matplotlib.pyplot as plt
         from matplotlib.colors import CenteredNorm
         if ix_plot is None:
@@ -56,7 +56,7 @@ class ArchOptTestProblemBase(CachedParetoFrontMixin, ArchOptProblemBase):
 
         def _plot_out(z, z_name, is_constraint=False):
             zz = z.reshape(xx.shape)
-            plt.figure()
+            plt.figure(), plt.title(f'{self!r}\nmin = {np.nanmin(z)}')
 
             plt.fill_between(x_lim, y_lim[0], y_lim[1], facecolor='none', hatch='X', edgecolor='r', linewidth=0)
 

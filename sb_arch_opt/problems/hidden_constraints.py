@@ -33,7 +33,7 @@ __all__ = ['SampledFailureRateMixin', 'Mueller01', 'Mueller02', 'Mueller08', 'MO
            'MOHierarchicalRosenbrockHC', 'HCMOHierarchicalTestProblem', 'RandomHiddenConstraintsBase', 'HCSphere',
            'HierarchicalRosenbrockHC', 'ConstraintHiderMetaProblem', 'CantileveredBeamHC', 'MDCantileveredBeamHC',
            'CarsideHC', 'MDCarsideHC', 'CarsideHCLess', 'MDMueller02', 'MDMueller08', 'MDMOMueller08',
-           'HierMueller02', 'HierMueller08', 'MOHierMueller08']
+           'HierMueller02', 'HierMueller08', 'MOHierMueller08', 'AlimoEdge']
 
 
 class SampledFailureRateMixin(ArchOptProblemBase):
@@ -187,26 +187,40 @@ class MOHierMueller08(SampledFailureRateMixin, TunableHierarchicalMetaProblem):
         super().__init__(lambda n: MOMueller08(), imp_ratio=6., n_subproblem=20, diversity_range=.5)
 
 
-class Alimo(SampledFailureRateMixin, NoHierarchyProblemBase):
+class Alimo(SampledFailureRateMixin, Branin):
     """
-    Test problem used by:
+    Modified test problem used by:
     Alimo et al. "Delaunay-based global optimization in nonconvex domains defined by hidden constraints", 2018,
     DOI: 10.1007/978-3-319-89890-2_17
-    """
 
-    def __init__(self):
-        n_var = 2
-        des_vars = [Real(bounds=(0, 1)) for _ in range(n_var)]
-        super().__init__(des_vars)
+    The underlying problem is replaced by the Branin function.
+    """
 
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
-        x0 = [.19, .29]  # In the paper, no other reference point is given
-        f_out[:, 0] = np.sum(np.abs(x - x0)**2, axis=1) - .024*self.n_var
+        # x0 = [.19, .29]  # In the paper, no other reference point is given
+        # f_out[:, 0] = np.sum(np.abs(x - x0)**2, axis=1) - .024*self.n_var
+        super()._arch_evaluate(x, is_active_out, f_out, g_out, h_out, *args, **kwargs)
 
         # The term of -.25 is added
-        cx = (self.n_var/12) + .1*np.sum(4*(x-.7)**2 - 2*np.cos(4*np.pi*(x-.7)), axis=1) - .25
+        x_fail = (x-self.xl)/(self.xu-self.xl)
+        self._mod_x_fail(x_fail)
+        cx = (self.n_var/12) + .1*np.sum(4*(x_fail-.7)**2 - 2*np.cos(4*np.pi*(x_fail-.7)), axis=1) - .25
         f_out[cx >= 0, :] = np.nan
+
+    def _mod_x_fail(self, x_fail):
+        x_fail[:, 1] = 1-x_fail[:, 1]
+        x_fail[:, 0] += .15
+
+
+class AlimoEdge(Alimo):
+    """
+    Modified Alimo/Branin problem where the optimum points lie at the edge of the failed region.
+    """
+
+    def _mod_x_fail(self, x_fail):
+        x_fail[:, 0] -= .05
+        x_fail[:, 1] += .05
 
 
 class HCBranin(SampledFailureRateMixin, Branin):
@@ -424,12 +438,14 @@ if __name__ == '__main__':
     # MDMueller08().print_stats()
     # MDMOMueller08().print_stats()
     # MDMOMueller08().plot_pf()
-    HierMueller02().print_stats()
-    HierMueller08().print_stats()
-    MOHierMueller08().print_stats()
+    # HierMueller02().print_stats()
+    # HierMueller08().print_stats()
+    # MOHierMueller08().print_stats()
 
-    # Alimo().print_stats()
+    Alimo().print_stats()
+    AlimoEdge().print_stats()
     # Alimo().plot_design_space()
+    AlimoEdge().plot_design_space()
     # HCBranin().print_stats()
     # HCBranin().plot_design_space()
     # HCSphere().print_stats()

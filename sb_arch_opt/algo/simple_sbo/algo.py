@@ -176,12 +176,11 @@ class SBOInfill(InfillCriterion):
         # (Re-)build the surrogate model
         if self.total_pop is None:
             self.total_pop = pop
-            new_population = pop
         else:
             new_population = self.eliminate_duplicates.do(pop, self.total_pop)
             self.total_pop = Population.merge(self.total_pop, new_population)
 
-        self._build_model(new_population)
+        self._build_model()
 
         # Search the surrogate model for infill points
         off = self._generate_infill_points(n_offsprings)
@@ -221,7 +220,7 @@ class SBOInfill(InfillCriterion):
     def _initialize(self):
         self.infill.initialize(self.problem, self.surrogate_model)
 
-    def _build_model(self, _: Population):
+    def _build_model(self):
         """Update the underlying model. New population is given, total population is available from self.total_pop"""
 
         # Get input and output training points
@@ -230,10 +229,10 @@ class SBOInfill(InfillCriterion):
         if self.problem.n_ieq_constr > 0:
             y = np.column_stack([y, self.total_pop.get('G')])
 
-        x, y = self._get_xy_train(x, y)
-
         # Normalize training values
         x_norm = self._normalize(x)
+
+        x_norm, y = self._get_xy_train(x_norm, y)
 
         n_obj = self.problem.n_obj
         f_norm, self.y_train_min, self.y_train_max = self._normalize_y(y[:, :n_obj])
@@ -255,20 +254,20 @@ class SBOInfill(InfillCriterion):
         self.pf_estimate = None
         self._train_model()
 
-    def _get_xy_train(self, x: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def _get_xy_train(self, x_norm: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """Replace failed points with current worst values"""
         is_failed = np.any(~np.isfinite(y), axis=1)
         if ~np.any(is_failed):
-            return x, y
+            return x_norm, y
 
-        x = x.copy()
+        x_norm = x_norm.copy()
         y = y.copy()
 
         n_obj = self.problem.n_obj
         y[:, :n_obj] = np.nanmax(y[:, :n_obj], axis=0)  # f
         y[:, n_obj:] = 1.  # g
 
-        return x, y
+        return x_norm, y
 
     def _train_model(self):
         s = timeit.default_timer()
