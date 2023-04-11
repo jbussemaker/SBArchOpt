@@ -33,6 +33,7 @@ from pymoo.core.algorithm import Algorithm
 from pymoo.algorithms.moo.nsga2 import NSGA2
 from pymoo.core.population import Population
 from pymoo.core.infill import InfillCriterion
+from pymoo.util.optimum import filter_optimum
 from pymoo.core.termination import Termination
 from pymoo.core.initialization import Initialization
 from pymoo.core.duplicate import DuplicateElimination
@@ -98,6 +99,12 @@ class InfillAlgorithm(Algorithm):
         self.pop = Population.merge(self.pop, infills)
         if self.survival is not None:
             self.pop = self.survival.do(self.problem, self.pop, self.init_size, algorithm=self)
+
+    def _set_optimum(self):
+        pop = self.pop
+        i_failed = ArchOptProblemBase.get_failed_points(pop)
+        valid_pop = pop[~i_failed]
+        self.opt = filter_optimum(valid_pop, least_infeasible=True)
 
     def store_intermediate_results(self, results_folder: str):
         """Enable intermediate results storage to support restarting"""
