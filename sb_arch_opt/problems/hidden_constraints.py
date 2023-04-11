@@ -148,6 +148,7 @@ class Mueller08(SampledFailureRateMixin, NoHierarchyProblemBase):
         if self._mo:
             inner_sum = [np.sum(j*np.cos((j+1)*x[:, :-1]) + j, axis=1) for j in range(1, 6)]
             f_out[:, 1] = np.sum(np.column_stack(inner_sum), axis=1)
+            f_out[:, 1] -= .2*f_out[:, 0]
 
         cx = np.sum(x**4 - 16*x**2 + 5*x, axis=1) - 1000*self.n_var
         f_out[cx > 0, :] = np.nan
@@ -431,9 +432,10 @@ if __name__ == '__main__':
     # Mueller08().plot_pf()
     # Mueller08().plot_design_space()
 
-    # MOMueller08().print_stats()
-    # MOMueller08().plot_pf()
+    MOMueller08().print_stats()
+    MOMueller08().plot_pf()
     # MDMueller02().print_stats()
+    # MDMueller02().plot_pf()
     # MDMueller02().plot_pf()
     # MDMueller08().print_stats()
     # MDMOMueller08().print_stats()
@@ -442,10 +444,10 @@ if __name__ == '__main__':
     # HierMueller08().print_stats()
     # MOHierMueller08().print_stats()
 
-    Alimo().print_stats()
-    AlimoEdge().print_stats()
+    # Alimo().print_stats()
+    # AlimoEdge().print_stats()
     # Alimo().plot_design_space()
-    AlimoEdge().plot_design_space()
+    # AlimoEdge().plot_design_space()
     # HCBranin().print_stats()
     # HCBranin().plot_design_space()
     # HCSphere().print_stats()
