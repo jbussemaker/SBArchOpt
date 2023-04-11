@@ -25,7 +25,7 @@ from pymoo.core.algorithm import filter_optimum
 from pymoo.algorithms.moo.nsga2 import RankAndCrowdingSurvival
 from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
 
-__all__ = ['SurrogateInfill', 'FunctionEstimateInfill', 'PoFInfill', 'FunctionEstimatePoFInfill',
+__all__ = ['SurrogateInfill', 'FunctionEstimateInfill', 'ConstrainedInfill', 'FunctionEstimateConstrainedInfill',
            'ExpectedImprovementInfill', 'MinVariancePFInfill', 'normalize', 'denormalize']
 
 try:
@@ -175,12 +175,12 @@ class FunctionEstimateInfill(SurrogateInfill):
         return f, g
 
 
-class PoFInfill(SurrogateInfill):
+class ConstrainedInfill(SurrogateInfill):
     """Probability of Feasibility infill criterion base, for handling constraints using the PoF criterion"""
 
-    def __init__(self, min_pof: float = .5):
+    def __init__(self, min_pof: float = None):
         self.min_pof = min_pof
-        super(PoFInfill, self).__init__()
+        super(ConstrainedInfill, self).__init__()
 
     @property
     def needs_variance(self):
@@ -194,12 +194,12 @@ class PoFInfill(SurrogateInfill):
         f_var, g_var = self.predict_variance(x)
 
         # Calculate Probability of Feasibility and transform to constraint (g < 0 --> PoF(g) > PoF_min)
-        g_pof = g
-        if self.n_constr > 0:
-            g_pof = self.min_pof-self._pof(g, g_var)
+        g_infill = g
+        if self.n_constr > 0 and self.min_pof is not None:
+            g_infill = self.min_pof-self._pof(g, g_var)
 
         f_infill = self._evaluate_f(f, f_var)
-        return f_infill, g_pof
+        return f_infill, g_infill
 
     @staticmethod
     def _pof(g: np.ndarray, g_var: np.ndarray) -> np.ndarray:
@@ -216,7 +216,7 @@ class PoFInfill(SurrogateInfill):
         raise NotImplementedError
 
 
-class FunctionEstimatePoFInfill(PoFInfill):
+class FunctionEstimateConstrainedInfill(ConstrainedInfill):
     """Probability of Feasibility combined with direct function estimate for the objectives."""
 
     def get_n_infill_objectives(self) -> int:
@@ -226,7 +226,7 @@ class FunctionEstimatePoFInfill(PoFInfill):
         return f_predict
 
 
-class ExpectedImprovementInfill(PoFInfill):
+class ExpectedImprovementInfill(ConstrainedInfill):
     """
     The Expected Improvement (EI) naturally balances exploitation and exploration by representing the expected amount
     of improvement at some point taking into accounts its probability of improvement.
@@ -287,7 +287,7 @@ class ExpectedImprovementInfill(PoFInfill):
         return ei
 
 
-class MinVariancePFInfill(FunctionEstimatePoFInfill):
+class MinVariancePFInfill(FunctionEstimateConstrainedInfill):
     """
     Minimization of the Variance of Kriging-Predicted Front (MVPF).
 

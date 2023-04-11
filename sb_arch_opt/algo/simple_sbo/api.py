@@ -56,7 +56,7 @@ def get_simple_sbo_rbf(init_size: int = 100, **kwargs):
     return _get_sbo(sm, FunctionEstimateInfill(), init_size=init_size, **kwargs)
 
 
-def get_simple_sbo_krg(init_size: int = 100, use_mvpf=True, use_ei=False, min_pof=.5, **kwargs):
+def get_simple_sbo_krg(init_size: int = 100, use_mvpf=True, use_ei=False, min_pof=None, **kwargs):
     """
     Get a simple SBO algorithm using a Kriging model as its surrogate model.
     It can use one of the following infill strategies:
@@ -70,7 +70,7 @@ def get_simple_sbo_krg(init_size: int = 100, use_mvpf=True, use_ei=False, min_po
     if use_ei:
         infill = ExpectedImprovementInfill(min_pof=min_pof)  # For single objective
     else:
-        infill = MinVariancePFInfill(min_pof=min_pof) if use_mvpf else FunctionEstimatePoFInfill(min_pof=min_pof)
+        infill = MinVariancePFInfill(min_pof=min_pof) if use_mvpf else FunctionEstimateConstrainedInfill(min_pof=min_pof)
     return _get_sbo(sm, infill, init_size=init_size, **kwargs)
 
 
