@@ -146,6 +146,7 @@ class SBOInfill(InfillCriterion):
         self.y_train_max = None
         self.y_train_centered = None
         self.n_train = 0
+        self.was_trained = False
         self.time_train = None
         self.pf_estimate = None
 
@@ -285,8 +286,11 @@ class SBOInfill(InfillCriterion):
         self.surrogate_model.set_training_values(self.x_train, self.y_train)
         self.infill.set_samples(self.x_train, self.y_train)
 
-        if self.x_train.shape[0] > 0:
+        if self.x_train.shape[0] > 1:
+            self.was_trained = True
             self.surrogate_model.train()
+        else:
+            self.was_trained = False
         self.n_train += 1
         self.time_train = timeit.default_timer()-s
 
@@ -325,8 +329,10 @@ class SBOInfill(InfillCriterion):
 
     def _generate_infill_points(self, n_infill: int) -> Population:
         # Check if there are any valid points available
-        if self.x_train is None or self.x_train.shape[0] == 0:
-            log.info(f'Generating {n_infill} random point(s), because there were no prior valid points')
+        if not self.was_trained:
+            if self.verbose:
+                log.info(f'Generating {n_infill} random point(s), because there were not enough prior valid points '
+                         f'on a total of {len(self.total_pop)} points')
             return self._get_random_infill_points(n_infill)
 
         # Create infill problem and algorithm
@@ -382,7 +388,7 @@ class SBOInfill(InfillCriterion):
     def get_pf_estimate(self) -> Optional[Population]:
         """Estimate the location of the Pareto front as predicted by the surrogate model"""
 
-        if self.problem is None or self.n_train == 0 or self.x_train is None or self.x_train.shape[0] == 0:
+        if self.problem is None or self.n_train == 0 or not self.was_trained:
             return
         if self.pf_estimate is not None:
             return self.pf_estimate
