@@ -5,7 +5,7 @@ from sb_arch_opt.problems.hierarchical import *
 from pymoo.core.evaluator import Evaluator
 
 
-def run_test_hierarchy(problem, imp_ratio, check_n_valid=True, validate_exhaustive=False):
+def run_test_hierarchy(problem, imp_ratio, check_n_valid=True, validate_exhaustive=False, exh_n_cont=3):
     x_discrete, is_act_discrete = problem.all_discrete_x
     if check_n_valid or x_discrete is not None:
         if x_discrete is not None:
@@ -23,9 +23,13 @@ def run_test_hierarchy(problem, imp_ratio, check_n_valid=True, validate_exhausti
     assert problem.get_imputation_ratio() == pytest.approx(imp_ratio, rel=.02)
     problem.print_stats()
 
-    if HierarchicalExhaustiveSampling.get_n_sample_exhaustive(problem, n_cont=3) < 1e3:
-        pop = HierarchicalExhaustiveSampling(n_cont=3).do(problem, 0)
-    else:
+    pop = None
+    if exh_n_cont != -1 and HierarchicalExhaustiveSampling.get_n_sample_exhaustive(problem, n_cont=exh_n_cont) < 1e3:
+        try:
+            pop = HierarchicalExhaustiveSampling(n_cont=exh_n_cont).do(problem, 0)
+        except MemoryError:
+            pass
+    if pop is None:
         pop = HierarchicalRandomSampling().do(problem, 100)
     Evaluator().eval(problem, pop)
     return pop

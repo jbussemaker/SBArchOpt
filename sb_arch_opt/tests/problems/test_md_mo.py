@@ -17,7 +17,7 @@ def test_md_base():
     Evaluator().eval(problem, pop)
 
 
-def run_test_no_hierarchy(problem):
+def run_test_no_hierarchy(problem, exh_n_cont=3):
     assert problem.get_imputation_ratio() == 1
     problem.print_stats()
 
@@ -26,9 +26,14 @@ def run_test_no_hierarchy(problem):
         assert x_discrete.shape[0] == problem.get_n_valid_discrete()
         assert np.all(~LargeDuplicateElimination.eliminate(x_discrete))
 
-    if HierarchicalExhaustiveSampling.get_n_sample_exhaustive(problem, n_cont=3) < 1e3 or x_discrete is not None:
-        pop = HierarchicalExhaustiveSampling(n_cont=3).do(problem, 0)
-    else:
+    pop = None
+    if exh_n_cont != -1 and (HierarchicalExhaustiveSampling.get_n_sample_exhaustive(problem, n_cont=exh_n_cont) < 1e3
+                             or x_discrete is not None):
+        try:
+            pop = HierarchicalExhaustiveSampling(n_cont=exh_n_cont).do(problem, 0)
+        except MemoryError:
+            pass
+    if pop is None:
         pop = HierarchicalRandomSampling().do(problem, 100)
     Evaluator().eval(problem, pop)
     return pop

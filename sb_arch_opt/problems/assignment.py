@@ -50,6 +50,7 @@ def check_dependency():
 
 class AssignmentProblemWrapper(HierarchyProblemBase):
     """Wrapper for the assignment problem definition in assign_enc"""
+    _force_get_discrete_rates = False
 
     # Each assignment test problem has at least 1 constraint, which might be violated if a constraint-violation
     # imputation algorithm (i.e. this one doesn't actually impute, but rather sets the constraint to violated if an

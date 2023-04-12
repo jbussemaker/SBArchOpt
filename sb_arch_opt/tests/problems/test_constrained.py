@@ -31,8 +31,8 @@ def test_md_osy():
 
 
 def test_das_cmop():
-    run_test_no_hierarchy(MODASCMOP())
+    run_test_no_hierarchy(MODASCMOP(), exh_n_cont=1)
 
 
 def test_md_das_cmop():
-    run_test_no_hierarchy(MDDASCMOP())
+    run_test_no_hierarchy(MDDASCMOP(), exh_n_cont=-1)

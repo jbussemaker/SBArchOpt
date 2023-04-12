@@ -94,6 +94,11 @@ class NoHierarchyProblemBase(ArchOptTestProblemBase):
     def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
         # No hierarchy, so we can just get the Cartesian product of discrete variables
         x_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(self, n_cont=1)
+
+        # Set some limit to what we want to generate
+        if np.prod([len(values) for values in x_values], dtype=float) > 1e6:
+            return
+
         x_discrete = np.array(list(itertools.product(*x_values)))
         is_active = np.ones(x_discrete.shape, dtype=bool)
         return x_discrete, is_active

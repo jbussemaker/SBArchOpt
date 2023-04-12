@@ -122,14 +122,14 @@ def test_so_failing(results_folder):
 
 @check_dependency()
 def test_mo_cont(results_folder):
-    interface = SEGOMOEInterface(MOHimmelblau(), results_folder, n_init=10, n_infill=1)
+    interface = SEGOMOEInterface(MOHimmelblau(), results_folder, n_init=50, n_infill=1)
     opt = interface.run_optimization()
-    assert interface.x.shape == (11, 2)
-    assert interface.y.shape == (11, 2)
-    assert interface.f.shape == (11, 2)
-    assert interface.g.shape == (11, 0)
-    assert interface.h.shape == (11, 0)
-    assert len(interface.pop) == 11
+    assert interface.x.shape == (51, 2)
+    assert interface.y.shape == (51, 2)
+    assert interface.f.shape == (51, 2)
+    assert interface.g.shape == (51, 0)
+    assert interface.h.shape == (51, 0)
+    assert len(interface.pop) == 51
     assert len(opt) > 1
 
 

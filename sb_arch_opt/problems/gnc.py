@@ -39,6 +39,7 @@ class GNCProblemBase(HierarchyProblemBase):
     Apaza & Selva, "Automatic Composition of Encoding Scheme and Search Operators
     in System Architecture Optimization", 2021.
     """
+    _force_get_discrete_rates = False
 
     mass = {
         'S': {'A': 3., 'B': 6., 'C': 9.},

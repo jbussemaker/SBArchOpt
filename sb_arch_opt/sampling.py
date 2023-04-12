@@ -125,22 +125,29 @@ class HierarchicalExhaustiveSampling(Sampling):
     def get_all_x_discrete_by_trial_and_repair(self, problem: Problem):
         # First sample only discrete dimensions
         opt_values = self.get_exhaustive_sample_values(problem, 1)
-        x = np.array(list(itertools.product(*opt_values)))
+        x_cart_product_gen = itertools.product(*opt_values)
 
         is_cont_mask = self.get_is_cont_mask(problem)
         is_discrete_mask = ~is_cont_mask
 
         # Create and repair the sampled design vectors in batches
         n_batch = 1000
-        x_later = x
-        x_repaired = x[:0, :]
+        x_repaired = np.zeros((0, len(opt_values)), dtype=int)
         is_active_repaired = np.zeros(x_repaired.shape, dtype=bool)
-        while x_later.shape[0] > 0:
-            # Repair current batch
-            x_repair = x_later[:n_batch, :]
-            x_later = x_later[x_repair.shape[0]:, :]
-            # print(f'Sampling {x_repair.shape[0]} ({x_later.shape[0]} to go; {x_repaired.shape[0]} sampled)')
+        while True:
+            # Get next batch
+            x_repair = []
+            for _ in range(n_batch):
+                x_next = next(x_cart_product_gen, None)
+                if x_next is None:
+                    break
+                x_repair.append(x_next)
+            if len(x_repair) == 0:
+                break
+            x_repair = np.array(x_repair).astype(int)
 
+            # Repair current batch
+            # print(f'Sampling {x_repair.shape[0]} ({x_repaired.shape[0]} sampled)')
             x_repair_input = x_repair
             x_repair = self._repair.do(problem, x_repair)
             if isinstance(self._repair, ArchOptRepair):
@@ -156,7 +163,7 @@ class HierarchicalExhaustiveSampling(Sampling):
             x_repaired = np.row_stack([x_repaired, x_repair])
             is_active_repaired = np.row_stack([is_active_repaired, is_active.astype(bool)])
 
-        x_discr = np.row_stack(x_repaired)
+        x_discr = np.row_stack(x_repaired).astype(float)
         is_act_discr = np.row_stack(is_active_repaired)
 
         # Impute continuous values

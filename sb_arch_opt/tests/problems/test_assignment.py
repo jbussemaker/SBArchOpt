@@ -33,9 +33,9 @@ def test_unordered():
 def test_assign_enc_gnc():
     for problem, n_valid, imp_ratio in [
         (AssignmentGNCNoActType(), 327, 14.1),
-        # (AssignmentGNCNoAct(), 29857, 39.5),
+        (AssignmentGNCNoAct(), 29857, 39.5),
         (AssignmentGNCNoType(), 85779, 82.5),
-        # (AssignmentGNC(), 79091323, 367),
+        (AssignmentGNC(), 79091323, 367),
     ]:
         run_test_hierarchy(problem, imp_ratio, check_n_valid=False)
         assert problem.get_n_valid_discrete() == n_valid
