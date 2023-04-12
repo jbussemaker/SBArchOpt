@@ -20,6 +20,7 @@ import logging
 import numpy as np
 from typing import *
 from sb_arch_opt.sampling import *
+from scipy.spatial import distance
 from sb_arch_opt.algo.pymoo_interface import *
 from sb_arch_opt.problem import ArchOptProblemBase
 
@@ -77,14 +78,12 @@ class InfillAlgorithm(Algorithm):
             from sb_arch_opt.algo.simple_sbo.metrics import SBOMultiObjectiveOutput
             self.output = SBOMultiObjectiveOutput()
 
-    def _initialize(self):
-        super(InfillAlgorithm, self)._initialize()
+    def _initialize_infill(self):
+        return self.initialization.do(self.problem, self.init_size, algorithm=self)
 
-        self.pop = pop = self.initialization.do(self.problem, self.init_size, algorithm=self)
-        self.evaluator.eval(self.problem, pop, algorithm=self)
+    def _initialize_advance(self, infills=None, **kwargs):
         if self.survival is not None:
-            self.pop = self.survival.do(self.problem, pop, len(pop), algorithm=self)
-        self.is_initialized = True
+            self.pop = self.survival.do(self.problem, infills, len(infills), algorithm=self)
 
     def _infill(self):
         off = self.infill_obj.do(self.problem, self.pop, self.infill_size, algorithm=self)
@@ -104,7 +103,10 @@ class InfillAlgorithm(Algorithm):
         pop = self.pop
         i_failed = ArchOptProblemBase.get_failed_points(pop)
         valid_pop = pop[~i_failed]
-        self.opt = filter_optimum(valid_pop, least_infeasible=True)
+        if len(valid_pop) == 0:
+            self.opt = Population.new(X=[None])
+        else:
+            self.opt = filter_optimum(valid_pop, least_infeasible=True)
 
     def store_intermediate_results(self, results_folder: str):
         """Enable intermediate results storage to support restarting"""
@@ -274,6 +276,8 @@ class SBOInfill(InfillCriterion):
         y[:, :n_obj] = np.nanmax(y[:, :n_obj], axis=0)  # f
         y[:, n_obj:] = 1.  # g
 
+        y[np.isnan(y)] = 1.
+
         return x_norm, y
 
     def _train_model(self):
@@ -281,7 +285,8 @@ class SBOInfill(InfillCriterion):
         self.surrogate_model.set_training_values(self.x_train, self.y_train)
         self.infill.set_samples(self.x_train, self.y_train)
 
-        self.surrogate_model.train()
+        if self.x_train.shape[0] > 0:
+            self.surrogate_model.train()
         self.n_train += 1
         self.time_train = timeit.default_timer()-s
 
@@ -293,6 +298,10 @@ class SBOInfill(InfillCriterion):
 
     @staticmethod
     def _normalize_y(y: np.ndarray, keep_centered=False, y_min=None, y_max=None):
+        if y.shape[0] == 0:
+            y_min, y_max = np.zeros((y.shape[1],)), np.ones((y.shape[1],))
+            return y, y_min, y_max
+
         if y_min is None:
             y_min = np.nanmin(y, axis=0)
         if y_max is None:
@@ -315,6 +324,11 @@ class SBOInfill(InfillCriterion):
         return (y_norm*norm) + y_min
 
     def _generate_infill_points(self, n_infill: int) -> Population:
+        # Check if there are any valid points available
+        if self.x_train is None or self.x_train.shape[0] == 0:
+            log.info(f'Generating {n_infill} random point(s), because there were no prior valid points')
+            return self._get_random_infill_points(n_infill)
+
         # Create infill problem and algorithm
         problem = self._get_infill_problem()
         algorithm = self._get_infill_algorithm()
@@ -345,10 +359,30 @@ class SBOInfill(InfillCriterion):
         x = self._denormalize(selected_pop.get('X'))
         return Population.new(X=x)
 
+    def _get_random_infill_points(self, n_infill: int) -> Population:
+        """Generate random infill points in case there were no valid points to train the surrogate with"""
+
+        # Randomly sample some points
+        pop_infill = HierarchicalRandomSampling().do(self.problem, max(100, n_infill))
+        if len(pop_infill) <= n_infill:
+            return pop_infill
+
+        # Randomly select if there is no existing population to compare against
+        if self.total_pop is None or len(self.total_pop) == 0:
+            i_select = np.random.choice(len(pop_infill), n_infill, replace=False)
+            return pop_infill[i_select]
+
+        # Downselect by maximizing minimum distance from existing points
+        x_dist = distance.cdist(self._normalize(pop_infill.get('X')),
+                                self._normalize(self.total_pop.get('X')), metric='cityblock')
+        min_x_dist = np.min(x_dist, axis=1)
+        i_max_dist = np.argsort(min_x_dist)[-n_infill:]
+        return pop_infill[i_max_dist]
+
     def get_pf_estimate(self) -> Optional[Population]:
         """Estimate the location of the Pareto front as predicted by the surrogate model"""
 
-        if self.problem is None or self.n_train == 0:
+        if self.problem is None or self.n_train == 0 or self.x_train is None or self.x_train.shape[0] == 0:
             return
         if self.pf_estimate is not None:
             return self.pf_estimate

@@ -1,7 +1,11 @@
 import pytest
 import tempfile
+import numpy as np
+from typing import Tuple
 from sb_arch_opt.problem import *
 from sb_arch_opt.algo.simple_sbo import *
+from sb_arch_opt.algo.simple_sbo.algo import *
+from sb_arch_opt.algo.simple_sbo.infill import *
 from pymoo.optimize import minimize
 
 check_dependency = lambda: pytest.mark.skipif(not HAS_SIMPLE_SBO, reason='Simple SBO dependencies not installed')
@@ -74,3 +78,27 @@ def test_store_results_restart(problem: ArchOptProblemBase):
             n_eval = 11 if i == 0 else 1
             result = minimize(problem, sbo, termination=('n_eval', n_eval))
             assert len(result.pop) == 10+(i+1)
+
+
+class FailedXYRemovingSBO(SBOInfill):
+
+    def _get_xy_train(self, x_norm: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        is_failed = np.any(~np.isfinite(y), axis=1)
+        return x_norm[~is_failed, :], y[~is_failed, :]
+
+
+@check_dependency()
+def test_invalid_training_set(problem: ArchOptProblemBase):
+    from smt.surrogate_models.rbf import RBF
+    sbo = FailedXYRemovingSBO(RBF(print_global=False), FunctionEstimateInfill(), pop_size=100, termination=100,
+                              repair=ArchOptRepair()).algorithm(infill_size=1, init_size=10)
+    sbo.setup(problem)
+
+    for i in range(2):
+        pop = sbo.ask()
+        assert len(pop) == (10 if i == 0 else 1)
+        sbo.evaluator.eval(problem, pop)
+        pop.set('F', pop.get('F')*np.nan)
+        sbo.tell(pop)
+
+    sbo.ask()
