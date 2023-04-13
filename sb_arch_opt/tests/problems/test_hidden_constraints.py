@@ -25,6 +25,8 @@ def test_mueller_08():
 def test_alimo():
     run_test_no_hierarchy(Alimo())
     run_test_no_hierarchy(AlimoEdge())
+    run_test_hierarchy(HierAlimo(), 5.4)
+    run_test_hierarchy(HierAlimoEdge(), 5.4)
 
 
 def test_hc_branin():

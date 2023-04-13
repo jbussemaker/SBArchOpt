@@ -33,7 +33,7 @@ __all__ = ['SampledFailureRateMixin', 'Mueller01', 'Mueller02', 'Mueller08', 'MO
            'MOHierarchicalRosenbrockHC', 'HCMOHierarchicalTestProblem', 'RandomHiddenConstraintsBase', 'HCSphere',
            'HierarchicalRosenbrockHC', 'ConstraintHiderMetaProblem', 'CantileveredBeamHC', 'MDCantileveredBeamHC',
            'CarsideHC', 'MDCarsideHC', 'CarsideHCLess', 'MDMueller02', 'MDMueller08', 'MDMOMueller08',
-           'HierMueller02', 'HierMueller08', 'MOHierMueller08', 'AlimoEdge']
+           'HierMueller02', 'HierMueller08', 'MOHierMueller08', 'AlimoEdge', 'HierAlimo', 'HierAlimoEdge']
 
 
 class SampledFailureRateMixin(ArchOptProblemBase):
@@ -222,6 +222,20 @@ class AlimoEdge(Alimo):
     def _mod_x_fail(self, x_fail):
         x_fail[:, 0] -= .05
         x_fail[:, 1] += .05
+
+
+class HierAlimo(SampledFailureRateMixin, TunableHierarchicalMetaProblem):
+    """Hierarchical Alimo problem"""
+
+    def __init__(self):
+        super().__init__(lambda n: Alimo(), imp_ratio=6., n_subproblem=20, diversity_range=.5)
+
+
+class HierAlimoEdge(SampledFailureRateMixin, TunableHierarchicalMetaProblem):
+    """Hierarchical AlimoEdge problem"""
+
+    def __init__(self):
+        super().__init__(lambda n: AlimoEdge(), imp_ratio=6., n_subproblem=20, diversity_range=.5)
 
 
 class HCBranin(SampledFailureRateMixin, Branin):
@@ -432,8 +446,8 @@ if __name__ == '__main__':
     # Mueller08().plot_pf()
     # Mueller08().plot_design_space()
 
-    MOMueller08().print_stats()
-    MOMueller08().plot_pf()
+    # MOMueller08().print_stats()
+    # MOMueller08().plot_pf()
     # MDMueller02().print_stats()
     # MDMueller02().plot_pf()
     # MDMueller02().plot_pf()
@@ -448,6 +462,8 @@ if __name__ == '__main__':
     # AlimoEdge().print_stats()
     # Alimo().plot_design_space()
     # AlimoEdge().plot_design_space()
+    HierAlimo().print_stats()
+    HierAlimoEdge().print_stats()
     # HCBranin().print_stats()
     # HCBranin().plot_design_space()
     # HCSphere().print_stats()

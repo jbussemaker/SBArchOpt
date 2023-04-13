@@ -82,9 +82,11 @@ An overview of available test problems in `sb_arch_opt.problems` (* = recommende
 | `CarsideHC`                       |         | 7      | 3     | 8     |     |     | Y   |      | Y   |               |           |              | fail_rate: 66%                   |
 | `CarsideHCLess`                   |         | 7      | 3     | 9     |     |     | Y   |      | Y   |               |           |              | fail_rate: 39%                   |
 | `MDCarsideHC`                     | 4       | 3      | 3     | 8     |     | Y   | Y   |      | Y   | 10000         |           |              | fail_rate: 66%                   |
-| `HierMueller02`                   | 4       | 4      | 1     |       |     |     |     | Y    | Y   | 20            | 5.4       |              | fail_rate: 37%                   |
-| `HierMueller08`                   | 4       | 10     | 1     |       |     |     |     | Y    | Y   | 20            | 5.4       |              | fail_rate: 73%                   |
-| `MOHierMueller08`                 | 4       | 10     | 2     |       |     |     | Y   | Y    | Y   | 20            | 5.4       |              | fail_rate: 73%                   |
+| `HierAlimo`                       | 5       | 2      | 1     |       |     | Y   |     | Y    | Y   | 20            | 5.4       |              | fail_rate: 51%                   |
+| `HierAlimoEdge`                   | 5       | 2      | 1     |       |     | Y   |     | Y    | Y   | 20            | 5.4       |              | fail_rate: 53%                   |
+| `HierMueller02`                   | 4       | 4      | 1     |       |     | Y   |     | Y    | Y   | 20            | 5.4       |              | fail_rate: 37%                   |
+| `HierMueller08`                   | 4       | 10     | 1     |       |     | Y   |     | Y    | Y   | 20            | 5.4       |              | fail_rate: 73%                   |
+| `MOHierMueller08`                 | 4       | 10     | 2     |       |     | Y   | Y   | Y    | Y   | 20            | 5.4       |              | fail_rate: 73%                   |
 | `HierarchicalRosenbrockHC`        | 5       | 8      | 1     | 1     |     | Y   | Y   | Y    | Y   | 32            | 1.5       |              | fail_rate: 21%                   |
 | `MOHierarchicalRosenbrockHC`      | 5       | 8      | 2     | 1     |     | Y   | Y   | Y    | Y   | 32            | 1.5       |              | fail_rate: 60%                   |
 | ~~`HCMOHierarchicalTestProblem`~~ | 11      | 16     | 2     | 1     |     | Y   | Y   | Y    | Y   | 64            | 72        |              | fail_rate: 60%                   |
