@@ -80,3 +80,7 @@ def test_hier_cantilevered_beam():
 
 def test_hier_carside():
     run_test_hierarchy(HierCarside(), 6.48)
+
+
+def test_hier_nn():
+    run_test_hierarchy(NeuralNetwork(), 2.51)

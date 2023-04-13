@@ -32,7 +32,8 @@ from pymoo.util.ref_dirs import get_reference_directions
 __all__ = ['HierarchyProblemBase', 'HierarchicalGoldstein', 'HierarchicalRosenbrock', 'ZaeffererHierarchical',
            'ZaeffererProblemMode', 'MOHierarchicalGoldstein', 'MOHierarchicalRosenbrock', 'HierarchicalMetaProblemBase',
            'MOHierarchicalTestProblem', 'Jenatton', 'TunableHierarchicalMetaProblem', 'TunableZDT1', 'HierZDT1',
-           'HierZDT1Small', 'HierZDT1Large', 'HierDiscreteZDT1', 'HierBranin', 'HierCantileveredBeam', 'HierCarside']
+           'HierZDT1Small', 'HierZDT1Large', 'HierDiscreteZDT1', 'HierBranin', 'HierCantileveredBeam', 'HierCarside',
+           'NeuralNetwork']
 
 
 class HierarchyProblemBase(ArchOptTestProblemBase):
@@ -628,6 +629,7 @@ class Jenatton(HierarchyProblemBase):
 
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
+        self._correct_x_impute(x, is_active_out)
         for i, xi in enumerate(x):
             if xi[0] == 0:
                 if xi[1] == 0:
@@ -1035,6 +1037,79 @@ class HierCarside(TunableHierarchicalMetaProblem):
         super().__init__(factory, imp_ratio=7., n_subproblem=50, diversity_range=.5)
 
 
+class NeuralNetwork(HierarchyProblemBase):
+    """
+    Multi-layer perceptron test problem from:
+    Audet, C., Hallé-Hannan, E. and Le Digabel, S., 2023, March. A general mathematical framework for constrained
+    mixed-variable blackbox optimization problems with meta and categorical variables. In Operations Research Forum
+    (Vol. 4, No. 1, pp. 1-37). Springer International Publishing.
+
+    Implementation based on:
+    https://github.com/SMTorg/smt/blob/master/smt/problems/neural_network.py
+    """
+
+    def __init__(self):
+        des_vars = [
+            Integer(bounds=(1, 3)),
+            Real(bounds=(-5, -2)),
+            Real(bounds=(-5, -1)),
+            Integer(bounds=(3, 8)),
+            Choice(options=['ReLU', 'SELU', 'ISRLU']),
+            Integer(bounds=(0, 5)),
+            Integer(bounds=(0, 5)),
+            Integer(bounds=(0, 5)),
+        ]
+        super().__init__(des_vars)
+
+    def _get_n_valid_discrete(self) -> int:
+        n_base = 6*3  # x3, x4
+        return sum([
+            n_base*6,  # x0 == 0
+            n_base*6**2,  # x0 == 1
+            n_base*6**3,  # x0 == 2
+        ])
+
+    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
+                       h_out: np.ndarray, *args, **kwargs):
+        self._correct_x_impute(x, is_active_out)
+
+        _f_factors = [
+            np.array([2,  1, -.5]),
+            np.array([-1, 2, -.5]),
+            np.array([-1, 1,  .5]),
+        ]
+
+        def f(x1, x2, x3, x4, x5, x6=None, x7=None):
+            f_value = np.sum(_f_factors[int(x4)]*np.array([x1, x2, 2**x3])) + x5**2
+            if x6 is not None:
+                f_value += .3*x6
+            if x7 is not None:
+                f_value -= .1*x7**3
+            return f_value
+
+        for i, xi in enumerate(x):
+            f_out[i, 0] = f(xi[1], xi[2], xi[3], xi[4], xi[5],
+                            x6=xi[6] if xi[0] in [2, 3] else None,
+                            x7=xi[7] if xi[0] == 3 else None)
+
+    def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
+        is_active[:, [6, 7]] = False
+        is_active[x[:, 0] == 2, 6] = True
+        is_active[x[:, 0] == 3, 6] = True
+        is_active[x[:, 0] == 3, 7] = True
+
+    def plot_doe(self, n=1000):
+        """Compare to: https://smt.readthedocs.io/en/latest/_images/neuralnetwork_Test_test_hier_neural_network.png"""
+        import matplotlib.pyplot as plt
+
+        x = HierarchicalRandomSampling().do(self, n).get('X')
+        f = self.evaluate(x, return_as_dictionary=True)['F']
+        plt.figure()
+        plt.scatter(x[:, 0], f[:, 0], s=5)
+        plt.xlabel('x0'), plt.ylabel('y')
+        plt.show()
+
+
 if __name__ == '__main__':
     # HierarchicalGoldstein().print_stats()
     # MOHierarchicalGoldstein().print_stats()
@@ -1062,9 +1137,12 @@ if __name__ == '__main__':
     # p = HierZDT1Large()
     # p = HierDiscreteZDT1()
     # p = HierCantileveredBeam()
-    p = HierCarside()
-    p.print_stats()
+    # p = HierCarside()
+    # p.print_stats()
     # p.reset_pf_cache()
     # p.plot_pf()
     # p.plot_transformation(show=False)
     # p.plot_i_sub_problem()
+
+    NeuralNetwork().print_stats()
+    # NeuralNetwork().plot_pf()

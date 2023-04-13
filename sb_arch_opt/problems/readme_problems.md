@@ -44,6 +44,7 @@ An overview of available test problems in `sb_arch_opt.problems` (* = recommende
 | Module: `hierarchical`            |
 | `ZaeffererHierarchical`           |         | 2      | 1     |       |     |     |     | Y    |     |               |           |              |                                  |
 | `Jenatton`                        | 3       | 6      | 1     |       |     | Y   |     | Y    |     | 4             | 2         |              |                                  |
+| `NeuralNetwork`                   | 6       | 2      | 1     |       |     | Y   |     | Y    |     | 4644          | 2.51      |              |                                  |
 | `HierarchicalGoldstein`           | 6       | 5      | 1     | 1     |     | Y   |     | Y    |     | 288           | 2.25      |              |                                  |
 | `MOHierarchicalGoldstein`         | 6       | 5      | 2     | 1     |     | Y   | Y   | Y    |     | 288           | 2.25      |              |                                  |
 | `HierBranin`*                     | 8       | 2      | 1     |       |     | Y   |     | Y    |     | 200           | 3.2       |              |                                  |
