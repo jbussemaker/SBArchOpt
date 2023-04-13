@@ -57,6 +57,7 @@ class ModelFactory:
 
     def get_smt_design_space_spec(self) -> SMTDesignSpaceSpec:
         """Get information about the design space as needed by SMT and SEGOMOE"""
+        check_dependencies()
         var_defs = []
         var_types = []
         var_limits = []
@@ -97,8 +98,10 @@ class ModelFactory:
 
     @staticmethod
     def get_rbf_model():
+        check_dependencies()
         return RBF(print_global=False, d0=1., poly_degree=-1, reg=1e-10)
 
     @staticmethod
     def get_kriging_model():
+        check_dependencies()
         return KRG(print_global=False)

@@ -31,7 +31,6 @@ def get_simple_sbo_rbf(init_size: int = 100, **kwargs):
     """
     Get a simple SBO algorithm using an RBF model as its surrogate model.
     """
-    check_dependencies()
     model = ModelFactory.get_rbf_model()
     return get_sbo(model, FunctionEstimateInfill(), init_size=init_size, **kwargs)
 
@@ -45,7 +44,6 @@ def get_simple_sbo_krg(init_size: int = 100, use_mvpf=True, use_ei=False, min_po
     - Directly optimizing on the mean prediction
     All strategies support constraints.
     """
-    check_dependencies()
     model = ModelFactory.get_kriging_model()
     if use_ei:
         infill = ExpectedImprovementInfill(min_pof=min_pof)  # For single objective
