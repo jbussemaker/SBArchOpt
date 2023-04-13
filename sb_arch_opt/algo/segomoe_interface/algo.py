@@ -18,7 +18,6 @@ import os
 import logging
 import numpy as np
 from typing import Tuple
-import pymoo.core.variable as var
 from sb_arch_opt.sampling import *
 from sb_arch_opt.util import capture_log
 from pymoo.core.population import Population
@@ -29,7 +28,7 @@ try:
     from segomoe.sego import Sego
     from segomoe.constraint import Constraint
     from segomoe.sego_defs import get_sego_file_map, ExitStatus
-    from smt.applications.mixed_integer import FLOAT, INT, ENUM
+    from sb_arch_opt.algo.simple_sbo.models import ModelFactory
 
     HAS_SEGOMOE = True
 except ImportError:
@@ -242,10 +241,10 @@ class SEGOMOEInterface:
         return sego.get_x(i=-1)
 
     def _get_sego(self, f_grouped):
-        var_defs, var_types, var_limits, is_mixed_discrete = self._get_design_variables()
+        design_space_spec = self._get_design_space()
 
         model_type = {
-            'type': 'MIXEDsmt' if is_mixed_discrete else 'KRGsmt',
+            'type': 'MIXEDsmt' if design_space_spec.is_mixed_discrete else 'KRGsmt',
             'regr': 'constant',
             'corr': 'squar_exp',
             'theta0': [1e-3],
@@ -254,9 +253,9 @@ class SEGOMOEInterface:
             'normalize': True,
             **self.model_options,
         }
-        if is_mixed_discrete:
-            model_type['xtypes'] = var_types
-            model_type['xlimits'] = var_limits
+        if design_space_spec.is_mixed_discrete:
+            model_type['xtypes'] = design_space_spec.var_types
+            model_type['xlimits'] = design_space_spec.var_limits
 
         optim_settings = {
             'grouped_eval': True,
@@ -273,46 +272,15 @@ class SEGOMOEInterface:
 
         return Sego(
             fun=f_grouped,
-            var=var_defs,
+            var=design_space_spec.var_defs,
             const=self._get_constraints(),
             optim_settings=optim_settings,
             path_hs=self._results_folder,
             comm=None,
         )
 
-    def _get_design_variables(self):
-        var_defs = []
-        var_types = []
-        var_limits = []
-        is_mixed_discrete = False
-        xl, xu = self._problem.xl, self._problem.xu
-        for i, var_def in enumerate(self._problem.des_vars):
-            name = f'x{i}'
-            var_defs.append({'name': name, 'lb': xl[i], 'ub': xu[i]})
-
-            if isinstance(var_def, var.Real):
-                var_types.append(FLOAT)
-                var_limits.append(var_def.bounds)
-
-            elif isinstance(var_def, var.Integer):
-                is_mixed_discrete = True
-                var_types.append(INT)
-                var_limits.append(var_def.bounds)
-
-            elif isinstance(var_def, var.Binary):
-                is_mixed_discrete = True
-                var_types.append(INT)
-                var_limits.append([0, 1])
-
-            elif isinstance(var_def, var.Choice):
-                is_mixed_discrete = True
-                var_types.append((ENUM, len(var_def.options)))
-                var_limits.append(var_def.options)
-
-            else:
-                raise RuntimeError(f'Unsupported design variable type: {var_def!r}')
-
-        return var_defs, var_types, var_limits, is_mixed_discrete
+    def _get_design_space(self):
+        return ModelFactory(self._problem).get_smt_design_space_spec()
 
     def _get_constraints(self):
         constraints = []
