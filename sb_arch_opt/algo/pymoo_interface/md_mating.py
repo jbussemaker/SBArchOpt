@@ -79,24 +79,22 @@ class MixedDiscreteMating(InfillCriterion):
 
         # group all the variables by their types
         vars_by_type = {}
-        for k, v in var_defs.items():
+        for ik, (k, v) in enumerate(var_defs.items()):
             clazz = type(v)
 
             if clazz not in vars_by_type:
                 vars_by_type[clazz] = []
-            vars_by_type[clazz].append(k)
+            vars_by_type[clazz].append((ik, k))
 
         # # all different recombinations (the choices need to be split because of data types)
         recomb = []
-        idx = 0
         for clazz, list_of_vars in vars_by_type.items():
             if clazz == Choice:
-                for e in list_of_vars:
-                    recomb.append((clazz, [e], np.array([idx])))
-                    idx += 1
+                for idx, var_name in list_of_vars:
+                    recomb.append((clazz, [var_name], np.array([idx])))
             else:
-                recomb.append((clazz, list_of_vars, np.array(range(idx, idx+len(list_of_vars)))))
-                idx += len(list_of_vars)
+                idx, var_names = zip(*list_of_vars)
+                recomb.append((clazz, var_names, np.array(idx)))
 
         # create an empty population that will be set in each iteration
         x_out = np.empty((n_offsprings, len(var_defs)))

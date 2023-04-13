@@ -58,6 +58,8 @@ class DummyProblem(ArchOptTestProblemBase):
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
         self._correct_x_impute(x, is_active_out)
+        assert np.all(x >= self.xl)
+        assert np.all(x <= self.xu)
 
         i_dv = np.where(self.is_cat_mask)[0][0]
         cat_values = self.get_categorical_values(x, i_dv)
