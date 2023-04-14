@@ -55,8 +55,5 @@ def get_simple_sbo_krg(init_size: int = 100, use_mvpf=True, use_ei=False, min_po
 def get_sbo(surrogate_model, infill: 'SurrogateInfill', infill_size: int = 1, init_size: int = 100,
             infill_pop_size: int = 100, infill_gens: int = 100, repair=None, **kwargs):
     """Create the SBO algorithm given some SMT surrogate model and an infill criterion"""
-    if repair is None:
-        repair = ArchOptRepair()
-
     return SBOInfill(surrogate_model, infill, pop_size=infill_pop_size, termination=infill_gens, repair=repair,
                      verbose=True).algorithm(infill_size=infill_size, init_size=init_size, **kwargs)

@@ -19,13 +19,14 @@ import timeit
 import logging
 import numpy as np
 from typing import *
+from sb_arch_opt.problem import *
 from sb_arch_opt.sampling import *
 from scipy.spatial import distance
 from sb_arch_opt.algo.pymoo_interface import *
-from sb_arch_opt.problem import ArchOptProblemBase
 
 from pymoo.core.repair import Repair
 from pymoo.core.result import Result
+from pymoo.core.variable import Real
 from pymoo.core.problem import Problem
 from pymoo.core.callback import Callback
 from pymoo.core.sampling import Sampling
@@ -36,6 +37,7 @@ from pymoo.core.population import Population
 from pymoo.core.infill import InfillCriterion
 from pymoo.util.optimum import filter_optimum
 from pymoo.core.termination import Termination
+from pymoo.util.normalization import Normalization
 from pymoo.core.initialization import Initialization
 from pymoo.core.duplicate import DuplicateElimination
 from pymoo.termination.max_gen import MaximumGenerationTermination
@@ -45,11 +47,11 @@ from pymoo.optimize import minimize
 try:
     from smt.surrogate_models.surrogate_model import SurrogateModel
     from sb_arch_opt.algo.simple_sbo.infill import *
+    from sb_arch_opt.algo.simple_sbo.models import *
 except ImportError:
     pass
 
-__all__ = ['InfillAlgorithm', 'SBOInfill', 'SurrogateInfillCallback', 'SurrogateInfillOptimizationProblem',
-           'NormalizedRepair']
+__all__ = ['InfillAlgorithm', 'SBOInfill', 'SurrogateInfillCallback', 'SurrogateInfillOptimizationProblem']
 
 log = logging.getLogger('sb_arch_opt.sbo')
 
@@ -124,8 +126,9 @@ class SBOInfill(InfillCriterion):
     _exclude = ['_surrogate_model', 'opt_results']
 
     def __init__(self, surrogate_model: 'SurrogateModel', infill: SurrogateInfill, pop_size=None,
-                 termination: Union[Termination, int] = None, verbose=False, repair: Repair = None,
-                 eliminate_duplicates: DuplicateElimination = None, force_new_points: bool = True, **kwargs):
+                 termination: Union[Termination, int] = None, normalization: Normalization = None, verbose=False,
+                 repair: Repair = None, eliminate_duplicates: DuplicateElimination = None,
+                 force_new_points: bool = True, **kwargs):
 
         if eliminate_duplicates is None:
             eliminate_duplicates = LargeDuplicateElimination()
@@ -135,6 +138,7 @@ class SBOInfill(InfillCriterion):
         self.problem: Optional[Problem] = None
         self.total_pop: Optional[Population] = None
         self._algorithm: Optional[Algorithm] = None
+        self._normalization: Optional[Normalization] = normalization
 
         self._surrogate_model_base = surrogate_model
         self._surrogate_model = None
@@ -195,7 +199,8 @@ class SBOInfill(InfillCriterion):
         # Search the surrogate model for infill points
         off = self._generate_infill_points(n_offsprings)
 
-        off = self.repair.do(problem, off, **kwargs)
+        if self.repair is not None:
+            off = self.repair.do(problem, off, **kwargs)
         off = self.eliminate_duplicates.do(off, pop)
 
         if self.verbose:
@@ -224,11 +229,19 @@ class SBOInfill(InfillCriterion):
         return self._surrogate_model
 
     @property
+    def normalization(self) -> Normalization:
+        if self._normalization is None:
+            if self.problem is None:
+                raise RuntimeError('Problem not set or not an architecture optimization problem!')
+            self._normalization = ModelFactory.get_continuous_normalization(self.problem)
+        return self._normalization
+
+    @property
     def supports_variances(self):
         return self._surrogate_model_base.supports['variances']
 
     def _initialize(self):
-        self.infill.initialize(self.problem, self.surrogate_model)
+        self.infill.initialize(self.problem, self.surrogate_model, self.normalization)
 
     def _build_model(self):
         """Update the underlying model. New population is given, total population is available from self.total_pop"""
@@ -239,11 +252,10 @@ class SBOInfill(InfillCriterion):
         if self.problem.n_ieq_constr > 0:
             y = np.column_stack([y, self.total_pop.get('G')])
 
-        # Normalize training values
-        x_norm = self._normalize(x)
+        # Select training values
+        x, y = self._get_xy_train(x, y)
 
-        x_norm, y = self._get_xy_train(x_norm, y)
-
+        # Normalize training output
         n_obj = self.problem.n_obj
         f_norm, self.y_train_min, self.y_train_max = self._normalize_y(y[:, :n_obj])
         self.y_train_centered = [False]*f_norm.shape[1]
@@ -258,19 +270,19 @@ class SBOInfill(InfillCriterion):
             self.y_train_centered += [True]*g_norm.shape[1]
 
         # Train the model
-        self.x_train = x_norm
+        self.x_train = x
         self.y_train = y_norm
 
         self.pf_estimate = None
         self._train_model()
 
-    def _get_xy_train(self, x_norm: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def _get_xy_train(self, x: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """Replace failed points with current worst values"""
         is_failed = np.any(~np.isfinite(y), axis=1)
         if ~np.any(is_failed):
-            return x_norm, y
+            return x, y
 
-        x_norm = x_norm.copy()
+        x = x.copy()
         y = y.copy()
 
         n_obj = self.problem.n_obj
@@ -279,11 +291,11 @@ class SBOInfill(InfillCriterion):
 
         y[np.isnan(y)] = 1.
 
-        return x_norm, y
+        return x, y
 
     def _train_model(self):
         s = timeit.default_timer()
-        self.surrogate_model.set_training_values(self.x_train, self.y_train)
+        self.surrogate_model.set_training_values(self.normalization.forward(self.x_train), self.y_train)
         self.infill.set_samples(self.x_train, self.y_train)
 
         if self.x_train.shape[0] > 1:
@@ -295,10 +307,7 @@ class SBOInfill(InfillCriterion):
         self.time_train = timeit.default_timer()-s
 
     def _normalize(self, x: np.ndarray) -> np.ndarray:
-        return normalize(x, self.problem.xl, self.problem.xu)
-
-    def _denormalize(self, x_norm: np.ndarray) -> np.ndarray:
-        return denormalize(x_norm, self.problem.xl, self.problem.xu)
+        return self.normalization.forward(x)
 
     @staticmethod
     def _normalize_y(y: np.ndarray, keep_centered=False, y_min=None, y_max=None):
@@ -362,7 +371,7 @@ class SBOInfill(InfillCriterion):
         selected_pop = self.infill.select_infill_solutions(result.pop, problem, n_infill)
         result.opt = selected_pop
 
-        x = self._denormalize(selected_pop.get('X'))
+        x = selected_pop.get('X')
         return Population.new(X=x)
 
     def _get_random_infill_points(self, n_infill: int) -> Population:
@@ -379,8 +388,9 @@ class SBOInfill(InfillCriterion):
             return pop_infill[i_select]
 
         # Downselect by maximizing minimum distance from existing points
-        x_dist = distance.cdist(self._normalize(pop_infill.get('X')),
-                                self._normalize(self.total_pop.get('X')), metric='cityblock')
+        normalization = ModelFactory.get_continuous_normalization(self.problem)
+        x_dist = distance.cdist(normalization.forward(pop_infill.get('X')),
+                                normalization.forward(self.total_pop.get('X')), metric='cityblock')
         min_x_dist = np.min(x_dist, axis=1)
         i_max_dist = np.argsort(min_x_dist)[-n_infill:]
         return pop_infill[i_max_dist]
@@ -394,7 +404,7 @@ class SBOInfill(InfillCriterion):
             return self.pf_estimate
 
         infill = FunctionEstimateInfill()
-        infill.initialize(self.problem, self.surrogate_model)
+        infill.initialize(self.problem, self.surrogate_model, self.normalization)
         infill.set_samples(self.x_train, self.y_train)
 
         problem = self._get_infill_problem(infill, force_new_points=False)
@@ -416,8 +426,8 @@ class SBOInfill(InfillCriterion):
         if force_new_points is None:
             force_new_points = self.force_new_points
 
-        x_exist_norm = self._normalize(self.total_pop.get('X')) if force_new_points else None
-        return SurrogateInfillOptimizationProblem(infill, self.problem, x_exist_norm=x_exist_norm)
+        x_exist = self.total_pop.get('X') if force_new_points else None
+        return SurrogateInfillOptimizationProblem(infill, self.problem, x_exist=x_exist)
 
     def _get_termination(self, n_obj):
         termination = self.termination
@@ -442,8 +452,8 @@ class SBOInfill(InfillCriterion):
 
     def _get_infill_repair(self):
         if self.repair is None:
-            return None
-        return NormalizedRepair(self.problem, self.repair)
+            return ArchOptRepair()
+        return self.repair
 
 
 class SurrogateInfillCallback(Callback):
@@ -462,34 +472,52 @@ class SurrogateInfillCallback(Callback):
                      f'({self.n_points_outer} real unique, {self.n_eval_outer} eval)')
 
 
-class SurrogateInfillOptimizationProblem(Problem):
+class SurrogateInfillOptimizationProblem(ArchOptProblemBase):
     """Problem class representing a surrogate infill problem given a SurrogateInfill instance."""
 
-    def __init__(self, infill: SurrogateInfill, problem: Problem, x_exist_norm: np.ndarray = None):
-        n_var = problem.n_var
-        xl, xu = np.zeros(n_var), np.ones(n_var)
-
+    def __init__(self, infill: SurrogateInfill, problem: Problem, x_exist: np.ndarray = None):
         n_obj = infill.get_n_infill_objectives()
-        n_constr = infill.get_n_infill_constraints()
+        n_ieq_constr = infill.get_n_infill_constraints()
 
-        self.pop_exist_norm = Population.new(X=x_exist_norm) if x_exist_norm is not None else None
-        self.force_new_points = x_exist_norm is not None
+        self.pop_exist = Population.new(X=x_exist) if x_exist is not None else None
+        self.force_new_points = x_exist is not None
         if self.force_new_points:
-            n_constr += 1
+            n_ieq_constr += 1
         self.eliminate_duplicates = LargeDuplicateElimination()
 
-        super(SurrogateInfillOptimizationProblem, self).__init__(
-            n_var=n_var, n_obj=n_obj, n_constr=n_constr, xl=xl, xu=xu)
+        if isinstance(problem, ArchOptProblemBase):
+            des_vars = problem.des_vars
+        elif problem.vars is not None:
+            des_vars = list(problem.vars.values())
+        else:
+            des_vars = [Real(bounds=(problem.xl[i], problem.xu[i])) for i in range(problem.n_var)]
+
+        super().__init__(des_vars=des_vars, n_obj=n_obj, n_ieq_constr=n_ieq_constr)
 
         self.infill = infill
+        self._problem: Problem = problem
 
-    def _evaluate(self, x, out, *args, **kwargs):
+    def _get_n_valid_discrete(self) -> int:
+        if isinstance(self._problem, ArchOptProblemBase):
+            return self._problem.get_n_valid_discrete()
+
+    def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
+        if isinstance(self._problem, ArchOptProblemBase):
+            return self._problem.all_discrete_x
+
+    def might_have_hidden_constraints(self):
+        return False
+
+    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
+                       h_out: np.ndarray, *args, **kwargs):
+        self._correct_x_impute(x, is_active_out)
+
         # Get infill search objectives and constraints
         f, g = self.infill.evaluate(x)
 
         if f.shape != (x.shape[0], self.n_obj):
             raise RuntimeError(f'Wrong objective results shape: {f.shape!r} != {(x.shape[0], self.n_obj)!r}')
-        out['F'] = f
+        f_out[:, :] = f
 
         if g is None and self.n_constr > 0:
             g = np.zeros((x.shape[0], 0))
@@ -497,33 +525,18 @@ class SurrogateInfillOptimizationProblem(Problem):
         # Add additional constraint to force the selection of new (discrete) points
         if self.force_new_points:
             g_force_new = np.zeros((x.shape[0],))
-            _, _, is_dup = self.eliminate_duplicates.do(Population.new(X=x), self.pop_exist_norm, return_indices=True)
+            _, _, is_dup = self.eliminate_duplicates.do(Population.new(X=x), self.pop_exist, return_indices=True)
             g_force_new[is_dup] = 1.
 
             g = np.column_stack([g, g_force_new])
 
         if g.shape != (x.shape[0], self.n_constr):
             raise RuntimeError(f'Wrong constraint results shape: {g.shape!r} != {(x.shape[0], self.n_constr)!r}')
-        out['G'] = g
+        g_out[:, :] = g
 
+    def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
+        if isinstance(self._problem, ArchOptProblemBase):
+            x[:, :], is_active[:, :] = self._problem.correct_x(x)
 
-class NormalizedRepair(Repair):
-    """Repair to be used during infill search: the infill search space is normalized compared to the original problem"""
-
-    def __init__(self, problem: Problem, repair: Repair):
-        super().__init__()
-        self._problem = problem
-        self._repair = repair
-
-    def do(self, problem, pop, **kwargs):
-        is_array = not isinstance(pop, Population)
-        x = pop if is_array else pop.get("X")
-
-        x_underlying = denormalize(x, self._problem.xl, self._problem.xu)
-        x_underlying = self._repair.do(self._problem, Population.new(X=x_underlying), **kwargs).get("X")
-        x = normalize(x_underlying, self._problem.xl, self._problem.xu)
-
-        if is_array:
-            return x
-        pop.set("X", x)
-        return pop
+    def __repr__(self):
+        return f'{self.__class__.__name__}({self.infill!r}, {self._problem!r})'

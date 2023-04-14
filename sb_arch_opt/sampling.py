@@ -150,9 +150,10 @@ class HierarchicalExhaustiveSampling(Sampling):
             # print(f'Sampling {x_repair.shape[0]} ({x_repaired.shape[0]} sampled)')
             x_repair_input = x_repair
             x_repair = self._repair.do(problem, x_repair)
+            is_active = None
             if isinstance(self._repair, ArchOptRepair):
                 is_active = self._repair.latest_is_active
-            else:
+            if is_active is None:
                 is_active = np.ones(x_repair.shape, dtype=bool)
 
             # Remove repaired points

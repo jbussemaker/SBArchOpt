@@ -82,9 +82,9 @@ def test_store_results_restart(problem: ArchOptProblemBase):
 
 class FailedXYRemovingSBO(SBOInfill):
 
-    def _get_xy_train(self, x_norm: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def _get_xy_train(self, x: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         is_failed = np.any(~np.isfinite(y), axis=1)
-        return x_norm[~is_failed, :], y[~is_failed, :]
+        return x[~is_failed, :], y[~is_failed, :]
 
 
 @check_dependency()

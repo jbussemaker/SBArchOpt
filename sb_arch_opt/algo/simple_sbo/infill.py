@@ -22,11 +22,12 @@ from scipy.stats import norm
 from pymoo.core.problem import Problem
 from pymoo.core.population import Population
 from pymoo.core.algorithm import filter_optimum
+from pymoo.util.normalization import Normalization
 from pymoo.algorithms.moo.nsga2 import RankAndCrowdingSurvival
 from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
 
 __all__ = ['SurrogateInfill', 'FunctionEstimateInfill', 'ConstrainedInfill', 'FunctionEstimateConstrainedInfill',
-           'ExpectedImprovementInfill', 'MinVariancePFInfill', 'normalize', 'denormalize']
+           'ExpectedImprovementInfill', 'MinVariancePFInfill']
 
 try:
     from smt.surrogate_models.surrogate_model import SurrogateModel
@@ -42,6 +43,7 @@ class SurrogateInfill:
     def __init__(self):
         self.problem: Optional[Problem] = None
         self.surrogate_model: Optional['SurrogateModel'] = None
+        self.normalization: Optional[Normalization] = None
         self.n_obj = 0
         self.n_constr = 0
         self.n_f_ic = None
@@ -70,7 +72,7 @@ class SurrogateInfill:
 
     def predict(self, x: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         try:
-            y = self.surrogate_model.predict_values(x)
+            y = self.surrogate_model.predict_values(self.normalization.forward(x))
         except FloatingPointError:
             y = np.zeros((x.shape[0], self.surrogate_model.ny))*np.nan
 
@@ -81,30 +83,25 @@ class SurrogateInfill:
         try:
             y_var = np.zeros((x.shape[0], self.surrogate_model.ny))
             for i in range(x.shape[0]):
-                y_var[i, :] = self.surrogate_model.predict_variances(x[[i], :])
+                y_var[i, :] = self.surrogate_model.predict_variances(self.normalization.forward(x[[i], :]))
 
         except FloatingPointError:
             y_var = np.zeros((x.shape[0], self.surrogate_model.ny))*np.nan
 
         return self._split_f_g(y_var)
 
-    def _normalize(self, x) -> np.ndarray:
-        return normalize(x, self.problem.xl, self.problem.xu)
-
-    def _denormalize(self, x_norm) -> np.ndarray:
-        return denormalize(x_norm, self.problem.xl, self.problem.xu)
-
     def _split_f_g(self, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         if self.n_constr > 0:
             return y[:, :self.n_obj], y[:, self.n_obj:self.n_obj+self.n_constr]
         return y[:, :self.n_obj], np.zeros((y.shape[0], 0))
 
-    def initialize(self, problem: Problem, surrogate_model: 'SurrogateModel'):
+    def initialize(self, problem: Problem, surrogate_model: 'SurrogateModel', normalization: Normalization):
         self.problem = problem
         self.n_obj = problem.n_obj
         self.n_constr = problem.n_constr
 
         self.surrogate_model = surrogate_model
+        self.normalization = normalization
 
         self._initialize()
 
@@ -255,7 +252,7 @@ class ExpectedImprovementInfill(ConstrainedInfill):
         f_pareto = cls.get_pareto_front(f_current)
         nadir_point, ideal_point = np.max(f_pareto, axis=0), np.min(f_pareto, axis=0)
         nadir_point[nadir_point == ideal_point] = 1.
-        f_pareto_norm = normalize(f_pareto, xu=nadir_point, xl=ideal_point)
+        f_pareto_norm = (f_pareto-ideal_point)/(nadir_point-ideal_point)
         f_norm, f_var_norm = cls._normalize_f_var(f, f_var, nadir_point, ideal_point)
 
         # Get EI for each point using closest point in the Pareto front
@@ -271,7 +268,7 @@ class ExpectedImprovementInfill(ConstrainedInfill):
 
     @staticmethod
     def _normalize_f_var(f: np.ndarray, f_var: np.ndarray, nadir_point, ideal_point):
-        f_norm = normalize(f, xu=nadir_point, xl=ideal_point)
+        f_norm = (f-ideal_point)/(nadir_point-ideal_point)
         f_var_norm = f_var/((nadir_point-ideal_point+1e-30)**2)
         return f_norm, f_var_norm
 
@@ -322,11 +319,3 @@ class MinVariancePFInfill(FunctionEstimateConstrainedInfill):
     def get_i_pareto_front(f: np.ndarray) -> np.ndarray:
         """Get the non-dominated set of objective values (the Pareto front)."""
         return NonDominatedSorting().do(f, only_non_dominated_front=True)
-
-
-def normalize(x: np.ndarray, xl, xu) -> np.ndarray:
-    return (x-xl)/(xu-xl)
-
-
-def denormalize(x_norm: np.ndarray, xl, xu) -> np.ndarray:
-    return x_norm*(xu-xl)+xl

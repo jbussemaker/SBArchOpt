@@ -17,17 +17,30 @@ Contact: jasper.bussemaker@dlr.de
 from typing import *
 from dataclasses import dataclass
 import pymoo.core.variable as var
+from pymoo.core.problem import Problem
 from sb_arch_opt.problem import ArchOptProblemBase
+from pymoo.util.normalization import SimpleZeroToOneNormalization
 
 try:
     from smt.surrogate_models.rbf import RBF
     from smt.surrogate_models.krg import KRG
     from smt.surrogate_models.surrogate_model import SurrogateModel
-    from smt.applications.mixed_integer import FLOAT, INT, ENUM
 
-    from sb_arch_opt.algo.simple_sbo.algo import *
-    from sb_arch_opt.algo.simple_sbo.infill import *
-    from sb_arch_opt.algo.simple_sbo.metrics import *
+    try:
+        # SMT v1.3
+        from smt.applications.mixed_integer import FLOAT as float_type, INT as int_type, ENUM as enum_type
+
+        class XType:
+            FLOAT = float_type
+            INT = int_type
+            ENUM = enum_type
+
+        IS_SMT_V2 = False
+    except ImportError:
+        # SMT v2
+        from smt.utils.mixed_integer import XType
+        from smt.utils.kriging import XSpecs, XRole
+        IS_SMT_V2 = True
 
     HAS_SIMPLE_SBO = True
 except ImportError:
@@ -68,22 +81,22 @@ class ModelFactory:
             var_defs.append({'name': name, 'lb': xl[i], 'ub': xu[i]})
 
             if isinstance(var_def, var.Real):
-                var_types.append(FLOAT)
+                var_types.append(XType.FLOAT)
                 var_limits.append(var_def.bounds)
 
             elif isinstance(var_def, var.Integer):
                 is_mixed_discrete = True
-                var_types.append(INT)
+                var_types.append(XType.INT)
                 var_limits.append(var_def.bounds)
 
             elif isinstance(var_def, var.Binary):
                 is_mixed_discrete = True
-                var_types.append(INT)
+                var_types.append(XType.INT)
                 var_limits.append([0, 1])
 
             elif isinstance(var_def, var.Choice):
                 is_mixed_discrete = True
-                var_types.append((ENUM, len(var_def.options)))
+                var_types.append((XType.ENUM, len(var_def.options)))
                 var_limits.append(var_def.options)
 
             else:
@@ -95,6 +108,10 @@ class ModelFactory:
             var_limits=var_limits,
             is_mixed_discrete=is_mixed_discrete,
         )
+
+    @staticmethod
+    def get_continuous_normalization(problem: Problem):
+        return SimpleZeroToOneNormalization(xl=problem.xl, xu=problem.xu, estimate_bounds=False)
 
     @staticmethod
     def get_rbf_model():
