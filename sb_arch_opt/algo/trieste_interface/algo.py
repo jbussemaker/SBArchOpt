@@ -412,7 +412,7 @@ class ProbabilityOfValidity(SingleModelAcquisitionBuilder):
     def prepare_acquisition_function(self, model, dataset=None):
 
         def acquisition(at):
-            mean, _ = model.predict(tf.squeeze(at, -2))
+            mean, _ = model.predict_y(tf.squeeze(at, -2))
             return mean
 
         return acquisition
