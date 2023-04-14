@@ -3,9 +3,12 @@ import tempfile
 import numpy as np
 from typing import Tuple
 from sb_arch_opt.problem import *
+from sb_arch_opt.sampling import *
+from pymoo.core.variable import Real, Integer, Choice
 from sb_arch_opt.algo.simple_sbo import *
 from sb_arch_opt.algo.simple_sbo.algo import *
 from sb_arch_opt.algo.simple_sbo.infill import *
+from sb_arch_opt.algo.simple_sbo.models import *
 from pymoo.optimize import minimize
 
 check_dependency = lambda: pytest.mark.skipif(not HAS_SIMPLE_SBO, reason='Simple SBO dependencies not installed')
@@ -102,3 +105,40 @@ def test_invalid_training_set(problem: ArchOptProblemBase):
         sbo.tell(pop)
 
     sbo.ask()
+
+
+class MDNormProblem(ArchOptProblemBase):
+
+    def __init__(self):
+        super().__init__(des_vars=[
+            Real(bounds=(-5, 2)),
+            Integer(bounds=[0, 5]),
+            Integer(bounds=[-1, 2]),
+            Integer(bounds=[1, 10]),
+            Choice(options=[1, 2, 3]),
+        ])
+
+    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
+                       h_out: np.ndarray, *args, **kwargs):
+        raise RuntimeError
+
+    def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
+        pass
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}()'
+
+
+def test_md_normalization():
+    problem = MDNormProblem()
+    x = HierarchicalRandomSampling().do(problem, 1000).get('X')
+    assert np.all(np.round(np.min(x, axis=0)) == problem.xl)
+    assert np.all(np.round(np.max(x, axis=0)) == problem.xu)
+
+    md_norm = MixedDiscreteNormalization(problem)
+    x_norm = md_norm.forward(x)
+    assert np.all(np.round(np.min(x_norm, axis=0)) == [0, 0, 0, 0, 0])
+    assert np.all(np.round(np.max(x_norm, axis=0)) == [1, 5, 3, 9, 2])
+
+    x_abs = md_norm.backward(x_norm)
+    assert np.all(x == x_abs)
