@@ -822,8 +822,8 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
             func = np.sin if i_trans % 2 == 0 else np.cos
             transform[:, i_trans] = func((np.linspace(0, 1, n_sub+1)[:n_sub]+offset[i_trans])*2*np.pi*n_cycles[i_trans])
 
-        mutual_distance = distance.cdist(transform, transform, metric='cityblock')
-        np.fill_diagonal(mutual_distance, np.nan)
+        # mutual_distance = distance.cdist(transform, transform, metric='cityblock')
+        # np.fill_diagonal(mutual_distance, np.nan)
         # if np.any(mutual_distance < 1e-10):
         #     raise RuntimeError('Duplicate transformations!')
 
