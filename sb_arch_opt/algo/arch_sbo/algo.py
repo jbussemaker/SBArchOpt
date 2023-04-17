@@ -46,8 +46,8 @@ from pymoo.optimize import minimize
 
 try:
     from smt.surrogate_models.surrogate_model import SurrogateModel
-    from sb_arch_opt.algo.simple_sbo.infill import *
-    from sb_arch_opt.algo.simple_sbo.models import *
+    from sb_arch_opt.algo.arch_sbo.infill import *
+    from sb_arch_opt.algo.arch_sbo.models import *
 except ImportError:
     pass
 
@@ -77,7 +77,7 @@ class InfillAlgorithm(Algorithm):
         self.survival = survival
 
         if self.output is None:
-            from sb_arch_opt.algo.simple_sbo.metrics import SBOMultiObjectiveOutput
+            from sb_arch_opt.algo.arch_sbo.metrics import SBOMultiObjectiveOutput
             self.output = SBOMultiObjectiveOutput()
 
     def _initialize_infill(self):

@@ -38,7 +38,7 @@ class EstimatedPFDistance(Indicator):
     def _do(self, f, *args, **kwargs):
         if self.algorithm is None:
             raise RuntimeError('Algorithm not set!')
-        from sb_arch_opt.algo.simple_sbo.algo import InfillAlgorithm, SBOInfill
+        from sb_arch_opt.algo.arch_sbo.algo import InfillAlgorithm, SBOInfill
 
         if len(f) == 0:
             return 1

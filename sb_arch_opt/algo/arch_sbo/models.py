@@ -55,17 +55,17 @@ try:
         from smt.utils.kriging import XSpecs, XRole
         IS_SMT_V2 = True
 
-    HAS_SIMPLE_SBO = True
+    HAS_ARCH_SBO = True
 except ImportError:
-    HAS_SIMPLE_SBO = False
+    HAS_ARCH_SBO = False
     get_sbo_termination = lambda *_, **__: None
 
-__all__ = ['check_dependencies', 'HAS_SIMPLE_SBO', 'ModelFactory', 'MixedDiscreteNormalization']
+__all__ = ['check_dependencies', 'HAS_ARCH_SBO', 'ModelFactory', 'MixedDiscreteNormalization']
 
 
 def check_dependencies():
-    if not HAS_SIMPLE_SBO:
-        raise ImportError(f'simple_sbo dependencies not installed: python setup.py install[simple_sbo]')
+    if not HAS_ARCH_SBO:
+        raise ImportError(f'arch_sbo dependencies not installed: python setup.py install[arch_sbo]')
 
 
 @dataclass

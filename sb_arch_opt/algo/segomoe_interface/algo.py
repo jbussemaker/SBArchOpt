@@ -28,7 +28,7 @@ try:
     from segomoe.sego import Sego
     from segomoe.constraint import Constraint
     from segomoe.sego_defs import get_sego_file_map, ExitStatus
-    from sb_arch_opt.algo.simple_sbo.models import ModelFactory
+    from sb_arch_opt.algo.arch_sbo.models import ModelFactory
 
     HAS_SEGOMOE = True
 except ImportError:

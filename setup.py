@@ -43,7 +43,7 @@ if __name__ == '__main__':
             'ConfigSpace~=0.6.1',
         ],
         extras_require={
-            'simple_sbo': [
+            'arch_sbo': [
                 'smt==1.3.0',
             ],
             'ota': [
