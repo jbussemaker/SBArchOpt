@@ -368,7 +368,8 @@ class ConstraintHiderMetaProblem(SampledFailureRateMixin, ArchOptTestProblemBase
             raise RuntimeError(f'Unavailable constraints: {i_g_hc}')
         n_constr -= len(i_g_hc)
 
-        super().__init__(problem.des_vars, n_obj=problem.n_obj, n_ieq_constr=n_constr, n_eq_constr=problem.n_eq_constr)
+        super().__init__(problem.design_space, n_obj=problem.n_obj, n_ieq_constr=n_constr,
+                         n_eq_constr=problem.n_eq_constr)
 
     def _get_n_valid_discrete(self) -> int:
         return self._problem.get_n_valid_discrete()

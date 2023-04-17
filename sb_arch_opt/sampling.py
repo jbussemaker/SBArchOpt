@@ -16,7 +16,6 @@ Contact: jasper.bussemaker@dlr.de
 """
 import logging
 import warnings
-import itertools
 import numpy as np
 from typing import Optional, Tuple
 from scipy.stats.qmc import Sobol
@@ -90,10 +89,13 @@ class HierarchicalExhaustiveSampling(Sampling):
                 is_act = np.repeat(is_act, n_repeat, axis=0)
 
                 # Fill sampled values
-                rep_idx = np.cumsum([0]+list(n_repeat))[:-1]
                 dv_sampled = np.linspace(problem.xl[i_dv], problem.xu[i_dv], n_cont)
-                for i in np.where(is_act_i)[0]:
-                    x[rep_idx[i]:rep_idx[i]+n_cont, i_dv] = dv_sampled
+
+                n_dv_rep = np.sum(is_act_i)
+                dv_sampled_rep = np.tile(dv_sampled, n_dv_rep)
+                rep_idx = np.cumsum([0]+list(n_repeat))[:-1]
+                i_repeated_at = np.repeat(rep_idx[is_act_i], n_repeat[is_act_i]) + np.tile(np.arange(n_cont), n_dv_rep)
+                x[i_repeated_at, i_dv] = dv_sampled_rep
 
         else:
             x = x_discr
@@ -122,59 +124,17 @@ class HierarchicalExhaustiveSampling(Sampling):
                       f'Consider implementing `_gen_all_discrete_x`', TrailRepairWarning)
         return self.get_all_x_discrete_by_trial_and_repair(problem)
 
-    def get_all_x_discrete_by_trial_and_repair(self, problem: Problem):
-        # First sample only discrete dimensions
-        opt_values = self.get_exhaustive_sample_values(problem, 1)
-        x_cart_product_gen = itertools.product(*opt_values)
-
-        is_cont_mask = self.get_is_cont_mask(problem)
-        is_discrete_mask = ~is_cont_mask
-
-        # Create and repair the sampled design vectors in batches
-        n_batch = 1000
-        x_repaired = np.zeros((0, len(opt_values)), dtype=int)
-        is_active_repaired = np.zeros(x_repaired.shape, dtype=bool)
-        while True:
-            # Get next batch
-            x_repair = []
-            for _ in range(n_batch):
-                x_next = next(x_cart_product_gen, None)
-                if x_next is None:
-                    break
-                x_repair.append(x_next)
-            if len(x_repair) == 0:
-                break
-            x_repair = np.array(x_repair).astype(int)
-
-            # Repair current batch
-            # print(f'Sampling {x_repair.shape[0]} ({x_repaired.shape[0]} sampled)')
-            x_repair_input = x_repair
-            x_repair = self._repair.do(problem, x_repair)
-            is_active = None
-            if isinstance(self._repair, ArchOptRepair):
-                is_active = self._repair.latest_is_active
-            if is_active is None:
-                is_active = np.ones(x_repair.shape, dtype=bool)
-
-            # Remove repaired points
-            is_not_repaired = ~np.any(x_repair[:, is_discrete_mask] != x_repair_input[:, is_discrete_mask], axis=1)
-            x_repair = x_repair[is_not_repaired, :]
-            is_active = is_active[is_not_repaired, :]
-
-            x_repaired = np.row_stack([x_repaired, x_repair])
-            is_active_repaired = np.row_stack([is_active_repaired, is_active.astype(bool)])
-
-        x_discr = np.row_stack(x_repaired).astype(float)
-        is_act_discr = np.row_stack(is_active_repaired)
-
-        # Impute continuous values
-        if isinstance(problem, ArchOptProblemBase):
-            problem.impute_x(x_discr, is_act_discr)
-
-        return x_discr, is_act_discr
+    @staticmethod
+    def get_all_x_discrete_by_trial_and_repair(problem: Problem):
+        if not isinstance(problem, ArchOptProblemBase):
+            raise RuntimeError('Not implemented for generic Problems!')
+        return problem.design_space.all_discrete_x_by_trial_and_imputation
 
     @classmethod
     def get_exhaustive_sample_values(cls, problem: Problem, n_cont=5):
+        if isinstance(problem, ArchOptProblemBase):
+            return problem.design_space.get_exhaustive_sample_values(n_cont=n_cont)
+
         # Determine bounds and which design variables are discrete
         xl, xu = problem.bounds()
         is_cont = cls.get_is_cont_mask(problem)
@@ -312,6 +272,9 @@ class HierarchicalRandomSampling(FloatRandomSampling):
             x, is_active = cls._sample_discrete_x(n_samples, is_cont_mask, x_all, is_act_all, sobol=sobol)
 
         # Otherwise, sample randomly
+        elif isinstance(problem, ArchOptProblemBase):
+            x, is_active = problem.design_space.quick_sample_x(n_samples)
+
         else:
             needs_repair = True
             opt_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(problem, n_cont=1)

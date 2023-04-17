@@ -35,8 +35,8 @@ class DummyProblem(ArchOptTestProblemBase):
 
     def set_provide_all_x(self, provide_all_x):
         self._provide_all_x = provide_all_x
-        if 'all_discrete_x' in self.__dict__:
-            del self.__dict__['all_discrete_x']
+        if 'all_discrete_x' in self.design_space.__dict__:
+            del self.design_space.__dict__['all_discrete_x']
 
     def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
         if not self._provide_all_x:

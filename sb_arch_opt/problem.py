@@ -17,13 +17,13 @@ Contact: jasper.bussemaker@dlr.de
 import numpy as np
 import pandas as pd
 from typing import List, Optional, Union, Tuple
-from cached_property import cached_property
 from pymoo.core.repair import Repair
 from pymoo.core.problem import Problem
+from pymoo.core.variable import Variable
 from pymoo.core.population import Population
-from pymoo.core.variable import Variable, Real, Integer, Choice, Binary
+from sb_arch_opt.design_space import ArchDesignSpace, ImplicitArchDesignSpace
 
-__all__ = ['ArchOptProblemBase', 'ArchOptRepair']
+__all__ = ['ArchOptProblemBase', 'ArchOptRepair', 'ArchDesignSpace']
 
 
 class ArchOptProblemBase(Problem):
@@ -53,44 +53,26 @@ class ArchOptProblemBase(Problem):
     the mixed-variable operators have been rewritten in SBArchOpt.
     """
 
-    def __init__(self, des_vars: List[Variable], n_obj=1, n_ieq_constr=0, n_eq_constr=0, **kwargs):
+    def __init__(self, des_vars: Union[List[Variable], ArchDesignSpace], n_obj=1, n_ieq_constr=0, n_eq_constr=0,
+                 **kwargs):
 
-        # Harmonize the pymoo variable definition interface
-        n_var = len(des_vars)
-        xl = np.zeros((n_var,))
-        xu = np.empty((n_var,))
-        self._is_int_mask = is_int_mask = np.zeros((n_var,), dtype=bool)
-        self._is_cat_mask = is_cat_mask = np.zeros((n_var,), dtype=bool)
-        self._choice_value_map = {}
-        corr_des_vars = []
-        for i_var, var_type in enumerate(des_vars):
-            if isinstance(var_type, Real):
-                xl[i_var], xu[i_var] = var_type.bounds
+        # Create a design space if we didn't get one
+        if isinstance(des_vars, ArchDesignSpace):
+            design_space = des_vars
+        else:
+            design_space = ImplicitArchDesignSpace(
+                des_vars,
+                self._correct_x,
+                self._get_n_valid_discrete,
+                self._gen_all_discrete_x,
+            )
+        self.design_space = design_space
 
-            elif isinstance(var_type, Integer):
-                is_int_mask[i_var] = True
-                xl[i_var], xu[i_var] = var_type.bounds
-
-            elif isinstance(var_type, Binary):
-                is_int_mask[i_var] = True
-                xu[i_var] = 1
-
-            elif isinstance(var_type, Choice):
-                is_cat_mask[i_var] = True
-                xu[i_var] = len(var_type.options)-1
-                self._choice_value_map[i_var] = var_type.options
-                var_type = Choice(options=list(range(len(var_type.options))))
-
-            else:
-                raise RuntimeError(f'Unsupported variable type: {var_type!r}')
-            corr_des_vars.append(var_type)
-
-        self.des_vars = corr_des_vars
-        var_types = {f'DV{i}': des_var for i, des_var in enumerate(corr_des_vars)}
-
-        self._is_discrete_mask = is_int_mask | is_cat_mask
-        self._is_cont_mask = ~self._is_discrete_mask
-        self._x_cont_mid = .5*(xl[self._is_cont_mask]+xu[self._is_cont_mask])
+        n_var = design_space.n_var
+        xl = design_space.xl
+        xu = design_space.xu
+        var_types = {f'DV{i}': des_var for i, des_var in enumerate(design_space.des_vars)}
+        self.des_vars = design_space.des_vars
 
         super().__init__(n_var=n_var, xl=xl, xu=xu, vars=var_types,
                          n_obj=n_obj, n_ieq_constr=n_ieq_constr, n_eq_constr=n_eq_constr, **kwargs)
@@ -98,74 +80,34 @@ class ArchOptProblemBase(Problem):
     @property
     def is_cat_mask(self):
         """Boolean mask specifying for each design variable whether it is a categorical variable"""
-        return self._is_cat_mask
+        return self.design_space.is_cat_mask
 
     @property
     def is_int_mask(self):
         """Boolean mask specifying for each design variable whether it is an integer variable"""
-        return self._is_int_mask
+        return self.design_space.is_int_mask
 
     @property
     def is_discrete_mask(self):
         """Boolean mask specifying for each design variable whether it is a discrete (i.e. integer or categorical)
         variable"""
-        return self._is_discrete_mask
+        return self.design_space.is_discrete_mask
 
     @property
     def is_cont_mask(self):
         """Boolean mask specifying for each design variable whether it is a continues (i.e. not discrete) variable"""
-        return self._is_cont_mask
+        return self.design_space.is_cont_mask
 
     def get_categorical_values(self, x: np.ndarray, i_dv) -> np.ndarray:
         """Gets the associated categorical variable values for some design variable"""
-        if i_dv not in self._choice_value_map:
-            raise ValueError(f'Design variable is not categorical: {i_dv}')
-
-        x_values = x[:, i_dv]
-        values = x_values.astype(np.str)
-        for i_cat, value in enumerate(self._choice_value_map[i_dv]):
-            values[x_values == i_cat] = value
-        return values
+        return self.design_space.get_categorical_values(x, i_dv)
 
     def correct_x(self, x: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """Imputes design vectors and returns activeness vectors"""
-        x_imputed = x.copy()
-        self._correct_x_discrete(x_imputed)
-        is_active = np.ones(x.shape, dtype=bool)
-
-        self._correct_x_impute(x_imputed, is_active)
-        return x_imputed, is_active
+        return self.design_space.correct_x(x)
 
     def _correct_x_impute(self, x: np.ndarray, is_active: np.ndarray):
-        self._correct_x(x, is_active)
-        self.impute_x(x, is_active)
-
-    def _correct_x_discrete(self, x: np.ndarray):
-        """
-        Ensures that discrete design variables take up integer values.
-        Rounding is not applied directly, as this would reduce the amount of points assigned to the first and last
-        options.
-
-        Directly rounding:
-        np.unique(np.round(np.linspace(0, 2, 100)).astype(int), return_counts=True) --> 25, 50, 25 (center bias)
-
-        Stretched rounding:
-        x = np.linspace(0, 2, 100)
-        xs = x*((np.max(x)+.99)/np.max(x))-.5
-        np.unique(np.abs(np.round(xs)).astype(int), return_counts=True) --> 34, 33, 33 (evenly distributed)
-        """
-        x_discrete = x[:, self._is_discrete_mask].astype(np.float64)
-        xl, xu = self.xl[self._is_discrete_mask], self.xu[self._is_discrete_mask]
-        diff = xu-xl
-
-        for ix in range(x_discrete.shape[1]):
-            x_discrete[x_discrete[:, ix] < xl[ix], ix] = xl[ix]
-            x_discrete[x_discrete[:, ix] > xu[ix], ix] = xu[ix]
-
-        x_stretched = (x_discrete-xl)*((diff+.99)/diff)-.5
-        x_rounded = (np.round(x_stretched)+xl).astype(np.int)
-
-        x[:, self._is_discrete_mask] = x_rounded
+        self.design_space.correct_x_impute(x, is_active)
 
     def impute_x(self, x: np.ndarray, is_active: np.ndarray):
         """
@@ -173,51 +115,23 @@ class ArchOptProblemBase(Problem):
         - Sets inactive discrete design variables to 0
         - Sets inactive continuous design variables to the mid of their bounds
         """
-
-        # Impute inactive discrete design variables
-        for i_dv in np.where(self.is_discrete_mask)[0]:
-            x[~is_active[:, i_dv], i_dv] = self.xl[i_dv]
-
-        # Impute inactive continuous design variables
-        for i_cont, i_dv in enumerate(np.where(self.is_cont_mask)[0]):
-            x[~is_active[:, i_dv], i_dv] = self._x_cont_mid[i_cont]
+        self.design_space.impute_x(x, is_active)
 
     def get_n_valid_discrete(self) -> Optional[int]:
         """Return the number of valid discrete design points (ignoring continuous dimensions); enables calculation of
         the imputation ratio"""
-        n_valid = self._get_n_valid_discrete()
-        if n_valid is not None:
-            return n_valid
+        return self.design_space.get_n_valid_discrete()
 
-        x_discrete, _ = self.all_discrete_x
-        if x_discrete is not None:
-            return x_discrete.shape[0]
+    def get_n_declared_discrete(self) -> int:
+        """Returns the number of declared discrete design points (ignoring continuous dimensions), calculated from the
+        cartesian product of discrete design variables"""
+        return self.design_space.get_n_declared_discrete()
 
-    @cached_property
+    @property
     def all_discrete_x(self) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
         """Generate all possible discrete design vectors, if the problem provides this function. Returns both the design
         vectors and activeness information. Continuous variables are initialized at the mid of their bounds."""
-
-        # Check if this problem implements discrete design vector generation
-        discrete_x = self._gen_all_discrete_x()
-        if discrete_x is None:
-            return None, None
-
-        # Impute values (mostly for continuous dimensions)
-        x, is_active = discrete_x
-        if x is None or is_active is None:
-            return None, None
-        if x.shape[1] != self.n_var or is_active.shape[1] != self.n_var:
-            raise RuntimeError(f'Inconsistent design vector dimensions: {x.shape[1]} != {self.n_var}')
-        x = x.astype(float)  # Otherwise continuous variables cannot be imputed
-        self.impute_x(x, is_active)
-
-        # Cross-check with numerical estimate
-        n_valid = self._get_n_valid_discrete()
-        if n_valid is not None and (n_valid != x.shape[0] or n_valid != is_active.shape[0]):
-            raise RuntimeError(f'Inconsistent estimation of nr of discrete design vectors: {n_valid} != {x.shape[0]}')
-
-        return x, is_active
+        return self.design_space.all_discrete_x
 
     def _evaluate(self, x, out, *args, **kwargs):
         """
@@ -230,7 +144,7 @@ class ArchOptProblemBase(Problem):
         """
         # Prepare output matrices for evaluation
         x_out = x.copy()
-        self._correct_x_discrete(x_out)
+        self.design_space.round_x_discrete(x_out)
         is_active_out = np.ones(x.shape, dtype=bool)
 
         f_out = np.zeros((x.shape[0], self.n_obj))*np.nan
@@ -313,84 +227,14 @@ class ArchOptProblemBase(Problem):
         means there is hierarchy. The higher the value, the more difficult it is to "randomly" sample a valid design
         vector (e.g. imputation ratio = 10 means that 1/10th of declared design vectors is valid).
         """
-
-        # Get valid design points
-        n_valid = self.get_n_valid_discrete()
-        if n_valid is None:
-            return np.nan
-        if n_valid == 0:
-            return 1.
-
-        n_declared = self.get_n_declared_discrete()
-        imp_ratio = n_declared/n_valid
-        return imp_ratio
+        return self.design_space.get_imputation_ratio()
 
     def get_discrete_rates(self, force=False, show=False) -> Optional[pd.DataFrame]:
         """Returns for each discrete value of the discrete design variables, how often the relatively occur over all
         possible design vectors. A value of -1 represents an inactive design variable. Results are returned in a
         pandas DataFrame with each column representing a design variable.
         Also adds a measure of rate diversity: difference between lowest and highest occurring values."""
-
-        # Get all discrete design vectors
-        if force:
-            from sb_arch_opt.sampling import HierarchicalExhaustiveSampling
-            x_all, is_act_all = HierarchicalExhaustiveSampling().get_all_x_discrete(self)
-        else:
-            x_all, is_act_all = self.all_discrete_x
-            if x_all is None:
-                return
-
-        # Set inactive values to -1
-        x_merged = (x_all-self.xl).astype(int)
-        x_merged[~is_act_all] = -1
-        n = x_merged.shape[0]
-
-        # Count the values
-        is_discrete_mask = self.is_discrete_mask
-        counts = {}
-        i_opts = set()
-        for ix in range(len(is_discrete_mask)):
-            if not is_discrete_mask[ix]:
-                counts[f'x{ix}'] = {}
-                continue
-
-            values, counts_i = np.unique(x_merged[:, ix], return_counts=True)
-            i_opts |= set(values)
-            counts[f'x{ix}'] = {value: counts_i[iv]/n for iv, value in enumerate(values)}
-
-        df = pd.DataFrame(index=sorted(list(i_opts)), columns=list(counts.keys()), data=counts)
-        df = df.rename(index={val: 'inactive' if val == -1 else f'opt {val}' for val in df.index})
-
-        # Add a measure of diversity: the range between the lowest and highest occurring values
-        diversity = df.max(axis=0)-df.min(axis=0)
-        if -1 in i_opts:
-            df_active = df.iloc[1:, :]
-            col_sums = df_active.sum(axis=0)
-            df_active /= col_sums
-            active_diversity = df_active.max(axis=0)-df_active.min(axis=0)
-        else:
-            active_diversity = diversity
-
-        df = pd.concat([df, pd.Series(diversity, name='diversity').to_frame().T,
-                        pd.Series(active_diversity, name='active-diversity').to_frame().T], axis=0)
-
-        if show:
-            with pd.option_context('display.max_rows', None, 'display.max_columns', None,
-                                   'display.expand_frame_repr', False, 'max_colwidth', -1):
-                print(df.iloc[:, self.is_discrete_mask].replace(np.nan, ''))
-
-        return df
-
-    def get_n_declared_discrete(self) -> int:
-        """Returns the number of declared discrete design points (ignoring continuous dimensions), calculated from the
-        cartesian product of discrete design variables"""
-
-        # Get number of discrete options for each discrete design variable
-        n_opts_discrete = self.xu[self._is_discrete_mask]-self.xl[self._is_discrete_mask]+1
-        if len(n_opts_discrete) == 0:
-            return 1
-
-        return int(np.prod(n_opts_discrete, dtype=np.float))
+        return self.design_space.get_discrete_rates(force=force, show=show)
 
     """##############################
     ### IMPLEMENT FUNCTIONS BELOW ###
@@ -398,11 +242,11 @@ class ArchOptProblemBase(Problem):
 
     def _get_n_valid_discrete(self) -> int:
         """Return the number of valid discrete design points (ignoring continuous dimensions); enables calculation of
-        the imputation ratio"""
+        the imputation ratio. Not needed if an explicit design space is provided."""
 
     def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
         """Generate all possible discrete design vectors (if available). Returns design vectors and activeness
-        information."""
+        information. Not needed if an explicit design space is provided."""
 
     def store_results(self, results_folder, final=False):
         """Callback function to store intermediate or final results in some results folder"""
@@ -441,9 +285,9 @@ class ArchOptProblemBase(Problem):
         raise NotImplementedError
 
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
-        """Fill the activeness matrix and (if needed) impute any design variables that are partially inactive.
-        Imputation of inactive design variables is always applied after this function."""
-        raise NotImplementedError
+        """Only if no explicit design space model is given. Fill the activeness matrix and (if needed) impute any
+        design variables that are partially inactive. Imputation of inactive design variables is always applied after
+        this function."""
 
     def __repr__(self):
         """repr() of the class, should be unique for unique Pareto fronts"""

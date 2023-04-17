@@ -122,9 +122,6 @@ class MDNormProblem(ArchOptProblemBase):
                        h_out: np.ndarray, *args, **kwargs):
         raise RuntimeError
 
-    def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
-        pass
-
     def __repr__(self):
         return f'{self.__class__.__name__}()'
 

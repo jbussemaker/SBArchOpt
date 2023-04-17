@@ -3,6 +3,7 @@ import pytest
 import itertools
 import numpy as np
 from sb_arch_opt.problem import *
+from sb_arch_opt.design_space import *
 from sb_arch_opt.sampling import *
 from pymoo.core.evaluator import Evaluator
 from pymoo.core.population import Population
@@ -12,6 +13,7 @@ from pymoo.core.variable import Real, Integer, Binary, Choice
 
 def test_init_no_vars():
     problem = ArchOptProblemBase([], n_obj=2, n_ieq_constr=2)
+    assert isinstance(problem.design_space, ArchDesignSpace)
     assert problem.n_var == 0
     assert problem.n_obj == 2
     assert problem.n_ieq_constr == 2
@@ -39,34 +41,6 @@ def test_init_vars():
     assert np.all(problem.is_cont_mask == [True, False, False, False])
 
     assert problem.get_n_declared_discrete() == 4*2*3
-
-
-def test_rounding():
-    problem = ArchOptProblemBase([Integer(bounds=(0, 5)), Integer(bounds=(-1, 1)), Integer(bounds=(2, 4))])
-    assert np.all(problem.is_discrete_mask)
-    x = np.array(list(itertools.product(np.linspace(0, 5, 20), np.linspace(-1, 1, 20), np.linspace(2, 4, 20))))
-    problem._correct_x_discrete(x)
-
-    x1, x1_counts = np.unique(x[:, 0], return_counts=True)
-    assert np.all(x1 == [0, 1, 2, 3, 4, 5])
-    x1_counts = x1_counts/np.sum(x1_counts)
-    assert np.all(np.abs(x1_counts - np.mean(x1_counts)) <= .05)
-
-    x2, x2_counts = np.unique(x[:, 1], return_counts=True)
-    assert np.all(x2 == [-1, 0, 1])
-    x2_counts = x2_counts/np.sum(x2_counts)
-    assert np.all(np.abs(x2_counts - np.mean(x2_counts)) <= .05)
-
-    x3, x3_counts = np.unique(x[:, 2], return_counts=True)
-    assert np.all(x3 == [2, 3, 4])
-    x3_counts = x3_counts/np.sum(x3_counts)
-    assert np.all(np.abs(x3_counts - np.mean(x3_counts)) <= .05)
-
-    x_out_of_bounds = np.zeros((20, 3), dtype=int)
-    x_out_of_bounds[:, 0] = np.linspace(-1, 6, 20)
-    problem._correct_x_discrete(x_out_of_bounds)
-    assert np.all(np.min(x_out_of_bounds, axis=0) == [0, 0, 2])
-    assert np.all(np.max(x_out_of_bounds, axis=0) == [5, 0, 2])
 
 
 def test_correct_x(problem: ArchOptProblemBase):
@@ -131,6 +105,10 @@ def test_imputation_ratio(problem: ArchOptProblemBase, discrete_problem: ArchOpt
     assert np.all(~LargeDuplicateElimination.eliminate(x_discrete))
     problem.get_discrete_rates(show=True)
 
+    x_discrete_trial, is_act_trail = problem.design_space.all_discrete_x_by_trial_and_imputation
+    assert np.all(x_discrete_trial == x_discrete)
+    assert np.all(is_active_discrete == is_act_trail)
+
     assert discrete_problem.get_n_declared_discrete() == 10*10
     assert discrete_problem.get_n_valid_discrete() == 10 * 5 + 5
     assert discrete_problem.get_imputation_ratio() == 1/.55
@@ -141,6 +119,10 @@ def test_imputation_ratio(problem: ArchOptProblemBase, discrete_problem: ArchOpt
     assert is_active_discrete.shape[0] == discrete_problem.get_n_valid_discrete()
     assert np.all(~LargeDuplicateElimination.eliminate(x_discrete))
     discrete_problem.get_discrete_rates(show=True)
+
+    x_discrete_trial, is_act_trail = discrete_problem.design_space.all_discrete_x_by_trial_and_imputation
+    assert np.all(x_discrete_trial == x_discrete)
+    assert np.all(is_active_discrete == is_act_trail)
 
 
 def test_evaluate(problem: ArchOptProblemBase):
@@ -211,7 +193,7 @@ def test_large_duplicate_elimination():
     assert len(pop) == n**m
 
 
-def test_repaired_exhaustive_sampling(problem: ArchOptProblemBase):
+def test_hierarchical_exhaustive_sampling(problem: ArchOptProblemBase):
     for has_cheap in [True, False]:
         problem.set_provide_all_x(has_cheap)
 
@@ -257,7 +239,7 @@ class HierarchicalDummyProblem(ArchOptProblemBase):
         return f'{self.__class__.__name__}()'
 
 
-def test_repaired_exhaustive_sampling_hierarchical():
+def test_hierarchical_exhaustive_sampling_hierarchical():
     problem = HierarchicalDummyProblem()
     x = HierarchicalExhaustiveSampling(n_cont=2).do(problem, 0).get('X')
     assert x.shape == (31, 8)  # 2**(n+1)-1
@@ -266,7 +248,7 @@ def test_repaired_exhaustive_sampling_hierarchical():
     assert np.all(x_imp == x)
 
 
-def test_repaired_exhaustive_sampling_hierarchical_large():
+def test_hierarchical_exhaustive_sampling_hierarchical_large():
     n = 12
     problem = HierarchicalDummyProblem(n=n)
     x = HierarchicalExhaustiveSampling(n_cont=2).do(problem, 0).get('X')
@@ -276,7 +258,7 @@ def test_repaired_exhaustive_sampling_hierarchical_large():
     assert np.all(x_imp == x)
 
 
-def test_repaired_lhs_sampling(problem: ArchOptProblemBase):
+def test_hierarchical_lhs_sampling(problem: ArchOptProblemBase):
 
     sampling = HierarchicalLatinHypercubeSampling()
     assert isinstance(sampling._repair, ArchOptRepair)
@@ -314,7 +296,7 @@ def test_sobol_sampling():
         HierarchicalRandomSampling._sobol_choice(10, 5, replace=False)
 
 
-def test_repaired_random_sampling(problem: ArchOptProblemBase):
+def test_hierarchical_random_sampling(problem: ArchOptProblemBase):
 
     sampling_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(problem)
     assert len(sampling_values) == 5
@@ -332,7 +314,7 @@ def test_repaired_random_sampling(problem: ArchOptProblemBase):
         assert np.all(x_imp == x)
 
 
-def test_repaired_random_sampling_discrete_hierarchical(discrete_problem: ArchOptProblemBase):
+def test_hierarchical_random_sampling_discrete_hierarchical(discrete_problem: ArchOptProblemBase):
 
     sampling_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(discrete_problem)
     assert len(sampling_values) == 2
@@ -350,7 +332,7 @@ def test_repaired_random_sampling_discrete_hierarchical(discrete_problem: ArchOp
         assert np.all(x_imp == x)
 
 
-def test_repaired_random_sampling_non_exhaustive(problem: ArchOptProblemBase):
+def test_hierarchical_random_sampling_non_exhaustive(problem: ArchOptProblemBase):
 
     sampling_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(problem)
     assert len(sampling_values) == 5

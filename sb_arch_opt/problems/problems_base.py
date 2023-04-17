@@ -103,9 +103,6 @@ class NoHierarchyProblemBase(ArchOptTestProblemBase):
         is_active = np.ones(x_discrete.shape, dtype=bool)
         return x_discrete, is_active
 
-    def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
-        pass  # No need to correct anything
-
     def __repr__(self):
         return f'{self.__class__.__name__}()'
 

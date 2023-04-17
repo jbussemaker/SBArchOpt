@@ -13,7 +13,7 @@ def run_test_hierarchy(problem, imp_ratio, check_n_valid=True, validate_exhausti
             assert x_discrete.shape[0] == problem.get_n_valid_discrete()
 
             if validate_exhaustive:
-                x_trail_repair, _ = HierarchicalExhaustiveSampling().get_all_x_discrete_by_trial_and_repair(problem)
+                x_trail_repair, _ = HierarchicalExhaustiveSampling.get_all_x_discrete_by_trial_and_repair(problem)
                 assert {tuple(ix) for ix in x_trail_repair} == {tuple(ix) for ix in x_discrete}
 
         pop = HierarchicalExhaustiveSampling(n_cont=1).do(problem, 0)
