@@ -152,6 +152,7 @@ class SBOInfill(InfillCriterion):
         self.n_train = 0
         self.was_trained = False
         self.time_train = None
+        self.time_infill = None
         self.pf_estimate = None
 
         self.pop_size = pop_size or 100
@@ -197,7 +198,9 @@ class SBOInfill(InfillCriterion):
         self._build_model()
 
         # Search the surrogate model for infill points
+        s = timeit.default_timer()
         off = self._generate_infill_points(n_offsprings)
+        self.time_infill = timeit.default_timer()-s
 
         if self.repair is not None:
             off = self.repair.do(problem, off, **kwargs)
