@@ -41,6 +41,7 @@ if __name__ == '__main__':
             'pandas',
             'cached-property~=1.5',
             'ConfigSpace~=0.6.1',
+            'more-itertools~=9.1',
         ],
         extras_require={
             'arch_sbo': [

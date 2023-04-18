@@ -50,11 +50,11 @@ Architecture optimization measure implementation status
 | HIER: imputation during evaluation     | SBArchOpt | SBArchOpt | SBArchOpt | N            | SBArchOpt |
 | HIER: imputation during infill search  |           | SBArchOpt | N         | N            | N         |
 | HIER: discard non-canonical DVs        | N         | N         | N         | Lib          | N         |
-| HIER: kernels                          |           | N         |           | N            | N         |
-| HIER: design space def (list)          | N         | N         |           | Lib          | N         |
-| HIER: design space def (tree)          | N         | N         | N         | Lib          | N         |
-| HIER: design space def (acyclic graph) | N         | N         | N         |              | N         |
-| HIER: design space def (graph)         | N         | N         | N         | N            | N         |
+| HIER: kernels                          |           |           |           | N            | N         |
+| HIER: design space def (list)          | N         |           |           | NbP          | N         |
+| HIER: design space def (tree)          | N         |           |           | NbP          | N         |
+| HIER: design space def (acyclic graph) | N         |           |           | N            | N         |
+| HIER: design space def (graph)         | N         |           |           | N            | N         |
 | HC: process NaNs                       | Lib       | SBArchOpt | Lib       | Lib          | Lib       |
 | HC: predict area                       |           | N         | Lib       | N            | Lib       |
 | EXP: intermediate result storage       | SBArchOpt | SBArchOpt | Lib       | NbP          | Lib       |
@@ -172,7 +172,7 @@ class DemoArchOptProblem(CachedParetoFrontMixin, ArchOptProblemBase):
         """
 
         # Correct the input design vectors (if not too expensive)
-        self._correct_x(x, is_active_out)
+        self._correct_x_impute(x, is_active_out)
 
         # Example of how to set objective values
         f_out[:, 0] = np.sum(x ** 2, axis=1)
@@ -225,3 +225,73 @@ if __name__ == '__main__':
     # Print some statistics about the problem
     DemoArchOptProblem().print_stats()
 ```
+
+### Architecture Optimization Problem with an Explicit Design Space Model
+
+If you are implementing an architecture optimization problem with design space hierarchy (i.e. some of your design
+variables are conditionally active), you could instead of implementing the `_correct_x` function yourself, also specify
+the hierarchical structure explicitly using `ExplicitArchDesignSpace`. To do this, you have to specify:
+1. Design variables using `ContinuousParam`, `IntegerParam`, or `CategoricalParam` (note: these are different classes
+   than when you use the pymoo API for the implicit formulation above!)
+2. Conditions specifying which design variable is active at which condition
+3. Optionally, you can also add value constraints, which explicitly forbid some condition, such as the simultaneous
+   occurrence of two design variable options
+
+You can then pass the explicit design space definition as the first argument to the `ArchOptProblemBase` class.
+Example usage:
+```python
+import numpy as np
+from sb_arch_opt.design_space_explicit import *
+from sb_arch_opt.problem import ArchOptProblemBase
+
+
+class DemoExplicitArchOptProblem(ArchOptProblemBase):
+    """
+    An example of an architecture problem implementation using an explicit design space definition.
+    Using this, there is no need to implement _correct_x, _get_n_valid_discrete, and _gen_all_discrete_x.
+    """
+
+    def __init__(self):
+        # Specify a design space with a categorical, an integer, and a continuous variable
+        ds = ExplicitArchDesignSpace([
+            CategoricalParam('cat', ['A', 'B', 'C']),
+            IntegerParam('int', 0, 3),
+            ContinuousParam('cont', 0, 1),
+        ])
+        
+        # Activate int and cont conditionally
+        ds.add_conditions([
+            InCondition(ds['int'], ds['cat'], ['A', 'B']),  # Activate int if cat == A or cat == B
+            EqualsCondition(ds['cont'], ds['cat'], 'A'),  # Activate cont if cat == A
+        ])
+        
+        # Explicitly forbid int from being 3 if cat == B
+        # You can also specify the values as a list to constrain more than one value at a time
+        ds.add_value_constraint(ds['int'], 3, ds['cat'], 'B')
+        
+        super().__init__(ds, n_obj=1)
+
+    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
+                       h_out: np.ndarray, *args, **kwargs):
+        """
+        Implement evaluation and write results in the provided output matrices:
+        - f (objectives): written as a minimization
+        - g (inequality constraints): written as "<= 0"
+        - h (equality constraints): written as "= 0"
+        
+        For the explicit design space definition, x and is_active_out are already imputed. If anything is wrong, then
+        you should change the design space definition rather than trying to fix it here.
+        """
+        
+        # Example of how to set objective values
+        f_out[:, 0] = np.sum(x ** 2, axis=1)
+
+    def __repr__(self):
+        """repr() of the class, should be unique for unique Pareto fronts"""
+        return f'{self.__class__.__name__}()'
+```
+
+Under the hood, the explicit design space definition uses [ConfigSpace](https://automl.github.io/ConfigSpace/), a
+library for modeling hierarchical design spaces.
+More details on how to [specify conditions here](https://automl.github.io/ConfigSpace/main/api/conditions.html).
+More details on how to [specify value constraints (forbidden clauses) here](https://automl.github.io/ConfigSpace/main/api/forbidden_clauses.html).

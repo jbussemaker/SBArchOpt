@@ -25,6 +25,7 @@ from sb_arch_opt.sampling import *
 from pymoo.problems.multi.zdt import ZDT1
 from sb_arch_opt.problems.discrete import *
 from sb_arch_opt.problems.constrained import *
+from sb_arch_opt.design_space_explicit import *
 from sb_arch_opt.problems.problems_base import *
 from pymoo.core.variable import Real, Integer, Choice
 from pymoo.util.ref_dirs import get_reference_directions
@@ -610,37 +611,85 @@ class Jenatton(HierarchyProblemBase):
     - https://github.com/facebook/Ax/blob/main/ax/metrics/jenatton.py
     """
 
-    def __init__(self):
-        des_vars = [
-            Choice(options=[0, 1]),  # x1
-            Choice(options=[0, 1]),  # x2
-            Choice(options=[0, 1]),  # x3
-            Real(bounds=(0, 1)),  # x4
-            Real(bounds=(0, 1)),  # x5
-            Real(bounds=(0, 1)),  # x6
-            Real(bounds=(0, 1)),  # x7
-            Real(bounds=(0, 1)),  # r8
-            Real(bounds=(0, 1)),  # r9
-        ]
-        super().__init__(des_vars)
+    def __init__(self, explicit=True):
+        self._explicit = explicit
+        if explicit:
+            ds = ExplicitArchDesignSpace([
+                CategoricalParam('x1', [0, 1]),
+                CategoricalParam('x2', [0, 1]),
+                CategoricalParam('x3', [0, 1]),
+                ContinuousParam('x4', 0, 1),
+                ContinuousParam('x5', 0, 1),
+                ContinuousParam('x6', 0, 1),
+                ContinuousParam('x7', 0, 1),
+                ContinuousParam('r8', 0, 1),
+                ContinuousParam('r9', 0, 1),
+            ])
+
+            ds.add_conditions([
+                # x1 == 0 activates x2, x4, x5, r8
+                EqualsCondition(ds['x2'], ds['x1'], 0),
+                EqualsCondition(ds['r8'], ds['x1'], 0),
+
+                # x4 and x5 are additionally only activated if x2 == 0 or 1, respectively
+                EqualsCondition(ds['x4'], ds['x2'], 0),
+                EqualsCondition(ds['x5'], ds['x2'], 1),
+
+                # x1 == 1 activates x3, x6, x7, r9
+                EqualsCondition(ds['x3'], ds['x1'], 1),
+                EqualsCondition(ds['r9'], ds['x1'], 1),
+
+                # x6 and x7 are additionally only activated if x3 == 0 or 1, respectively
+                EqualsCondition(ds['x6'], ds['x3'], 0),
+                EqualsCondition(ds['x7'], ds['x3'], 1),
+            ])
+
+            ds_or_dv = ds
+        else:
+            ds_or_dv = [
+                Choice(options=[0, 1]),  # x1
+                Choice(options=[0, 1]),  # x2
+                Choice(options=[0, 1]),  # x3
+                Real(bounds=(0, 1)),  # x4
+                Real(bounds=(0, 1)),  # x5
+                Real(bounds=(0, 1)),  # x6
+                Real(bounds=(0, 1)),  # x7
+                Real(bounds=(0, 1)),  # r8
+                Real(bounds=(0, 1)),  # r9
+            ]
+        super().__init__(ds_or_dv)
 
     def _get_n_valid_discrete(self) -> int:
         return 4
 
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
-        self._correct_x_impute(x, is_active_out)
+
+        if not self._explicit:
+            self._correct_x_impute(x, is_active_out)
+
         for i, xi in enumerate(x):
+            is_active_i = np.zeros((x.shape[1],), dtype=bool)
+            is_active_i[0] = True
             if xi[0] == 0:
+                is_active_i[1] = True
                 if xi[1] == 0:
+                    is_active_i[[3, 7]] = True
                     f_out[i, 0] = xi[3]**2 + .1 + xi[7]  # x4^2 + .1 + r8
                 else:
+                    is_active_i[[4, 7]] = True
                     f_out[i, 0] = xi[4]**2 + .1 + xi[7]  # x5^2 + .1 + r8
             else:
+                is_active_i[2] = True
                 if xi[2] == 0:
+                    is_active_i[[5, 8]] = True
                     f_out[i, 0] = xi[5]**2 + .1 + xi[8]  # x6^2 + .1 + r9
                 else:
+                    is_active_i[[6, 8]] = True
                     f_out[i, 0] = xi[6]**2 + .1 + xi[8]  # x7^2 + .1 + r9
+
+            # Check if the design space is defined correctly
+            assert np.all(is_active_i == is_active_out[i, :])
 
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
         for i in [2, 5, 6, 8]:  # x1 = 0: x3, x6, x7, r9 inactive
@@ -648,7 +697,7 @@ class Jenatton(HierarchyProblemBase):
         is_active[(x[:, 0] == 0) & (x[:, 1] == 0), 4] = False  # x2 = 0: x5 inactive
         is_active[(x[:, 0] == 0) & (x[:, 1] == 1), 3] = False  # x2 = 1: x4 inactive
 
-        for i in [1, 4, 5, 7]:  # x2, x4, x5, r8 inactive
+        for i in [1, 3, 4, 7]:  # x2, x4, x5, r8 inactive
             is_active[x[:, 0] == 1, i] = False
         is_active[(x[:, 0] == 1) & (x[:, 2] == 0), 6] = False  # x3 = 0: x7 inactive
         is_active[(x[:, 0] == 1) & (x[:, 2] == 1), 5] = False  # x3 = 1: x6 inactive

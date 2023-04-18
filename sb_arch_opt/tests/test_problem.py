@@ -4,6 +4,7 @@ import itertools
 import numpy as np
 from sb_arch_opt.problem import *
 from sb_arch_opt.design_space import *
+from sb_arch_opt.design_space_explicit import *
 from sb_arch_opt.sampling import *
 from pymoo.core.evaluator import Evaluator
 from pymoo.core.population import Population
@@ -390,3 +391,54 @@ def test_failing_evaluations(failing_problem: ArchOptTestProblemBase):
     out = failing_problem.evaluate(np.random.random((4, 5)), return_as_dictionary=True)
     is_failed = failing_problem.get_failed_points(out)
     assert np.all(is_failed == [True, False, True, False])
+
+
+class DummyExplicitDesignSpaceProblem(ArchOptTestProblemBase):
+
+    def __init__(self, write_x_out=False):
+        ds = ExplicitArchDesignSpace([
+            CategoricalParam('a', ['A', 'B', 'C']),
+            IntegerParam('b', 0, 3),
+            ContinuousParam('c', 0, 2),
+        ])
+        ds.add_conditions([
+            InCondition(ds['b'], ds['a'], ['A', 'B']),
+            InCondition(ds['c'], ds['a'], ['B', 'C']),
+        ])
+        ds.add_value_constraint(ds['b'], 3, ds['a'], 'B')
+        self.write_x_out = write_x_out
+        super().__init__(ds)
+
+    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
+                       h_out: np.ndarray, *args, **kwargs):
+        for i, xi in enumerate(x):
+            assert is_active_out[i, 1] == (xi[0] != 2)
+            assert is_active_out[i, 2] == (xi[0] != 0)
+
+            if xi[0] == 0:  # A
+                assert xi[2] == 1.  # c is inactive
+
+            elif xi[0] == 2:  # B
+                assert xi[1] != 3  # b == 3 forbidden if a == B
+
+        f_out[:, :] = 0
+
+        if self.write_x_out:
+            x[:, :] += 1
+            is_active_out[:, :] = False
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}'
+
+
+def test_explicit_design_space():
+    problem = DummyExplicitDesignSpaceProblem()
+
+    assert problem.get_n_valid_discrete() == 8
+    x_all, _ = problem.all_discrete_x
+    assert x_all.shape == (8, 3)
+    problem.evaluate(x_all)
+
+    problem_try_mod = DummyExplicitDesignSpaceProblem(write_x_out=True)
+    with pytest.raises(ValueError):
+        problem_try_mod.evaluate(x_all)

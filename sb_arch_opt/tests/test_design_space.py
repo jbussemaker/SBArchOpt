@@ -12,8 +12,15 @@ class TestDesignSpace(ArchDesignSpace):
         self._des_vars = des_vars
         super().__init__()
 
+    def is_explicit(self) -> bool:
+        return False
+
     def _get_variables(self):
         return self._des_vars
+
+    def _quick_sample_discrete_x(self, n: int):
+        """Sample n discrete design vectors (also return is_active) without generating all design vectors first"""
+        raise RuntimeError
 
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
         pass
@@ -61,6 +68,8 @@ def test_init_no_vars():
     assert ds.get_n_declared_discrete() == 1
     assert np.isnan(ds.get_imputation_ratio())
 
+    assert not ds.is_explicit()
+
 
 def test_init_vars():
     ds = TestDesignSpace([
@@ -101,6 +110,8 @@ def test_x_generation(problem: ArchOptProblemBase, discrete_problem: ArchOptProb
         assert ds.get_n_valid_discrete() == n_valid
         assert ds.get_imputation_ratio() == (10*10)/n_valid
 
+        assert not ds.is_explicit()
+
         x_discrete, is_active_discrete = ds.all_discrete_x
         assert x_discrete.shape[0] == ds.get_n_valid_discrete()
         assert is_active_discrete.shape[0] == ds.get_n_valid_discrete()
@@ -112,7 +123,7 @@ def test_x_generation(problem: ArchOptProblemBase, discrete_problem: ArchOptProb
         assert np.all(is_active_discrete == is_act_trail)
 
         for _ in range(10):
-            x_sampled, is_act_sampled = ds.quick_sample_x(20)
+            x_sampled, is_act_sampled = ds.quick_sample_discrete_x(20)
             assert x_sampled.shape == (20, ds.n_var)
             assert is_act_sampled.shape == (20, ds.n_var)
 

@@ -268,14 +268,17 @@ class HierarchicalRandomSampling(FloatRandomSampling):
 
         # If the population of all available discrete design vectors is available, sample from there
         is_active = is_act_all
+        might_contain_duplicates = False
         if x_all is not None:
             x, is_active = cls._sample_discrete_x(n_samples, is_cont_mask, x_all, is_act_all, sobol=sobol)
 
-        # Otherwise, sample randomly
+        # Otherwise, sample discrete vectors randomly
         elif isinstance(problem, ArchOptProblemBase):
-            x, is_active = problem.design_space.quick_sample_x(n_samples)
+            might_contain_duplicates = True
+            x, is_active = problem.design_space.quick_sample_discrete_x(n_samples)
 
         else:
+            might_contain_duplicates = True
             needs_repair = True
             opt_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(problem, n_cont=1)
             x = np.empty((n_samples, problem.n_var))
@@ -306,9 +309,13 @@ class HierarchicalRandomSampling(FloatRandomSampling):
 
             x[:, is_cont_mask] = x_unit_abs
 
-        # Repair
         if needs_repair:
             x = repair.do(problem, x)
+
+        if not has_x_cont and might_contain_duplicates:
+            is_unique = ~LargeDuplicateElimination.eliminate(x)
+            x = x[is_unique, :]
+
         return x
 
     @classmethod

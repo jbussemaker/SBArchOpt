@@ -130,7 +130,7 @@ class ArchOptProblemBase(Problem):
     @property
     def all_discrete_x(self) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
         """Generate all possible discrete design vectors, if the problem provides this function. Returns both the design
-        vectors and activeness information. Continuous variables are initialized at the mid of their bounds."""
+        vectors and activeness information. Active continuous variables may have any value within their bounds."""
         return self.design_space.all_discrete_x
 
     def _evaluate(self, x, out, *args, **kwargs):
@@ -143,13 +143,20 @@ class ArchOptProblemBase(Problem):
         H: equality constraint values
         """
         # Prepare output matrices for evaluation
-        x_out = x.copy()
+        x_out: np.ndarray = x.copy()
         self.design_space.round_x_discrete(x_out)
         is_active_out = np.ones(x.shape, dtype=bool)
 
         f_out = np.zeros((x.shape[0], self.n_obj))*np.nan
         g_out = np.zeros((x.shape[0], self.n_ieq_constr))*np.nan
         h_out = np.zeros((x.shape[0], self.n_eq_constr))*np.nan
+
+        # If the design space definition is explicit, it means that that is all we need to correct and impute, and we
+        # prevent subsequent changing of the inputs
+        if self.design_space.is_explicit():
+            self._correct_x_impute(x_out, is_active_out)
+            x_out.setflags(write=False)
+            is_active_out.setflags(write=False)
 
         # Call evaluation function
         self._arch_evaluate(x_out, is_active_out, f_out, g_out, h_out, *args, **kwargs)
@@ -276,7 +283,8 @@ class ArchOptProblemBase(Problem):
                        h_out: np.ndarray, *args, **kwargs):
         """
         Implement evaluation and write results in the provided output matrices:
-        - x (design vectors): discrete variables have integer values, imputed design vectors can be output here
+        - x (design vectors): discrete variables have integer values, imputed design vectors can be output here (except
+                              if using an explicit design space definition)
         - is_active (activeness): vector specifying for each design variable whether it was active or not
         - f (objectives): written as a minimization
         - g (inequality constraints): written as "<= 0"

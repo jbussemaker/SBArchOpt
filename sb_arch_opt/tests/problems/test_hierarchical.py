@@ -61,6 +61,7 @@ def test_hier_test_problem():
 
 def test_jenatton():
     run_test_hierarchy(Jenatton(), 2)
+    run_test_hierarchy(Jenatton(explicit=False), 2)
 
 
 def test_hier_branin():

@@ -47,6 +47,7 @@ class ArchDesignSpace:
 
     def __init__(self):
         self._choice_value_map = None
+        self._is_initialized = False
 
     @cached_property
     def n_var(self):
@@ -71,11 +72,13 @@ class ArchDesignSpace:
                 raise RuntimeError(f'Unsupported variable type: {var_type!r}')
 
             corr_des_vars.append(var_type)
+
+        self._is_initialized = True
         return corr_des_vars
 
     def get_categorical_values(self, x: np.ndarray, i_dv) -> np.ndarray:
         """Gets the associated categorical variable values for some design variable"""
-        if self._choice_value_map is None:
+        if not self._is_initialized:
             getattr(self, 'des_vars')
         if i_dv not in self._choice_value_map:
             raise ValueError(f'Design variable is not categorical: {i_dv}')
@@ -287,10 +290,10 @@ class ArchDesignSpace:
 
         return df
 
-    def quick_sample_x(self, n: int) -> Tuple[np.ndarray, np.ndarray]:
+    def quick_sample_discrete_x(self, n: int) -> Tuple[np.ndarray, np.ndarray]:
         """Sample n design vectors (also return is_active) without generating all design vectors first"""
 
-        x, is_active = self._quick_sample_x(n)
+        x, is_active = self._quick_sample_discrete_x(n)
         if x.shape[1] != self.n_var or is_active.shape[1] != self.n_var:
             raise RuntimeError(f'Inconsistent design vector dimensions: {x.shape[1]} != {self.n_var}')
         x = x.astype(float)  # Otherwise continuous variables cannot be imputed
@@ -303,7 +306,7 @@ class ArchDesignSpace:
     @cached_property
     def all_discrete_x(self) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
         """Generate all possible discrete design vectors, if the problem provides this function. Returns both the design
-        vectors and activeness information. Continuous variables are initialized at the mid of their bounds."""
+        vectors and activeness information. Active continuous variables may have any value within their bounds."""
 
         # Check if this problem implements discrete design vector generation
         discrete_x = self._gen_all_discrete_x()
@@ -387,6 +390,11 @@ class ArchDesignSpace:
         # Get values to be sampled for each design variable
         return [np.linspace(xl[i], xu[i], n_cont) if is_cont[i] else np.arange(xl[i], xu[i]+1) for i in range(len(xl))]
 
+    def is_explicit(self) -> bool:
+        """Whether this design space is defined explicitly, that is: a model of the design space is available and
+        correct, and therefore the problem evaluation function never needs to correct any design vector"""
+        raise NotImplementedError
+
     def _get_variables(self) -> List[Variable]:
         """Returns the list of design variables (pymoo classes)"""
         raise NotImplementedError
@@ -398,8 +406,8 @@ class ArchDesignSpace:
         """
         raise NotImplementedError
 
-    def _quick_sample_x(self, n: int) -> Tuple[np.ndarray, np.ndarray]:
-        """Sample n design vectors (also return is_active) without generating all design vectors first"""
+    def _quick_sample_discrete_x(self, n: int) -> Tuple[np.ndarray, np.ndarray]:
+        """Sample n discrete design vectors (also return is_active) without generating all design vectors first"""
         raise NotImplementedError
 
     def _get_n_valid_discrete(self) -> Optional[int]:
@@ -425,18 +433,21 @@ class ImplicitArchDesignSpace(ArchDesignSpace):
         self._gen_all_discrete_x_func = gen_all_discrete_x_func
         super().__init__()
 
+    def is_explicit(self) -> bool:
+        return False
+
     def _get_variables(self) -> List[Variable]:
         return self._variables
 
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
         self._correct_x_func(x, is_active)
 
-    def _quick_sample_x(self, n: int) -> Tuple[np.ndarray, np.ndarray]:
+    def _quick_sample_discrete_x(self, n: int) -> Tuple[np.ndarray, np.ndarray]:
         opt_values = self.get_exhaustive_sample_values(n_cont=1)
         x = np.empty((n, self.n_var))
-        is_cont_mask = self.is_cont_mask
+        is_discrete_mask = self.is_discrete_mask
         for i_dv in range(self.n_var):
-            if not is_cont_mask[i_dv]:
+            if is_discrete_mask[i_dv]:
                 i_opt_sampled = np.random.choice(len(opt_values[i_dv]), n, replace=True)
                 x[:, i_dv] = opt_values[i_dv][i_opt_sampled]
 
