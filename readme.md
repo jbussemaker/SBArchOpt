@@ -54,7 +54,7 @@ Architecture optimization measure implementation status
 | HIER: design space def (list)          | N         |           |           | NbP          | N         |
 | HIER: design space def (tree)          | N         |           |           | NbP          | N         |
 | HIER: design space def (acyclic graph) | N         |           |           | N            | N         |
-| HIER: design space def (graph)         | N         |           |           | N            | N         |
+| HIER: design space def (graph)         | N         | N         | N         | N            | N         |
 | HC: process NaNs                       | Lib       | SBArchOpt | Lib       | Lib          | Lib       |
 | HC: predict area                       |           | N         | Lib       | N            | Lib       |
 | EXP: intermediate result storage       | SBArchOpt | SBArchOpt | Lib       | NbP          | Lib       |

@@ -277,3 +277,64 @@ def test_add_value_constraint():
 
         x, is_active = ds.all_discrete_x
         assert x.shape == (10, 4)
+
+
+@pytest.mark.skip('Cyclic conditions not (yet?) supported by ConfigSpace')
+def test_circular_conditions():
+    ds = ExplicitArchDesignSpace([
+        CategoricalParam('x1', options=[0, 1]),
+        CategoricalParam('x2', options=[0, 1]),
+        CategoricalParam('x3', options=[0, 1]),
+    ])
+    ds.add_conditions([
+        OrConjunction(  # x2 is active if x1 == 0 OR (x1 == 1 and x3 == 0)
+            EqualsCondition(ds['x2'], ds['x1'], 0),
+            AndConjunction(
+                EqualsCondition(ds['x2'], ds['x1'], 1),
+                EqualsCondition(ds['x2'], ds['x3'], 0),
+            ),
+        ),
+        OrConjunction(  # x3 is active if x1 == 1 OR (x1 == 0 and x2 == 1)
+            EqualsCondition(ds['x3'], ds['x1'], 1),
+            AndConjunction(
+                EqualsCondition(ds['x3'], ds['x1'], 0),
+                EqualsCondition(ds['x3'], ds['x2'], 1),
+            ),
+        ),
+    ])
+
+    x_all, is_act_all = ds.all_discrete_x
+    assert x_all.shape == (6, 3)
+    assert np.all(x_all == [
+        [0, 0, 0],
+        [0, 1, 0],
+        [0, 1, 1],
+        [1, 0, 0],
+        [1, 1, 0],
+        [1, 0, 1],
+    ])
+    assert is_act_all.shape == x_all.shape
+    assert np.all(is_act_all == [
+        [True, True, False],
+        [True, True, True],
+        [True, True, True],
+        [True, True, True],
+        [True, True, True],
+        [True, False, True],
+    ])
+
+    assert ds.get_n_valid_discrete() == 6
+
+    x, is_active = ds.quick_sample_discrete_x(100)
+    assert len(np.unique(x, axis=0)) == 6
+    assert len(np.unique(is_active, axis=0)) == 3
+
+    for i, xi in enumerate(x):
+        x_imp, is_act_imp = ds.correct_x(xi)
+        assert np.all(xi == x_imp)
+        assert np.all(is_active[i, :] == is_act_imp)
+
+    x_random = FloatRandomSampling().do(ArchOptProblemBase(ds), 100)
+    x, is_active = ds.correct_x(x_random)
+    assert len(np.unique(x, axis=0)) == 6
+    assert len(np.unique(is_active, axis=0)) == 3
