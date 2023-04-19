@@ -73,6 +73,7 @@ Following Python SBO frameworks are not implemented, however deserve an acknowle
 - [pySOT](https://pysot.readthedocs.io/): does not support mixed-discrete, multi-objective optimization
 - [MOBOpt](https://github.com/ppgaluzio/MOBOpt)
 - [Bayesian Optimization](https://github.com/fmfn/BayesianOptimization): only single-objective
+- [OpenBox](https://open-box.readthedocs.io/en/latest/)
 
 ## Installation
 
