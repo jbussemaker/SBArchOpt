@@ -6,6 +6,7 @@ from typing import Optional
 from sb_arch_opt.problem import *
 from sb_arch_opt.sampling import *
 from sb_arch_opt.algo.pymoo_interface import *
+from sb_arch_opt.algo.pymoo_interface.random_search import RandomSearchAlgorithm
 
 from pymoo.optimize import minimize
 from pymoo.algorithms.soo.nonconvex.ga import GA
@@ -152,3 +153,9 @@ def test_doe_algo(problem: ArchOptProblemBase):
         pop_loaded = load_from_previous_results(problem, tmp_folder)
         assert np.all(pop_loaded.get('X') == pop.get('X'))
         assert np.all(pop_loaded.get('F') == pop.get('F'))
+
+
+def test_random_search(problem: ArchOptProblemBase):
+    rs = RandomSearchAlgorithm(n_init=10)
+    result = minimize(problem, rs, termination=('n_eval', 100))
+    assert len(result.pop) == 100
