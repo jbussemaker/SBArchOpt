@@ -136,6 +136,10 @@ class ExplicitArchDesignSpace(ArchDesignSpace):
         """Maps design space var index to underlying config space index"""
         return self._cs_idx
 
+    @property
+    def inv_cs_idx(self) -> np.ndarray:
+        return self._inv_cs_idx
+
     def _update_cs_idx(self):
         cs_param_names = self._cs.get_hyperparameter_names()
         self._cs_idx = cs_idx = np.array([cs_param_names.index(name) for name in self._var_names])

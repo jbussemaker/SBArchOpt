@@ -39,27 +39,27 @@ Architecture optimization aspects and mitigation measures:
 Architecture optimization measure implementation status
 (Lib = yes, in the library; SBArchOpt = yes, in SBArchOpt; N = not implemented; NbP = not implemented but possible to implement; empty = unknown or not relevant):
 
-| Aspect: measure                        | pymoo     | ArchSBO   | SEGOMOE   | BoTorch (Ax) | Trieste   |
-|----------------------------------------|-----------|-----------|-----------|--------------|-----------|
-| MD: continuous surrogates              |           | SBArchOpt | N         | Lib          | Lib       |
-| MD: kernels                            |           | N         | Lib       | Lib          | N         |
-| MD: one-hot encoding                   |           | N         | Lib       | N            | N         |
-| MD: force new infill point selection   |           | SBArchOpt | N         | N            | N         |
-| MO: multi-objective infill             |           | SBArchOpt | Lib       | Lib          | Lib       |
-| HIER: imputation during sampling       | SBArchOpt | SBArchOpt | SBArchOpt | N            | NbP       |
-| HIER: imputation during evaluation     | SBArchOpt | SBArchOpt | SBArchOpt | N            | SBArchOpt |
-| HIER: imputation during infill search  |           | SBArchOpt | N         | N            | N         |
-| HIER: discard non-canonical DVs        | N         | N         | N         | Lib          | N         |
-| HIER: kernels                          |           |           |           | N            | N         |
-| HIER: design space def (list)          | N         |           |           | NbP          | N         |
-| HIER: design space def (tree)          | N         |           |           | NbP          | N         |
-| HIER: design space def (acyclic graph) | N         |           |           | N            | N         |
-| HIER: design space def (graph)         | N         | N         | N         | N            | N         |
-| HC: process NaNs                       | Lib       | SBArchOpt | Lib       | Lib          | Lib       |
-| HC: predict area                       |           | N         | Lib       | N            | Lib       |
-| EXP: intermediate result storage       | SBArchOpt | SBArchOpt | Lib       | NbP          | Lib       |
-| EXP: resuming optimizations            | SBArchOpt | SBArchOpt | Lib       | NbP          | Lib       |
-| EXP: ask-tell interface                | Lib       | SBArchOpt | NbP       | NbP          | NbP       |
+| Aspect: measure                        | pymoo     | ArchSBO   | SEGOMOE   | BoTorch (Ax) | Trieste   | TPE       |
+|----------------------------------------|-----------|-----------|-----------|--------------|-----------|-----------|
+| MD: continuous surrogates              |           | SBArchOpt | N         | Lib          | Lib       |           |
+| MD: kernels                            |           | N         | Lib       | Lib          | N         |           |
+| MD: one-hot encoding                   |           | N         | Lib       | N            | N         |           |
+| MD: force new infill point selection   |           | SBArchOpt | N         | N            | N         |           |
+| MO: multi-objective infill             |           | SBArchOpt | Lib       | Lib          | Lib       | N         |
+| HIER: imputation during sampling       | SBArchOpt | SBArchOpt | SBArchOpt | N            | NbP       | SBArchOpt |
+| HIER: imputation during evaluation     | SBArchOpt | SBArchOpt | SBArchOpt | N            | SBArchOpt | SBArchOpt |
+| HIER: imputation during infill search  |           | SBArchOpt | N         | N            | N         | N         |
+| HIER: discard non-canonical DVs        | N         | N         | N         | Lib          | N         | N         |
+| HIER: kernels                          |           |           |           | N            | N         | N         |
+| HIER: design space def (list)          | N         |           |           | NbP          | N         | N         |
+| HIER: design space def (tree)          | N         |           |           | NbP          | N         | N         |
+| HIER: design space def (acyclic graph) | N         |           |           | N            | N         | N         |
+| HIER: design space def (graph)         | N         | N         | N         | N            | N         | N         |
+| HC: process NaNs                       | Lib       | SBArchOpt | Lib       | Lib          | Lib       | Lib       |
+| HC: predict area                       |           | N         | Lib       | N            | Lib       | Lib       |
+| EXP: intermediate result storage       | SBArchOpt | SBArchOpt | Lib       | NbP          | Lib       | SBArchOpt |
+| EXP: resuming optimizations            | SBArchOpt | SBArchOpt | Lib       | NbP          | Lib       | SBArchOpt |
+| EXP: ask-tell interface                | Lib       | SBArchOpt | NbP       | NbP          | NbP       | SBArchOpt |
 
 Following Python SBO frameworks are not implemented, however deserve an acknowledgment:
 - [pysamoo](https://anyoptimization.com/projects/pysamoo/): generic acceleration of (multi-objective) evolutionary
@@ -100,6 +100,7 @@ Each framework has a dedicated readme file with instructions on how to use and h
 - [SEGOMOE](sb_arch_opt/algo/segomoe_readme.md)
 - [BoTorch (Ax)](sb_arch_opt/algo/botorch_readme.md)
 - [Trieste](sb_arch_opt/algo/trieste_readme.md)
+- [TPE](sb_arch_opt/algo/tpe_readme.md)
 
 Optimization frameworks (except pymoo) are always optional! Therefore, when installing SBArchOpt, the interfaces to
 optimization frameworks are probably not working yet.

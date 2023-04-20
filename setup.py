@@ -60,6 +60,9 @@ if __name__ == '__main__':
             'trieste': [
                 'trieste~=1.0.0',
             ],
+            'tpe': [
+                'tpe==0.0.8',
+            ],
             # 'hebo': [
             #     'HEBO',
             # ],
