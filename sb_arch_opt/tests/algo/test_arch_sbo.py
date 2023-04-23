@@ -69,6 +69,15 @@ def test_arch_sbo_krg_ei(problem: ArchOptProblemBase):
 
 
 @check_dependency()
+def test_arch_sbo_gp(problem: ArchOptProblemBase):
+    assert HAS_ARCH_SBO
+
+    sbo = get_arch_sbo_gp(problem, init_size=10)
+    result = minimize(problem, sbo, termination=('n_eval', 12))
+    assert len(result.pop) == 12
+
+
+@check_dependency()
 def test_store_results_restart(problem: ArchOptProblemBase):
     assert HAS_ARCH_SBO
 
