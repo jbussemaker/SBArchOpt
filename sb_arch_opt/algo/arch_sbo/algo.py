@@ -211,6 +211,10 @@ class SBOInfill(InfillCriterion):
             i_select = np.random.choice(len(off), n_offsprings, replace=False)
             off = off[i_select]
 
+        # Add random points if not enough points were generated
+        elif len(off) < n_offsprings:
+            off = Population.merge(off, self._get_random_infill_points(n_offsprings-len(off)))
+
         if self.verbose:
             n_eval_outer = self._algorithm.evaluator.n_eval if self._algorithm is not None else -1
             log.info(f'Infill: {len(off)} new (eval {len(self.total_pop)} real unique, {n_eval_outer} eval)')
