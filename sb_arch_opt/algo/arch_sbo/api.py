@@ -23,7 +23,7 @@ if not HAS_ARCH_SBO:
     get_sbo_termination = lambda *_, **__: None
 
 
-__all__ = ['get_arch_sbo_rbf', 'get_arch_sbo_krg', 'HAS_ARCH_SBO', 'get_sbo_termination']
+__all__ = ['get_arch_sbo_rbf', 'get_arch_sbo_krg', 'HAS_ARCH_SBO', 'get_sbo_termination', 'get_sbo']
 
 
 def get_arch_sbo_rbf(init_size: int = 100, **kwargs):

@@ -67,7 +67,7 @@ class InfillAlgorithm(Algorithm):
         super(InfillAlgorithm, self).__init__(**kwargs)
 
         self.init_size = init_size
-        self.infill_size = infill_size or self.init_size
+        self.infill_size = infill_size or 1
         self.infill_obj = infill
 
         if init_sampling is None:
@@ -205,6 +205,11 @@ class SBOInfill(InfillCriterion):
         if self.repair is not None:
             off = self.repair.do(problem, off, **kwargs)
         off = self.eliminate_duplicates.do(off, pop)
+
+        # Randomly select offspring if too many points were generated
+        if len(off) > n_offsprings:
+            i_select = np.random.choice(len(off), n_offsprings, replace=False)
+            off = off[i_select]
 
         if self.verbose:
             n_eval_outer = self._algorithm.evaluator.n_eval if self._algorithm is not None else -1

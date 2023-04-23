@@ -50,6 +50,11 @@ try:
                 pass
 
     except ImportError:
+        # Temp fix: fix class name of XRole enum
+        from enum import Enum
+        import smt.utils.kriging as krg_utils
+        krg_utils.XRole = Enum("XRole", ["NEUTRAL", "META", "DECREED"])
+
         # SMT v2
         from smt.utils.mixed_integer import XType
         from smt.utils.kriging import XSpecs, XRole
