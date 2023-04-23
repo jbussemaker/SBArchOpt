@@ -7,6 +7,7 @@ from sb_arch_opt.sampling import *
 from pymoo.core.variable import Real, Integer, Choice
 from sb_arch_opt.algo.arch_sbo import *
 from sb_arch_opt.algo.arch_sbo.algo import *
+from sb_arch_opt.problems.constrained import *
 from sb_arch_opt.algo.arch_sbo.infill import *
 from sb_arch_opt.algo.arch_sbo.models import *
 from pymoo.optimize import minimize
@@ -90,6 +91,22 @@ def test_store_results_restart(problem: ArchOptProblemBase):
             n_eval = 11 if i == 0 else 1
             result = minimize(problem, sbo, termination=('n_eval', n_eval))
             assert len(result.pop) == 10+(i+1)
+
+
+@check_dependency()
+def test_constraint_handling():
+    problem = ArchCantileveredBeam()
+    assert problem.n_ieq_constr > 0
+
+    for strategy in [MeanConstraintPrediction(), ProbabilityOfFeasibility(), ProbabilityOfFeasibility(min_pof=.25)]:
+        model = ModelFactory.get_kriging_model()
+        infill = FunctionEstimateConstrainedInfill(constraint_strategy=strategy)
+        sbo = get_sbo(model, infill, init_size=10)
+
+        result = minimize(problem, sbo, termination=('n_eval', 12), copy_algorithm=False)
+        assert infill.constraint_strategy.problem is problem
+        assert infill.get_n_infill_constraints() == problem.n_ieq_constr
+        assert len(result.pop) == 12
 
 
 class FailedXYRemovingSBO(SBOInfill):

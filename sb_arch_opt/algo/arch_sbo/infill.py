@@ -27,7 +27,8 @@ from pymoo.algorithms.moo.nsga2 import RankAndCrowdingSurvival
 from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
 
 __all__ = ['SurrogateInfill', 'FunctionEstimateInfill', 'ConstrainedInfill', 'FunctionEstimateConstrainedInfill',
-           'ExpectedImprovementInfill', 'MinVariancePFInfill']
+           'ExpectedImprovementInfill', 'MinVariancePFInfill', 'ConstraintStrategy', 'MeanConstraintPrediction',
+           'ProbabilityOfFeasibility']
 
 try:
     from smt.surrogate_models.surrogate_model import SurrogateModel
@@ -172,31 +173,60 @@ class FunctionEstimateInfill(SurrogateInfill):
         return f, g
 
 
-class ConstrainedInfill(SurrogateInfill):
-    """Probability of Feasibility infill criterion base, for handling constraints using the PoF criterion"""
+class ConstraintStrategy:
+    """Base class for a strategy for dealing with design constraints"""
 
-    def __init__(self, min_pof: float = None):
-        self.min_pof = min_pof
-        super(ConstrainedInfill, self).__init__()
+    def __init__(self):
+        self.problem: Optional[Problem] = None
 
-    @property
-    def needs_variance(self):
-        return True
+    def initialize(self, problem: Problem):
+        self.problem = problem
 
     def get_n_infill_constraints(self) -> int:
-        return self.problem.n_constr
+        raise NotImplementedError
 
-    def _evaluate(self, x: np.ndarray) -> Tuple[np.ndarray, Optional[np.ndarray]]:
-        f, g = self.predict(x)
-        f_var, g_var = self.predict_variance(x)
+    def evaluate(self, x: np.ndarray, g: np.ndarray, g_var: np.ndarray) -> np.ndarray:
+        """Evaluate the infill constraint function(s) given x and predicted g and g_var"""
+        raise NotImplementedError
 
-        # Calculate Probability of Feasibility and transform to constraint (g < 0 --> PoF(g) > PoF_min)
-        g_infill = g
-        if self.n_constr > 0 and self.min_pof is not None:
-            g_infill = self.min_pof-self._pof(g, g_var)
 
-        f_infill = self._evaluate_f(f, f_var)
-        return f_infill, g_infill
+class MeanConstraintPrediction(ConstraintStrategy):
+    """Simple use the mean prediction of the constraint functions as the infill constraint"""
+
+    def get_n_infill_constraints(self) -> int:
+        return self.problem.n_ieq_constr
+
+    def evaluate(self, x: np.ndarray, g: np.ndarray, g_var: np.ndarray) -> np.ndarray:
+        return g
+
+
+class ProbabilityOfFeasibility(ConstraintStrategy):
+    """
+    Uses a lower limit on the Probability of Feasibility (PoF) as the infill constraint.
+
+    PoF(x) = Phi(-y(x)/sqrt(s(x)))
+    where
+    - Phi is the cumulative distribution function of the normal distribution
+    - y(x) the surrogate model estimate
+    - s(x) the surrogate model variance estimate
+
+    Implementation based on discussion in:
+    Schonlau, M., "Global Versus Local Search in Constrained Optimization of Computer Models", 1998,
+        10.1214/lnms/1215456182
+    """
+
+    def __init__(self, min_pof: float = None):
+        if min_pof is None:
+            min_pof = .5
+        self.min_pof = min_pof
+        super().__init__()
+
+    def get_n_infill_constraints(self) -> int:
+        return self.problem.n_ieq_constr
+
+    def evaluate(self, x: np.ndarray, g: np.ndarray, g_var: np.ndarray) -> np.ndarray:
+        pof = self._pof(g, g_var)
+        return self.min_pof - pof
 
     @staticmethod
     def _pof(g: np.ndarray, g_var: np.ndarray) -> np.ndarray:
@@ -205,6 +235,42 @@ class ConstrainedInfill(SurrogateInfill):
         pof[is_nan_mask & (g <= 0.)] = 1.
         pof[is_nan_mask & (g > 0.)] = 0.
         return pof
+
+
+class ConstrainedInfill(SurrogateInfill):
+    """Base class for an infill criterion with a constraint handling strategy"""
+
+    def __init__(self, constraint_strategy: ConstraintStrategy = None, min_pof: float = None):
+        if constraint_strategy is None:
+            if min_pof is not None:
+                constraint_strategy = ProbabilityOfFeasibility(min_pof=min_pof)
+            else:
+                constraint_strategy = MeanConstraintPrediction()
+
+        self.constraint_strategy = constraint_strategy
+        super(ConstrainedInfill, self).__init__()
+
+    def _initialize(self):
+        self.constraint_strategy.initialize(self.problem)
+
+    @property
+    def needs_variance(self):
+        return True
+
+    def get_n_infill_constraints(self) -> int:
+        return self.constraint_strategy.get_n_infill_constraints()
+
+    def _evaluate(self, x: np.ndarray) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+        f, g = self.predict(x)
+        f_var, g_var = self.predict_variance(x)
+
+        # Apply constraint handling strategy
+        g_infill = g
+        if self.n_constr > 0:
+            g_infill = self.constraint_strategy.evaluate(x, g, g_var)
+
+        f_infill = self._evaluate_f(f, f_var)
+        return f_infill, g_infill
 
     def get_n_infill_objectives(self) -> int:
         raise NotImplementedError
