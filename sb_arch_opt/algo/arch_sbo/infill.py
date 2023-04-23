@@ -269,13 +269,13 @@ class ConstrainedInfill(SurrogateInfill):
         if self.n_constr > 0:
             g_infill = self.constraint_strategy.evaluate(x, g, g_var)
 
-        f_infill = self._evaluate_f(f, f_var)
+        f_infill = self.evaluate_f(f, f_var)
         return f_infill, g_infill
 
     def get_n_infill_objectives(self) -> int:
         raise NotImplementedError
 
-    def _evaluate_f(self, f_predict: np.ndarray, f_var_predict: np.ndarray) -> np.ndarray:
+    def evaluate_f(self, f_predict: np.ndarray, f_var_predict: np.ndarray) -> np.ndarray:
         raise NotImplementedError
 
 
@@ -285,7 +285,7 @@ class FunctionEstimateConstrainedInfill(ConstrainedInfill):
     def get_n_infill_objectives(self) -> int:
         return self.problem.n_obj
 
-    def _evaluate_f(self, f_predict: np.ndarray, f_var_predict: np.ndarray) -> np.ndarray:
+    def evaluate_f(self, f_predict: np.ndarray, f_var_predict: np.ndarray) -> np.ndarray:
         return f_predict
 
 
@@ -309,7 +309,7 @@ class ExpectedImprovementInfill(ConstrainedInfill):
     def get_n_infill_objectives(self) -> int:
         return self.problem.n_obj
 
-    def _evaluate_f(self, f_predict: np.ndarray, f_var_predict: np.ndarray) -> np.ndarray:
+    def evaluate_f(self, f_predict: np.ndarray, f_var_predict: np.ndarray) -> np.ndarray:
         return self._evaluate_f_ei(f_predict, f_var_predict, self.y_train[:, :f_predict.shape[1]])
 
     @classmethod
