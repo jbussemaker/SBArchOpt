@@ -39,7 +39,7 @@ except ImportError:
     pass
 
 
-def get_default_infill(problem: ArchOptProblemBase, n_parallel: int = None) -> Tuple['SurrogateInfill', int]:
+def get_default_infill(problem: ArchOptProblemBase, n_parallel: int = None) -> Tuple['ConstrainedInfill', int]:
     """
     Get the default infill criterion according to the following logic:
     - If evaluations can be run in parallel:
