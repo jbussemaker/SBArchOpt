@@ -73,9 +73,22 @@ def test_arch_sbo_krg_ei(problem: ArchOptProblemBase):
 def test_arch_sbo_gp(problem: ArchOptProblemBase):
     assert HAS_ARCH_SBO
 
+    _, n_batch = get_default_infill(problem)
+    assert n_batch == 1
+
     sbo = get_arch_sbo_gp(problem, init_size=10)
     result = minimize(problem, sbo, termination=('n_eval', 12))
     assert len(result.pop) == 12
+
+
+@check_dependency()
+def test_arch_sbo_gp_batch(problem: ArchOptProblemBase):
+    _, n_batch = get_default_infill(problem, n_parallel=5)
+    assert n_batch == 5
+
+    sbo = get_arch_sbo_gp(problem, init_size=10, n_parallel=5)
+    result = minimize(problem, sbo, termination=('n_gen', 2))
+    assert len(result.pop) == 15
 
 
 @check_dependency()
