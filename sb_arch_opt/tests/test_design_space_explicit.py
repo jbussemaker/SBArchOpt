@@ -279,6 +279,21 @@ def test_add_value_constraint():
         assert x.shape == (10, 4)
 
 
+def test_add_value_constraint_default_config():
+    ds = ExplicitArchDesignSpace([
+        IntegerParam('a', 0, 2),
+        IntegerParam('b', 0, 2),
+    ])
+    assert ds.config_space.get_hyperparameters()[0].default_value == 1
+
+    ds.add_value_constraint(ds['a'], 1, ds['b'], 1)
+    ds.quick_sample_discrete_x(100)
+
+    x_random = FloatRandomSampling().do(ArchOptProblemBase(ds), 100).get('X')
+    assert x_random.shape == (100, 2)
+    ds.correct_x(x_random)
+
+
 @pytest.mark.skip('Cyclic conditions not (yet?) supported by ConfigSpace')
 def test_circular_conditions():
     ds = ExplicitArchDesignSpace([

@@ -123,7 +123,7 @@ class ExplicitArchDesignSpace(ArchDesignSpace):
         self._cs_idx = np.array([])
         self._inv_cs_idx = np.array([])
 
-        self._cs = ConfigurationSpace(name='Explicit DS')
+        self._cs = NoDefaultConfigurationSpace(name='Explicit DS')
         if params is not None:
             self.add_params(params)
 
@@ -361,7 +361,7 @@ class ExplicitArchDesignSpace(ArchDesignSpace):
             pass
 
         # Unfortunately there is a bug: generate_grid does not handle forbidden clauses
-        cs_no_forbidden = ConfigurationSpace(name='no_forbidden')
+        cs_no_forbidden = NoDefaultConfigurationSpace(name='no_forbidden')
         cs_no_forbidden.add_hyperparameters(self._cs.get_hyperparameters())
         cs_no_forbidden.add_conditions(self._cs.get_conditions())
 
@@ -413,3 +413,13 @@ class ExplicitArchDesignSpace(ArchDesignSpace):
 
         # Integer values are normalized similarly to what we do in round_x_discrete
         x[:, is_int_mask] = np.round(x[:, is_int_mask]*(xu[is_int_mask]-xl[is_int_mask]+.9999)+xl[is_int_mask]-.49999)
+
+
+class NoDefaultConfigurationSpace(ConfigurationSpace):
+    """ConfigurationSpace that supports no default configuration"""
+
+    def get_default_configuration(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def _check_default_configuration(self, *args, **kwargs):
+        pass
