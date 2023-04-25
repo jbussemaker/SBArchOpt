@@ -31,6 +31,8 @@ An overview of available test problems in `sb_arch_opt.problems` (* = recommende
 | `MDZDT1`                          | 15      | 15     | 2     |       |     | Y   | Y   |      |     | ~30.5e9       |           |              |                                  |
 | `DZDT1`                           | 30      |        | 2     |       | Y   |     | Y   |      |     | ~931e18       |           |              |                                  |
 | Module: `constrained`             |
+| `ConBraninProd`                   |         | 2      | 1     | 1     |     |     |     |      |     |               |           |              |                                  |
+| `ConBraninGomez`                  |         | 2      | 1     | 1     |     |     |     |      |     |               |           |              |                                  |
 | `ArchCantileveredBeam`            |         | 4      | 1     | 2     |     |     |     |      |     |               |           |              |                                  |
 | `MDCantileveredBeam`              | 2       | 2      | 1     | 2     |     | Y   |     |      |     | 100           |           |              |                                  |
 | `ArchWeldedBeam`                  |         | 4      | 2     | 4     |     |     | Y   |      |     |               |           |              |                                  |
