@@ -235,7 +235,7 @@ class ModelFactory:
                 print_global=False,
                 xspecs=norm_ds_spec.x_specs,
                 categorical_kernel=MixIntKernelType.HOMO_HSPHERE,
-                hierarchical_kernel=MixHrcKernelType.ARC_KERNEL,
+                hierarchical_kernel=MixHrcKernelType.ALG_KERNEL,
                 **kwargs,
             )
             if norm_ds_spec.is_mixed_discrete:
