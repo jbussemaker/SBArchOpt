@@ -105,7 +105,7 @@ def test_discrete_x():
     assert np.all(x_imp == x)
     assert np.all(is_active_imp)
 
-    x = HierarchicalRandomSampling.randomly_sample(
+    x = HierarchicalRandomSampling(sobol=False).randomly_sample(
         ArchOptProblemBase(ds), 100, ArchOptRepair(), x_all=None, is_act_all=None)
     assert x.shape == (6, 2)
 
@@ -143,7 +143,7 @@ def test_hierarchy():
     x, is_active = ds.quick_sample_discrete_x(100)
     assert x.shape == (100, 4)
 
-    x = HierarchicalRandomSampling.randomly_sample(
+    x = HierarchicalRandomSampling(sobol=False).randomly_sample(
         ArchOptProblemBase(ds), 100, ArchOptRepair(), x_all=None, is_act_all=None)
     assert x.shape == (100, 4)
 

@@ -173,7 +173,7 @@ class ArchDesignSpace:
             x_discrete[x_discrete[:, ix] < xl[ix], ix] = xl[ix]
             x_discrete[x_discrete[:, ix] > xu[ix], ix] = xu[ix]
 
-        x_stretched = (x_discrete-xl)*((diff+.99)/diff)-.5
+        x_stretched = (x_discrete-xl)*((diff+.9999)/diff)-.5
         x_rounded = (np.round(x_stretched)+xl).astype(np.int)
 
         x[:, is_discrete_mask] = x_rounded

@@ -185,8 +185,9 @@ class HierarchicalLatinHypercubeSampling(LatinHypercubeSampling):
 
         # Sample several times to find the best-scored samples
         best_x = best_score = None
+        random_sampler = HierarchicalRandomSampling()
         for _ in range(self.iterations):
-            x = HierarchicalRandomSampling.randomly_sample(problem, n_samples, self._repair, x_all, is_act, lhs=True)
+            x = random_sampler.randomly_sample(problem, n_samples, self._repair, x_all, is_act, lhs=True)
             if self.criterion is None:
                 return x
 
@@ -231,7 +232,7 @@ class HierarchicalRandomSampling(FloatRandomSampling):
         # Get Cartesian product of all discrete design variables (only available if design space is not too large)
         x, is_active = self.get_hierarchical_cartesian_product(problem, self._repair)
 
-        return self.randomly_sample(problem, n_samples, self._repair, x, is_active, sobol=self.sobol)
+        return self.randomly_sample(problem, n_samples, self._repair, x, is_active)
 
     @classmethod
     def get_hierarchical_cartesian_product(cls, problem: Problem, repair: Repair) \
@@ -255,22 +256,22 @@ class HierarchicalRandomSampling(FloatRandomSampling):
                       f'sampling! Consider implementing `_gen_all_discrete_x`', TrailRepairWarning)
         return None, None
 
-    @classmethod
-    def randomly_sample(cls, problem, n_samples, repair: Repair, x_all: Optional[np.ndarray],
-                        is_act_all: Optional[np.ndarray], lhs=False, sobol=False):
+    def randomly_sample(self, problem, n_samples, repair: Repair, x_all: Optional[np.ndarray],
+                        is_act_all: Optional[np.ndarray], lhs=False):
         is_cont_mask = HierarchicalExhaustiveSampling.get_is_cont_mask(problem)
         has_x_cont = np.any(is_cont_mask)
         xl, xu = problem.xl, problem.xu
         needs_repair = False
+        sobol = self.sobol
 
         def _choice(n_choose, n_from, replace=True):
-            return cls._choice(n_choose, n_from, replace=replace, sobol=sobol)
+            return self._choice(n_choose, n_from, replace=replace, sobol=sobol)
 
         # If the population of all available discrete design vectors is available, sample from there
         is_active = is_act_all
         might_contain_duplicates = False
         if x_all is not None:
-            x, is_active = cls._sample_discrete_x(n_samples, is_cont_mask, x_all, is_act_all, sobol=sobol)
+            x, is_active = self._sample_discrete_x(n_samples, is_cont_mask, x_all, is_act_all, sobol=sobol)
 
         # Otherwise, sample discrete vectors randomly
         elif isinstance(problem, ArchOptProblemBase):
@@ -297,7 +298,7 @@ class HierarchicalRandomSampling(FloatRandomSampling):
             if lhs:
                 x_unit = sampling_lhs_unit(x.shape[0], nx_cont)
             elif sobol:
-                x_unit = cls._sobol(x.shape[0], nx_cont)
+                x_unit = self._sobol(x.shape[0], nx_cont)
             else:
                 x_unit = np.random.random((x.shape[0], nx_cont))
 
@@ -319,15 +320,15 @@ class HierarchicalRandomSampling(FloatRandomSampling):
         return x
 
     @classmethod
-    def _sample_discrete_x(cls, n_samples: int, is_cont_mask, x_all: np.ndarray, is_act_all: np.ndarray, sobol=False):
+    def _sample_discrete_x(self, n_samples: int, is_cont_mask, x_all: np.ndarray, is_act_all: np.ndarray, sobol=False):
         has_x_cont = np.any(is_cont_mask)
 
         x = x_all
         if n_samples < x.shape[0]:
-            i_x = cls._choice(n_samples, x.shape[0], replace=False, sobol=sobol)
+            i_x = self._choice(n_samples, x.shape[0], replace=False, sobol=sobol)
         elif has_x_cont:
             # If there are more samples requested than points available, only repeat points if there are continuous vars
-            i_x_add = cls._choice(n_samples-x.shape[0], x.shape[0], sobol=sobol)
+            i_x_add = self._choice(n_samples - x.shape[0], x.shape[0], sobol=sobol)
             i_x = np.sort(np.concatenate([np.arange(x.shape[0]), i_x_add]))
         else:
             i_x = np.arange(x.shape[0])
