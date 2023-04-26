@@ -71,6 +71,8 @@ def test_num_x():
     assert np.all(x_imp == x)
     assert np.all(is_active_imp)
 
+    ds.correct_x(np.array([[1+1e-4, 0, 0, 0, 0]]))
+
 
 def test_discrete_x():
     ds = ExplicitArchDesignSpace([

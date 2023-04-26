@@ -401,7 +401,7 @@ class ExplicitArchDesignSpace(ArchDesignSpace):
         norm[norm == 0] = 1e-16
 
         is_cont_mask, is_int_mask = self.is_cont_mask, self.is_int_mask
-        x[:, is_cont_mask] = (x[:, is_cont_mask]-xl[is_cont_mask])/norm[is_cont_mask]
+        x[:, is_cont_mask] = np.clip((x[:, is_cont_mask]-xl[is_cont_mask])/norm[is_cont_mask], 0, 1)
 
         # Integer values are normalized similarly to what we do in round_x_discrete
         x[:, is_int_mask] = (x[:, is_int_mask]-xl[is_int_mask]+.49999)/(norm[is_int_mask]+.9999)
