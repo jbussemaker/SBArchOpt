@@ -39,7 +39,8 @@ except ImportError:
     pass
 
 
-def get_default_infill(problem: ArchOptProblemBase, n_parallel: int = None) -> Tuple['ConstrainedInfill', int]:
+def get_default_infill(problem: ArchOptProblemBase, n_parallel: int = None, min_pof: float = None) \
+        -> Tuple['ConstrainedInfill', int]:
     """
     Get the default infill criterion according to the following logic:
     - If evaluations can be run in parallel:
@@ -50,11 +51,12 @@ def get_default_infill(problem: ArchOptProblemBase, n_parallel: int = None) -> T
         - Continuous: Mean function estimate
         - Mixed-discrete: Ensemble of EI, LCB, PoI with n_batch = 1
       - Multi-objective:  Ensemble of MPoI, MEPoI  with n_batch = 1
+    - Set Probability of Feasibility as constraint handling technique if min_pof != .5, otherwise use g-mean prediction
 
     Returns the infill and the recommended infill batch size.
     """
 
-    # Get number of evaluations that can be run in parallel
+    # Determine number of evaluations that can be run in parallel
     if n_parallel is None:
         n_parallel = problem.get_n_batch_evaluate()
         if n_parallel is None:
@@ -63,21 +65,32 @@ def get_default_infill(problem: ArchOptProblemBase, n_parallel: int = None) -> T
     so_ensemble = [ExpectedImprovementInfill(), LowerConfidenceBoundInfill(), ProbabilityOfImprovementInfill()]
     mo_ensemble = [MinimumPoIInfill(), MinimumPoIInfill(euclidean=True)]
 
-    # Use the ensemble infill if parallel
-    if n_parallel > 1:
-        return EnsembleInfill(so_ensemble if problem.n_obj == 1 else mo_ensemble), n_parallel
+    def _get_infill():
+        # Use the ensemble infill if parallel
+        if n_parallel > 1:
+            return EnsembleInfill(so_ensemble if problem.n_obj == 1 else mo_ensemble), n_parallel
 
-    # Ensemble infill with 1 per iteration if multi-objective
-    if problem.n_obj > 1:
-        return EnsembleInfill(mo_ensemble), 1
+        # Ensemble infill with 1 per iteration if multi-objective
+        if problem.n_obj > 1:
+            return EnsembleInfill(mo_ensemble), 1
 
-    # Mean function estimate if continuous single-objective
-    is_continuous = np.all(problem.is_cont_mask)
-    if is_continuous:
-        return FunctionEstimateConstrainedInfill(), 1
+        # Mean function estimate if continuous single-objective
+        is_continuous = np.all(problem.is_cont_mask)
+        if is_continuous:
+            return FunctionEstimateConstrainedInfill(), 1
 
-    # Single-objective ensemble if mixed-discrete
-    return EnsembleInfill(so_ensemble), 1
+        # Single-objective ensemble if mixed-discrete
+        return EnsembleInfill(so_ensemble), 1
+
+    # Get infill and set constraint handling technique
+    infill, n_batch = _get_infill()
+
+    if min_pof is not None and min_pof != .5:
+        infill.constraint_strategy = ProbabilityOfFeasibility(min_pof=min_pof)
+    else:
+        infill.constraint_strategy = MeanConstraintPrediction()
+
+    return infill, n_batch
 
 
 class SurrogateInfill:
@@ -226,6 +239,9 @@ class ConstraintStrategy:
     def initialize(self, problem: Problem):
         self.problem = problem
 
+    def set_samples(self, x_train: np.ndarray, y_train: np.ndarray):
+        pass
+
     def get_n_infill_constraints(self) -> int:
         raise NotImplementedError
 
@@ -296,6 +312,10 @@ class ConstrainedInfill(SurrogateInfill):
 
     def _initialize(self):
         self.constraint_strategy.initialize(self.problem)
+
+    def set_samples(self, x_train: np.ndarray, y_train: np.ndarray):
+        super().set_samples(x_train, y_train)
+        self.constraint_strategy.set_samples(x_train, y_train)
 
     @property
     def needs_variance(self):
