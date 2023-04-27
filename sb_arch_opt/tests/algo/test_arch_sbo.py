@@ -6,6 +6,7 @@ from sb_arch_opt.problem import *
 from sb_arch_opt.sampling import *
 from pymoo.core.variable import Real, Integer, Choice
 from sb_arch_opt.algo.arch_sbo import *
+from sb_arch_opt.problems.md_mo import *
 from sb_arch_opt.algo.arch_sbo.algo import *
 from sb_arch_opt.problems.constrained import *
 from sb_arch_opt.algo.arch_sbo.infill import *
@@ -66,6 +67,15 @@ def test_arch_sbo_krg_ei(problem: ArchOptProblemBase):
 
     sbo = get_arch_sbo_krg(init_size=10, use_ei=True)
     result = minimize(problem, sbo, termination=('n_eval', 12))
+    assert len(result.pop) == 12
+
+
+@check_dependency()
+def test_arch_sbo_mvpf():
+    model = ModelFactory.get_kriging_model()
+    infill = MinVariancePFInfill()
+    sbo = get_sbo(model, infill, init_size=10)
+    result = minimize(MOHimmelblau(), sbo, termination=('n_eval', 12))
     assert len(result.pop) == 12
 
 

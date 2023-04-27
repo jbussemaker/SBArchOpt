@@ -26,8 +26,6 @@ from sb_arch_opt.algo.pymoo_interface import *
 
 from pymoo.core.repair import Repair
 from pymoo.core.result import Result
-from pymoo.core.variable import Real
-from pymoo.core.problem import Problem
 from pymoo.core.callback import Callback
 from pymoo.core.sampling import Sampling
 from pymoo.core.survival import Survival
@@ -135,7 +133,7 @@ class SBOInfill(InfillCriterion):
         super(SBOInfill, self).__init__(repair=repair, eliminate_duplicates=eliminate_duplicates, **kwargs)
 
         self._is_init = None
-        self.problem: Optional[Problem] = None
+        self.problem: Optional[ArchOptProblemBase] = None
         self.total_pop: Optional[Population] = None
         self._algorithm: Optional[Algorithm] = None
         self._normalization: Optional[Normalization] = normalization
@@ -145,6 +143,7 @@ class SBOInfill(InfillCriterion):
         self.infill = infill
 
         self.x_train = None
+        self.is_active_train = None
         self.y_train = None
         self.y_train_min = None
         self.y_train_max = None
@@ -180,6 +179,8 @@ class SBOInfill(InfillCriterion):
 
         # Check if we need to initialize
         if self._is_init is None:
+            if not isinstance(problem, ArchOptProblemBase):
+                raise RuntimeError('ArchSBO requires an ArchOptProblem')
             self.problem = problem
             self._is_init = problem
 
@@ -282,7 +283,9 @@ class SBOInfill(InfillCriterion):
             self.y_train_centered += [True]*g_norm.shape[1]
 
         # Train the model
+        x, is_active = self.problem.correct_x(x)
         self.x_train = x
+        self.is_active_train = is_active
         self.y_train = y_norm
 
         self.pf_estimate = None
@@ -307,8 +310,9 @@ class SBOInfill(InfillCriterion):
 
     def _train_model(self):
         s = timeit.default_timer()
-        self.surrogate_model.set_training_values(self.normalization.forward(self.x_train), self.y_train)
-        self.infill.set_samples(self.x_train, self.y_train)
+        self.surrogate_model.set_training_values(
+            self.normalization.forward(self.x_train), self.y_train, is_acting=self.is_active_train)
+        self.infill.set_samples(self.x_train, self.is_active_train, self.y_train)
 
         if self.x_train.shape[0] > 1:
             self.was_trained = True
@@ -417,7 +421,7 @@ class SBOInfill(InfillCriterion):
 
         infill = FunctionEstimateInfill()
         infill.initialize(self.problem, self.surrogate_model, self.normalization)
-        infill.set_samples(self.x_train, self.y_train)
+        infill.set_samples(self.x_train, self.is_active_train, self.y_train)
 
         problem = self._get_infill_problem(infill, force_new_points=False)
         algorithm = self._get_infill_algorithm()
@@ -487,7 +491,7 @@ class SurrogateInfillCallback(Callback):
 class SurrogateInfillOptimizationProblem(ArchOptProblemBase):
     """Problem class representing a surrogate infill problem given a SurrogateInfill instance."""
 
-    def __init__(self, infill: SurrogateInfill, problem: Problem, x_exist: np.ndarray = None):
+    def __init__(self, infill: SurrogateInfill, problem: ArchOptProblemBase, x_exist: np.ndarray = None):
         n_obj = infill.get_n_infill_objectives()
         n_ieq_constr = infill.get_n_infill_constraints()
 
@@ -497,25 +501,17 @@ class SurrogateInfillOptimizationProblem(ArchOptProblemBase):
             n_ieq_constr += 1
         self.eliminate_duplicates = LargeDuplicateElimination()
 
-        if isinstance(problem, ArchOptProblemBase):
-            des_vars = problem.des_vars
-        elif problem.vars is not None:
-            des_vars = list(problem.vars.values())
-        else:
-            des_vars = [Real(bounds=(problem.xl[i], problem.xu[i])) for i in range(problem.n_var)]
-
+        des_vars = problem.des_vars
         super().__init__(des_vars=des_vars, n_obj=n_obj, n_ieq_constr=n_ieq_constr)
 
         self.infill = infill
-        self._problem: Problem = problem
+        self._problem: ArchOptProblemBase = problem
 
     def _get_n_valid_discrete(self) -> int:
-        if isinstance(self._problem, ArchOptProblemBase):
-            return self._problem.get_n_valid_discrete()
+        return self._problem.get_n_valid_discrete()
 
     def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
-        if isinstance(self._problem, ArchOptProblemBase):
-            return self._problem.all_discrete_x
+        return self._problem.all_discrete_x
 
     def might_have_hidden_constraints(self):
         return False
@@ -525,7 +521,7 @@ class SurrogateInfillOptimizationProblem(ArchOptProblemBase):
         self._correct_x_impute(x, is_active_out)
 
         # Get infill search objectives and constraints
-        f, g = self.infill.evaluate(x)
+        f, g = self.infill.evaluate(x, is_active_out)
 
         if f.shape != (x.shape[0], self.n_obj):
             raise RuntimeError(f'Wrong objective results shape: {f.shape!r} != {(x.shape[0], self.n_obj)!r}')
@@ -546,9 +542,11 @@ class SurrogateInfillOptimizationProblem(ArchOptProblemBase):
             raise RuntimeError(f'Wrong constraint results shape: {g.shape!r} != {(x.shape[0], self.n_constr)!r}')
         g_out[:, :] = g
 
+    def _is_conditionally_active(self) -> List[bool]:
+        return self._problem.is_conditionally_active
+
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
-        if isinstance(self._problem, ArchOptProblemBase):
-            x[:, :], is_active[:, :] = self._problem.correct_x(x)
+        x[:, :], is_active[:, :] = self._problem.correct_x(x)
 
     def __repr__(self):
         return f'{self.__class__.__name__}({self.infill!r}, {self._problem!r})'

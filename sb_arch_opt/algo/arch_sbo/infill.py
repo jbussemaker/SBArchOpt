@@ -107,6 +107,7 @@ class SurrogateInfill:
         self.n_f_ic = None
 
         self.x_train = None
+        self.is_active_train = None
         self.y_train = None
 
         self.f_infill_log = []
@@ -124,25 +125,24 @@ class SurrogateInfill:
     def needs_variance(self):
         return False
 
-    def set_samples(self, x_train: np.ndarray, y_train: np.ndarray):
+    def set_samples(self, x_train: np.ndarray, is_active_train: np.ndarray, y_train: np.ndarray):
         self.x_train = x_train
+        self.is_active_train = is_active_train
         self.y_train = y_train
 
-    def predict(self, x: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def predict(self, x: np.ndarray, is_active: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         try:
-            y = self.surrogate_model.predict_values(self.normalization.forward(x))
+            y = self.surrogate_model.predict_values(self.normalization.forward(x), is_acting=is_active.astype(bool))
         except FloatingPointError:
             y = np.zeros((x.shape[0], self.surrogate_model.ny))*np.nan
 
         return self._split_f_g(y)
 
-    def predict_variance(self, x: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def predict_variance(self, x: np.ndarray, is_active: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
 
         try:
-            y_var = np.zeros((x.shape[0], self.surrogate_model.ny))
-            for i in range(x.shape[0]):
-                y_var[i, :] = self.surrogate_model.predict_variances(self.normalization.forward(x[[i], :]))
-
+            y_var = self.surrogate_model.predict_variances(
+                self.normalization.forward(x), is_acting=is_active.astype(bool))
         except FloatingPointError:
             y_var = np.zeros((x.shape[0], self.surrogate_model.ny))*np.nan
 
@@ -188,12 +188,12 @@ class SurrogateInfill:
         self.n_eval_infill = 0
         self.time_eval_infill = 0.
 
-    def evaluate(self, x: np.ndarray) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+    def evaluate(self, x: np.ndarray, is_active: np.ndarray) -> Tuple[np.ndarray, Optional[np.ndarray]]:
         """Evaluate the surrogate infill objectives (and optionally constraints). Use the predict and predict_variance
         methods to query the surrogate model on its objectives and constraints."""
 
         s = timeit.default_timer()
-        f_infill, g_infill = self._evaluate(x)
+        f_infill, g_infill = self._evaluate(x, is_active)
         self.time_eval_infill += timeit.default_timer()-s
 
         self.f_infill_log.append(f_infill)
@@ -210,7 +210,7 @@ class SurrogateInfill:
     def get_n_infill_constraints(self) -> int:
         raise NotImplementedError
 
-    def _evaluate(self, x: np.ndarray) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+    def _evaluate(self, x: np.ndarray, is_active: np.ndarray) -> Tuple[np.ndarray, Optional[np.ndarray]]:
         """Evaluate the surrogate infill objectives (and optionally constraints). Use the predict and predict_variance
         methods to query the surrogate model on its objectives and constraints."""
         raise NotImplementedError
@@ -225,8 +225,8 @@ class FunctionEstimateInfill(SurrogateInfill):
     def get_n_infill_constraints(self) -> int:
         return self.problem.n_constr
 
-    def _evaluate(self, x: np.ndarray) -> Tuple[np.ndarray, Optional[np.ndarray]]:
-        f, g = self.predict(x)
+    def _evaluate(self, x: np.ndarray, is_active: np.ndarray) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+        f, g = self.predict(x, is_active)
         return f, g
 
 
@@ -313,8 +313,8 @@ class ConstrainedInfill(SurrogateInfill):
     def _initialize(self):
         self.constraint_strategy.initialize(self.problem)
 
-    def set_samples(self, x_train: np.ndarray, y_train: np.ndarray):
-        super().set_samples(x_train, y_train)
+    def set_samples(self, x_train: np.ndarray, is_active_train: np.ndarray, y_train: np.ndarray):
+        super().set_samples(x_train, is_active_train, y_train)
         self.constraint_strategy.set_samples(x_train, y_train)
 
     @property
@@ -324,9 +324,9 @@ class ConstrainedInfill(SurrogateInfill):
     def get_n_infill_constraints(self) -> int:
         return self.constraint_strategy.get_n_infill_constraints()
 
-    def _evaluate(self, x: np.ndarray) -> Tuple[np.ndarray, Optional[np.ndarray]]:
-        f, g = self.predict(x)
-        f_var, g_var = self.predict_variance(x)
+    def _evaluate(self, x: np.ndarray, is_active: np.ndarray) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+        f, g = self.predict(x, is_active)
+        f_var, g_var = self.predict_variance(x, is_active)
 
         # Apply constraint handling strategy
         g_infill = g
@@ -432,10 +432,11 @@ class MinVariancePFInfill(FunctionEstimateConstrainedInfill):
         i_pf = self.get_i_pareto_front(f)
         pop_pf = population[i_pf]
         x_pf = pop_pf.get('X')
+        is_active_pf = pop_pf.get('is_active').astype(bool)
         g_pf = pop_pf.get('G')
 
         # Get variances
-        f_var, _ = self.predict_variance(x_pf)
+        f_var, _ = self.predict_variance(x_pf, is_active_pf)
 
         # Select points with highest variances
         f_std_obj = 1.-np.sqrt(f_var)
@@ -561,8 +562,8 @@ class MinimumPoIInfill(ConstrainedInfill):
     def get_n_infill_objectives(self) -> int:
         return 1
 
-    def set_samples(self, x_train: np.ndarray, y_train: np.ndarray):
-        super().set_samples(x_train, y_train)
+    def set_samples(self, x_train: np.ndarray, is_active_train: np.ndarray, y_train: np.ndarray):
+        super().set_samples(x_train, is_active_train, y_train)
         self.f_pareto = self.get_pareto_front(y_train[:, :self.problem.n_obj])
 
     def evaluate_f(self, f_predict: np.ndarray, f_var_predict: np.ndarray) -> np.ndarray:
@@ -652,10 +653,10 @@ class EnsembleInfill(ConstrainedInfill):
 
         super()._initialize()
 
-    def set_samples(self, x_train: np.ndarray, y_train: np.ndarray):
-        super().set_samples(x_train, y_train)
+    def set_samples(self, x_train: np.ndarray, is_active_train: np.ndarray, y_train: np.ndarray):
+        super().set_samples(x_train, is_active_train, y_train)
         for infill in self.infills:
-            infill.set_samples(x_train, y_train)
+            infill.set_samples(x_train, is_active_train, y_train)
 
     def get_n_infill_objectives(self) -> int:
         return sum([infill.get_n_infill_objectives() for infill in self.infills])
