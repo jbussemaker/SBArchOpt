@@ -16,6 +16,9 @@ def run_test_hierarchy(problem, imp_ratio, check_n_valid=True, validate_exhausti
                 x_trail_repair, _ = HierarchicalExhaustiveSampling.get_all_x_discrete_by_trial_and_repair(problem)
                 assert {tuple(ix) for ix in x_trail_repair} == {tuple(ix) for ix in x_discrete}
 
+            is_cond_act = problem.is_conditionally_active
+            assert np.all(is_cond_act == np.any(~is_act_discrete, axis=0))
+
         pop = HierarchicalExhaustiveSampling(n_cont=1).do(problem, 0)
         assert len(pop) == problem.get_n_valid_discrete()
     assert HierarchicalExhaustiveSampling.has_cheap_all_x_discrete(problem) == (x_discrete is not None)

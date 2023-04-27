@@ -22,6 +22,9 @@ class TestDesignSpace(ArchDesignSpace):
         """Sample n discrete design vectors (also return is_active) without generating all design vectors first"""
         raise RuntimeError
 
+    def _is_conditionally_active(self):
+        return [False]*self.n_var
+
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
         pass
 
@@ -86,6 +89,7 @@ def test_init_vars():
     assert np.all(ds.is_int_mask == [False, True, True, False])
     assert np.all(ds.is_discrete_mask == [False, True, True, True])
     assert np.all(ds.is_cont_mask == [True, False, False, False])
+    assert np.all(~ds.is_conditionally_active)
 
     assert ds.get_n_declared_discrete() == 4*2*3
 

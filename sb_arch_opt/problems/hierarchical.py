@@ -47,6 +47,12 @@ class HierarchyProblemBase(ArchOptTestProblemBase):
     def _get_n_valid_discrete(self) -> int:
         raise NotImplementedError
 
+    def _is_conditionally_active(self) -> List[bool]:
+        _, is_act_all = self.all_discrete_x
+        if is_act_all is None:
+            _, is_act_all = self.design_space.all_discrete_x_by_trial_and_imputation
+        return list(np.any(~is_act_all, axis=0))
+
     def __repr__(self):
         return f'{self.__class__.__name__}()'
 

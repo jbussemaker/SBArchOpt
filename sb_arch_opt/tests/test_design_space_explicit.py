@@ -34,6 +34,7 @@ def test_init_vars():
     assert np.all(ds.is_int_mask == [False, True, True, False])
     assert np.all(ds.is_discrete_mask == [False, True, True, True])
     assert np.all(ds.is_cont_mask == [True, False, False, False])
+    assert np.all(~ds.is_conditionally_active)
 
     assert ds.get_n_declared_discrete() == 4*2*3
 
@@ -59,6 +60,7 @@ def test_num_x():
     assert ds.get_n_declared_discrete() == 64
     assert ds.get_n_valid_discrete() == 64
     assert ds.get_imputation_ratio() == 1
+    assert np.all(~ds.is_conditionally_active)
 
     x, is_active = ds.quick_sample_discrete_x(1000)
     assert x.shape == (1000, 5)
@@ -92,6 +94,7 @@ def test_discrete_x():
     assert ds.get_n_declared_discrete() == 6
     assert ds.get_n_valid_discrete() == 6
     assert ds.get_imputation_ratio() == 1
+    assert np.all(~ds.is_conditionally_active)
 
     x, is_active = ds.quick_sample_discrete_x(100)
     assert x.shape == (100, 2)
@@ -105,9 +108,11 @@ def test_discrete_x():
     assert np.all(x_imp == x)
     assert np.all(is_active_imp)
 
-    x = HierarchicalRandomSampling(sobol=False).randomly_sample(
+    x, is_active = HierarchicalRandomSampling(sobol=False).randomly_sample(
         ArchOptProblemBase(ds), 100, ArchOptRepair(), x_all=None, is_act_all=None)
     assert x.shape == (6, 2)
+    assert is_active.shape == x.shape
+    assert np.all(is_active)
 
 
 def test_hierarchy():
@@ -125,6 +130,7 @@ def test_hierarchy():
 
     assert ds.n_var == 4
     assert ds.get_n_declared_discrete() == 12
+    assert np.all(ds.is_conditionally_active == [False, True, True, True])
 
     x, is_active = ds.all_discrete_x
     assert x.shape == (5, 4)
@@ -143,9 +149,12 @@ def test_hierarchy():
     x, is_active = ds.quick_sample_discrete_x(100)
     assert x.shape == (100, 4)
 
-    x = HierarchicalRandomSampling(sobol=False).randomly_sample(
+    x, is_active = HierarchicalRandomSampling(sobol=False).randomly_sample(
         ArchOptProblemBase(ds), 100, ArchOptRepair(), x_all=None, is_act_all=None)
     assert x.shape == (100, 4)
+    assert is_active.shape == x.shape
+    _, is_active_ = ds.correct_x(x)
+    assert np.all(is_active == is_active_)
 
     x = HierarchicalRandomSampling().do(ArchOptProblemBase(ds), 100).get('X')
     assert x.shape == (100, 4)
@@ -181,6 +190,7 @@ def test_sorting():
     assert ds.get_param_by_idx(1) == 'b'
     assert ds.get_idx_by_param_name('a') == 0
     assert ds.get_idx_by_param_name('b') == 1
+    assert np.all(ds.is_conditionally_active == [True, False])
 
     x, is_active = ds.all_discrete_x
     assert x.shape == (4, 2)
@@ -222,6 +232,7 @@ def test_forbidden():
 
     assert ds.n_var == 4
     assert ds.get_n_declared_discrete() == 12
+    assert np.all(ds.is_conditionally_active == [False, False, False, True])
 
     x, is_active = ds.quick_sample_discrete_x(100)
     assert x.shape == (100, 4)
@@ -276,6 +287,7 @@ def test_add_value_constraint():
 
         assert ds.n_var == 4
         assert ds.get_n_declared_discrete() == 12
+        assert np.all(ds.is_conditionally_active == [False, False, False, True])
 
         x, is_active = ds.all_discrete_x
         assert x.shape == (10, 4)
@@ -341,6 +353,7 @@ def test_circular_conditions():
     ])
 
     assert ds.get_n_valid_discrete() == 6
+    assert np.all(ds.is_conditionally_active == [False, True, True])
 
     x, is_active = ds.quick_sample_discrete_x(100)
     assert len(np.unique(x, axis=0)) == 6

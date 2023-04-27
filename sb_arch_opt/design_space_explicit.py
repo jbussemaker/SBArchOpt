@@ -270,6 +270,10 @@ class ExplicitArchDesignSpace(ArchDesignSpace):
 
         return des_vars
 
+    def _is_conditionally_active(self) -> List[bool]:
+        conditional_params = set(self._cs.get_all_conditional_hyperparameters())
+        return [name in conditional_params for name in self.get_param_names()]
+
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
         """
         Fill the activeness matrix (n x nx) and if needed correct design vectors (n x nx) that are partially inactive.

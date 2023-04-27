@@ -1,4 +1,5 @@
 import pytest
+import numpy as np
 from sb_arch_opt.problems.assignment import *
 from sb_arch_opt.tests.problems.test_hierarchical import run_test_hierarchy
 
@@ -7,13 +8,20 @@ check_dependency = lambda: pytest.mark.skipif(not HAS_ASSIGN_ENC, reason='assign
 
 @check_dependency()
 def test_assignment():
-    run_test_hierarchy(Assignment(), 1)
+    assignment = Assignment()
+    run_test_hierarchy(assignment, 1)
     run_test_hierarchy(AssignmentLarge(), 1, check_n_valid=False)
 
     AssignmentInj().print_stats()
     AssignmentInjLarge().print_stats()
     AssignmentRepeat().print_stats()
     AssignmentRepeatLarge().print_stats()
+
+    x_all, is_act_all = assignment.all_discrete_x
+    assert x_all is not None
+
+    is_cond_act = assignment.is_conditionally_active
+    assert np.all(is_cond_act == np.any(~is_act_all, axis=0))
 
 
 @check_dependency()
@@ -39,3 +47,6 @@ def test_assign_enc_gnc():
     ]:
         run_test_hierarchy(problem, imp_ratio, check_n_valid=False)
         assert problem.get_n_valid_discrete() == n_valid
+
+        with pytest.raises(RuntimeError):
+            _ = problem.is_conditionally_active

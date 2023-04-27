@@ -171,7 +171,7 @@ def test_md_normalization():
     assert np.all(np.round(np.min(x, axis=0)) == problem.xl)
     assert np.all(np.round(np.max(x, axis=0)) == problem.xu)
 
-    md_norm = MixedDiscreteNormalization(problem)
+    md_norm = MixedDiscreteNormalization(problem.design_space)
     x_norm = md_norm.forward(x)
     assert np.all(np.round(np.min(x_norm, axis=0)) == [0, 0, 0, 0, 0])
     assert np.all(np.round(np.max(x_norm, axis=0)) == [1, 5, 3, 9, 2])

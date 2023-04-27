@@ -63,6 +63,7 @@ class ArchOptProblemBase(Problem):
             design_space = ImplicitArchDesignSpace(
                 des_vars,
                 self._correct_x,
+                self._is_conditionally_active,
                 self._get_n_valid_discrete,
                 self._gen_all_discrete_x,
             )
@@ -97,6 +98,10 @@ class ArchOptProblemBase(Problem):
     def is_cont_mask(self):
         """Boolean mask specifying for each design variable whether it is a continues (i.e. not discrete) variable"""
         return self.design_space.is_cont_mask
+
+    @property
+    def is_conditionally_active(self):
+        return self.design_space.is_conditionally_active
 
     def get_categorical_values(self, x: np.ndarray, i_dv) -> np.ndarray:
         """Gets the associated categorical variable values for some design variable"""
@@ -246,6 +251,10 @@ class ArchOptProblemBase(Problem):
     """##############################
     ### IMPLEMENT FUNCTIONS BELOW ###
     ##############################"""
+
+    def _is_conditionally_active(self) -> List[bool]:
+        """Return for each design variable whether it is conditionally active (i.e. might become inactive). Not needed
+        if an explicit design space is provided."""
 
     def _get_n_valid_discrete(self) -> int:
         """Return the number of valid discrete design points (ignoring continuous dimensions); enables calculation of

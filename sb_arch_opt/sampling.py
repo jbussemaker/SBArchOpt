@@ -187,7 +187,7 @@ class HierarchicalLatinHypercubeSampling(LatinHypercubeSampling):
         best_x = best_score = None
         random_sampler = HierarchicalRandomSampling()
         for _ in range(self.iterations):
-            x = random_sampler.randomly_sample(problem, n_samples, self._repair, x_all, is_act, lhs=True)
+            x, _ = random_sampler.randomly_sample(problem, n_samples, self._repair, x_all, is_act, lhs=True)
             if self.criterion is None:
                 return x
 
@@ -229,10 +229,15 @@ class HierarchicalRandomSampling(FloatRandomSampling):
         super().__init__()
 
     def _do(self, problem, n_samples, **kwargs):
+        x_sampled, _ = self.sample_get_x(problem, n_samples)
+        return x_sampled
+
+    def sample_get_x(self, problem, n_samples):
         # Get Cartesian product of all discrete design variables (only available if design space is not too large)
         x, is_active = self.get_hierarchical_cartesian_product(problem, self._repair)
 
-        return self.randomly_sample(problem, n_samples, self._repair, x, is_active)
+        x_sampled, is_active = self.randomly_sample(problem, n_samples, self._repair, x, is_active)
+        return x_sampled, is_active
 
     @classmethod
     def get_hierarchical_cartesian_product(cls, problem: Problem, repair: Repair) \
@@ -257,7 +262,7 @@ class HierarchicalRandomSampling(FloatRandomSampling):
         return None, None
 
     def randomly_sample(self, problem, n_samples, repair: Repair, x_all: Optional[np.ndarray],
-                        is_act_all: Optional[np.ndarray], lhs=False):
+                        is_act_all: Optional[np.ndarray], lhs=False) -> Tuple[np.ndarray, np.ndarray]:
         is_cont_mask = HierarchicalExhaustiveSampling.get_is_cont_mask(problem)
         has_x_cont = np.any(is_cont_mask)
         xl, xu = problem.xl, problem.xu
@@ -312,12 +317,19 @@ class HierarchicalRandomSampling(FloatRandomSampling):
 
         if needs_repair:
             x = repair.do(problem, x)
+            if isinstance(repair, ArchOptRepair) and repair.latest_is_active is not None:
+                is_active = repair.latest_is_active
+            elif isinstance(problem, ArchOptProblemBase):
+                x, is_active = problem.correct_x(x)
+        if is_active is None:
+            raise ValueError('Unexpectedly empty is_active!')
 
         if not has_x_cont and might_contain_duplicates:
             is_unique = ~LargeDuplicateElimination.eliminate(x)
             x = x[is_unique, :]
+            is_active = is_active[is_unique, :]
 
-        return x
+        return x, is_active
 
     @classmethod
     def _sample_discrete_x(self, n_samples: int, is_cont_mask, x_all: np.ndarray, is_act_all: np.ndarray, sobol=False):

@@ -76,6 +76,32 @@ class ArchDesignSpace:
         self._is_initialized = True
         return corr_des_vars
 
+    @cached_property
+    def is_conditionally_active(self) -> np.ndarray:
+        """
+        Returns a mask specifying for each design variable whether it is conditionally active (i.e. may become inactive
+        at some point).
+        """
+
+        is_cond_active = self._is_conditionally_active()
+
+        # If not provided, deduce from all discrete design vectors
+        if is_cond_active is None:
+            _, is_act_all = self.all_discrete_x
+            if is_act_all is not None:
+                return np.any(~is_act_all, axis=0)
+
+            raise RuntimeError('Could not deduce is_conditionally_active from all x, '
+                               'implement _is_conditionally_active!')
+
+        is_cond_active = np.array(is_cond_active)
+        if len(is_cond_active) != self.n_var:
+            raise ValueError(f'is_cont_active should be same length as x: {len(is_cond_active)} != {self.n_var}')
+        if np.all(is_cond_active):
+            raise ValueError(f'At least one variable should be nonconditionally active: {is_cond_active}')
+
+        return is_cond_active
+
     def get_categorical_values(self, x: np.ndarray, i_dv) -> np.ndarray:
         """Gets the associated categorical variable values for some design variable"""
         if not self._is_initialized:
@@ -399,6 +425,10 @@ class ArchDesignSpace:
         """Returns the list of design variables (pymoo classes)"""
         raise NotImplementedError
 
+    def _is_conditionally_active(self) -> Optional[List[bool]]:
+        """Returns for each design variable whether it is conditionally active (i.e. may become inactive)"""
+        raise NotImplementedError
+
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
         """
         Fill the activeness matrix (n x nx) and if needed correct design vectors (n x nx) that are partially inactive.
@@ -425,10 +455,12 @@ class ImplicitArchDesignSpace(ArchDesignSpace):
     """An implicit, problem-specific definition of the architecture design space"""
 
     def __init__(self, des_vars: List[Variable], correct_x_func: Callable[[np.ndarray, np.ndarray], None],
+                 is_conditional_func: Callable[[], List[bool]],
                  n_valid_discrete_func: Callable[[], int] = None,
                  gen_all_discrete_x_func: Callable[[], Optional[Tuple[np.ndarray, np.ndarray]]] = None):
         self._variables = des_vars
         self._correct_x_func = correct_x_func
+        self._is_conditional_func = is_conditional_func
         self._n_valid_discrete_func = n_valid_discrete_func
         self._gen_all_discrete_x_func = gen_all_discrete_x_func
         super().__init__()
@@ -438,6 +470,9 @@ class ImplicitArchDesignSpace(ArchDesignSpace):
 
     def _get_variables(self) -> List[Variable]:
         return self._variables
+
+    def _is_conditionally_active(self) -> Optional[List[bool]]:
+        return self._is_conditional_func()
 
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
         self._correct_x_func(x, is_active)

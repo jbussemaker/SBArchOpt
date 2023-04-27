@@ -18,6 +18,7 @@ This test suite contains the discrete, hierarchical, multi-objective Guidance, N
 """
 import itertools
 import numpy as np
+from typing import List
 from pymoo.core.variable import Integer, Choice
 from sb_arch_opt.problems.hierarchical import HierarchyProblemBase
 
@@ -158,6 +159,37 @@ class GNCProblemBase(HierarchyProblemBase):
             des_vars += [Choice(options=[False, True]) for _ in range(self.n_max*self.n_max)]
 
         return des_vars
+
+    def _is_conditionally_active(self) -> List[bool]:
+        # If we do not choose the number of objects, all variables are always active
+        if not self.choose_nr:
+            return [False]*self.n_var
+
+        is_cond_act = [True]*self.n_var
+        n_obj_types = 3 if self.actuators else 2
+        i_dv = 0
+        for _ in range(n_obj_types):
+            # Choose nr of obj is always active
+            is_cond_act[i_dv] = False
+            i_dv += 1
+
+        if self.choose_type:
+            for _ in range(n_obj_types):
+                for i in range(self.n_max):
+                    # Choose type is active is not choose nr OR for the first instance of each object type
+                    if i == 0:
+                        is_cond_act[i_dv] = False
+                        i_dv += 1
+
+        for _ in range(n_obj_types):
+            for i in range(self.n_max):
+                for j in range(self.n_max):
+                    # Connections between the first object instances are always active
+                    if i == 0 and j == 0:
+                        is_cond_act[i_dv] = False
+                    i_dv += 1
+
+        return is_cond_act
 
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
         n_obj_types = 3 if self.actuators else 2

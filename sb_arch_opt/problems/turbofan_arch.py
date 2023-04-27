@@ -104,6 +104,9 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
     def get_failure_rate(self) -> float:
         raise NotImplementedError
 
+    def _is_conditionally_active(self) -> List[bool]:
+        raise NotImplementedError
+
     def get_n_batch_evaluate(self) -> Optional[int]:
         return self.n_parallel
 
@@ -181,6 +184,16 @@ class SimpleTurbofanArch(OpenTurbArchProblemWrapper):
     def get_failure_rate(self) -> float:
         return .51  # Paper section IV.B
 
+    def _is_conditionally_active(self) -> List[bool]:
+        is_cond_active = [True]*self.n_var
+        is_cond_active[0] = False  # Fan
+
+        is_cond_active[3] = False  # Nr of shafts
+        is_cond_active[4] = False  # Shaft 1 PR
+        is_cond_active[7] = False  # Shaft 1 RPM
+
+        return is_cond_active
+
 
 class RealisticTurbofanArch(OpenTurbArchProblemWrapper):
     """
@@ -228,6 +241,16 @@ class RealisticTurbofanArch(OpenTurbArchProblemWrapper):
 
     def get_failure_rate(self) -> float:
         return .67  # Paper section IV.C
+
+    def _is_conditionally_active(self) -> List[bool]:
+        is_cond_active = [True]*self.n_var
+        is_cond_active[0] = False  # Fan
+
+        is_cond_active[4] = False  # Nr of shafts
+        is_cond_active[5] = False  # Shaft 1 PR
+        is_cond_active[6] = False  # Shaft 1 RPM
+
+        return is_cond_active
 
 
 if __name__ == '__main__':

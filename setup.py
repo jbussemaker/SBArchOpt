@@ -45,7 +45,7 @@ if __name__ == '__main__':
         ],
         extras_require={
             'arch_sbo': [
-                'smt==1.3.0',
+                # 'smt==1.3.0',  # Code currently works with a non-merged version
             ],
             'ota': [
                 'open_turb_arch @ git+https://github.com/jbussemaker/OpenTurbofanArchitecting@pymoo_optional#egg=open_turb_arch',

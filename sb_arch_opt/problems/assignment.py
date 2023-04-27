@@ -24,6 +24,7 @@ Test problems are based on:
 - GN&C problem: see GNCProblemBase in gnc.py for an overview
 """
 import numpy as np
+from typing import *
 from sb_arch_opt.problems.hierarchical import HierarchyProblemBase
 
 try:
@@ -69,6 +70,24 @@ class AssignmentProblemWrapper(HierarchyProblemBase):
 
     def _get_n_valid_discrete(self) -> int:
         return self._problem.get_n_valid_design_points(n_cont=1)
+
+    def _is_conditionally_active(self) -> List[bool]:
+        _, is_act_all = self.all_discrete_x
+        if is_act_all is None:
+            raise RuntimeError(f'_is_conditionally_active not implemented for {self.__class__.__name__}')
+        return list(np.any(~is_act_all, axis=0))
+
+    def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
+        if isinstance(self._problem, AnalyticalProblemBase):
+            x_all_map = self._problem.assignment_manager.get_all_design_vectors()
+            if len(x_all_map) > 1:
+                return
+
+            x_all_map_main: np.ndarray = list(x_all_map.values())[0]
+            is_active_all = x_all_map_main != -1
+            x_all_map_main[~is_active_all] = 0
+
+            return x_all_map_main, is_active_all
 
     def _print_extra_stats(self):
         if isinstance(self._problem, AssignmentProblem):

@@ -19,6 +19,7 @@ def test_md_base():
 
 def run_test_no_hierarchy(problem, exh_n_cont=3):
     assert problem.get_imputation_ratio() == 1
+    assert np.all(~problem.is_conditionally_active)
     problem.print_stats()
 
     x_discrete, is_act_discrete = problem.all_discrete_x

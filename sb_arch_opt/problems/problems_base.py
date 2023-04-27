@@ -91,6 +91,9 @@ class NoHierarchyProblemBase(ArchOptTestProblemBase):
         # No hierarchy, so the number of valid points is the same as the number of declared points
         return self.get_n_declared_discrete()
 
+    def _is_conditionally_active(self):
+        return [False]*self.n_var
+
     def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
         # No hierarchy, so we can just get the Cartesian product of discrete variables
         x_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(self, n_cont=1)

@@ -23,6 +23,9 @@ def test_init_no_vars():
     assert np.isnan(problem.get_imputation_ratio())
     problem.print_stats()
 
+    with pytest.raises(RuntimeError):
+        _ = problem.is_conditionally_active
+
 
 def test_init_vars():
     problem = ArchOptProblemBase([
@@ -66,6 +69,8 @@ def test_correct_x(problem: ArchOptProblemBase):
         [True, True, True, True, True],
         [True, True, True, True, False],
     ])
+
+    assert np.all(problem.is_conditionally_active == [False, False, False, False, True])
 
 
 def test_repair(problem: ArchOptProblemBase):

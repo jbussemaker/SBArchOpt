@@ -117,6 +117,7 @@ You then need to implement the following functionality:
 - Design variable definition in the `__init__` function using `Variable` classes (in `pymoo.core.variable`)
 - Evaluation of a design vector in `_arch_evaluate`
 - Correction (imputation/repair) of a design vector in `_correct_x`
+- Return which variables are conditionally active in `_is_conditionally_active`
 - An (optional) interface for implementing intermediate storage of problem-specific results (`store_results`), and
   restarting an optimization from these previous results (`load_previous_results`)
 - A unique class representation in `__repr__`
@@ -143,6 +144,7 @@ Example:
 
 ```python
 import numpy as np
+from typing import List
 from sb_arch_opt.problem import ArchOptProblemBase
 from sb_arch_opt.pareto_front import CachedParetoFrontMixin
 from pymoo.core.variable import Real, Integer, Choice
@@ -191,6 +193,10 @@ class DemoArchOptProblem(CachedParetoFrontMixin, ArchOptProblemBase):
         
         # Set inactive variables to some predefined value (can be left out, as this is also done by `_impute_x`)
         x[~is_active] = 0
+    
+    def _is_conditionally_active(self) -> List[bool]:
+        """Return for each design variable whether it is conditionally active (i.e. might become inactive). Not needed
+        if an explicit design space is provided."""
 
     def store_results(self, results_folder, final=False):  # Optional
         """Implement this function to enable problem-specific intermediate results storage"""
