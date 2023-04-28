@@ -190,8 +190,9 @@ class SBArchOptDesignSpace(BaseDesignSpace):
     def _get_design_variables(self) -> List[ds.DesignVariable]:
         """Return the design variables defined in this design space if not provided upon initialization of the class"""
         smt_des_vars = []
+        is_conditional = self._ds.is_conditionally_active
         normalize = self.normalize is not None
-        for dv in self._ds.des_vars:
+        for i, dv in enumerate(self._ds.des_vars):
             if isinstance(dv, var.Real):
                 bounds = (0, 1) if normalize else dv.bounds
                 smt_des_vars.append(ds.FloatVariable(bounds[0], bounds[1]))
@@ -204,7 +205,11 @@ class SBArchOptDesignSpace(BaseDesignSpace):
                 smt_des_vars.append(ds.OrdinalVariable(values=[0, 1]))
 
             elif isinstance(dv, var.Choice):
-                smt_des_vars.append(ds.CategoricalVariable(values=dv.options))
+                # Conditional categorical variables are currently not supported
+                if is_conditional[i]:
+                    smt_des_vars.append(ds.IntegerVariable(0, len(dv.options)-1))
+                else:
+                    smt_des_vars.append(ds.CategoricalVariable(values=dv.options))
 
             else:
                 raise ValueError(f'Unexpected variable type: {dv!r}')
