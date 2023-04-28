@@ -27,7 +27,7 @@ from sb_arch_opt.problems.hierarchical import HierarchyProblemBase
 import os
 os.environ['OPENMDAO_REQUIRE_MPI'] = 'false'  # Suppress OpenMDAO MPI import warnings
 try:
-    from open_turb_arch.architecting.architecting_problem import get_architecting_problem
+    from open_turb_arch.architecting.architecting_problem import get_architecting_problem, load_pareto_front
     from open_turb_arch.architecting.problem import ArchitectingProblem
     from open_turb_arch.architecting.opt_defs import *
     from open_turb_arch.tests.examples.simple_problem import get_architecting_problem as get_simple_architecting_problem
@@ -211,6 +211,9 @@ class RealisticTurbofanArch(OpenTurbArchProblemWrapper):
         check_dependency()
         super().__init__(get_architecting_problem(), n_parallel=n_parallel)
 
+        x_pf, self.f_pf, _ = load_pareto_front()
+        self.x_pf, _ = self.correct_x(x_pf)
+
     def _get_n_valid_discrete(self) -> int:
         n_valid_no_fan = 1
         n_valid_fan = 1
@@ -251,6 +254,12 @@ class RealisticTurbofanArch(OpenTurbArchProblemWrapper):
         is_cond_active[6] = False  # Shaft 1 RPM
 
         return is_cond_active
+
+    def _calc_pareto_front(self):
+        return self.f_pf
+
+    def _calc_pareto_set(self):
+        return self.x_pf
 
 
 if __name__ == '__main__':

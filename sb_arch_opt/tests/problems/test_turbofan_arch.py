@@ -59,3 +59,13 @@ def test_realistic_problem():
 
     assert problem._get_n_valid_discrete() == 1163
     # problem.get_discrete_rates(force=True, show=True)  # Takes several minutes
+
+    f_pf = problem.pareto_front()
+    x_pf = problem.pareto_set()
+    x_pf_corr, is_act_pf = problem.correct_x(x_pf)
+    assert np.all(x_pf_corr == x_pf)
+    assert not np.all(is_act_pf)
+
+    f_eval = problem.evaluate(x_pf[[0], :], return_as_dictionary=True)['F']
+    assert np.all(np.isfinite(f_eval))
+    assert np.all(f_eval[0, :] == f_pf[0, :])
