@@ -150,7 +150,7 @@ class SurrogateInfill:
 
     def _split_f_g(self, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         if self.n_constr > 0:
-            return y[:, :self.n_obj], y[:, self.n_obj:self.n_obj+self.n_constr]
+            return y[:, :self.n_obj], y[:, self.n_obj:]
         return y[:, :self.n_obj], np.zeros((y.shape[0], 0))
 
     def initialize(self, problem: Problem, surrogate_model: 'SurrogateModel', normalization: Normalization):
@@ -235,15 +235,27 @@ class ConstraintStrategy:
 
     def __init__(self):
         self.problem: Optional[Problem] = None
+        self.n_trained_g = None
 
     def initialize(self, problem: Problem):
         self.problem = problem
 
     def set_samples(self, x_train: np.ndarray, y_train: np.ndarray):
+        self.n_trained_g = n_trained_g = y_train.shape[1]-self.problem.n_obj
+
+        n_constr = self.problem.n_ieq_constr
+        if n_trained_g == 0 and n_constr != 0:
+            raise RuntimeError(f'Expecting at least one trained constraint model ({n_constr}), received 0')
+        elif n_constr > 0 and n_trained_g not in {1, n_constr}:
+            raise RuntimeError(f'Expecting either 1 or {n_constr} constraint models, received {n_trained_g}')
+
+        self._set_samples(x_train, y_train)
+
+    def _set_samples(self, x_train: np.ndarray, y_train: np.ndarray):
         pass
 
     def get_n_infill_constraints(self) -> int:
-        raise NotImplementedError
+        return self.n_trained_g
 
     def evaluate(self, x: np.ndarray, g: np.ndarray, g_var: np.ndarray) -> np.ndarray:
         """Evaluate the infill constraint function(s) given x and predicted g and g_var"""
@@ -252,9 +264,6 @@ class ConstraintStrategy:
 
 class MeanConstraintPrediction(ConstraintStrategy):
     """Simple use the mean prediction of the constraint functions as the infill constraint"""
-
-    def get_n_infill_constraints(self) -> int:
-        return self.problem.n_ieq_constr
 
     def evaluate(self, x: np.ndarray, g: np.ndarray, g_var: np.ndarray) -> np.ndarray:
         return g
@@ -280,9 +289,6 @@ class ProbabilityOfFeasibility(ConstraintStrategy):
             min_pof = .5
         self.min_pof = min_pof
         super().__init__()
-
-    def get_n_infill_constraints(self) -> int:
-        return self.problem.n_ieq_constr
 
     def evaluate(self, x: np.ndarray, g: np.ndarray, g_var: np.ndarray) -> np.ndarray:
         pof = self._pof(g, g_var)

@@ -275,7 +275,7 @@ class SBOInfill(InfillCriterion):
         y_norm = f_norm
 
         if self.problem.n_ieq_constr > 0:
-            g_norm, g_min, g_max = self._normalize_y(y[:, n_obj:], keep_centered=True)
+            g_norm, g_min, g_max = self._get_normalize_g(y[:, n_obj:])
             y_norm = np.column_stack([y_norm, g_norm])
 
             self.y_train_min = np.append(self.y_train_min, g_min)
@@ -290,6 +290,9 @@ class SBOInfill(InfillCriterion):
 
         self.pf_estimate = None
         self._train_model()
+
+    def _get_normalize_g(self, g: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        return self._normalize_y(g, keep_centered=True)
 
     def _get_xy_train(self, x: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """Replace failed points with current worst values"""
