@@ -102,6 +102,16 @@ def test_arch_sbo_gp_batch(problem: ArchOptProblemBase):
 
 
 @check_dependency()
+def test_arch_sbo_gp_high_dim():
+    assert HAS_ARCH_SBO
+
+    problem = MOZDT1()
+    sbo = get_arch_sbo_gp(problem, init_size=10, kpls_n_dim=5)
+    result = minimize(problem, sbo, termination=('n_eval', 12))
+    assert len(result.pop) == 12
+
+
+@check_dependency()
 def test_store_results_restart(problem: ArchOptProblemBase):
     assert HAS_ARCH_SBO
 

@@ -36,17 +36,21 @@ def get_arch_sbo_rbf(init_size: int = 100, **kwargs):
 
 
 def get_arch_sbo_gp(problem: ArchOptProblemBase, init_size: int = 100, n_parallel=None, min_pof: float = None,
-                    **kwargs):
+                    kpls_n_dim: int = 20, **kwargs):
     """
     Get an architecture SBO algorithm using a mixed-discrete Gaussian Process (Kriging) model as its surrogate model.
     Appropriate (multi-objective) infills and constraint handling techniques are automatically selected.
 
     For constraint handling, increase min_pof to between 0.50 and 0.75 to be more conservative (i.e. require a higher
     probability of being feasible for infill points) or decrease below 0.50 to be more exploratory.
+
+    To reduce model training times for high-dimensional problems, KPLS is used instead of Kriging when the problem
+    dimension exceeds kpls_n_dim. Note that the DoE should then contain at least kpls_n_dim+1 points.
     """
 
     # Create the mixed-discrete Kriging model, correctly configured for the given design space
-    model, normalization = ModelFactory(problem).get_md_kriging_model()
+    kpls_n_comp = kpls_n_dim if kpls_n_dim is not None and problem.n_var > kpls_n_dim else None
+    model, normalization = ModelFactory(problem).get_md_kriging_model(kpls_n_comp=kpls_n_comp)
 
     # Select the single- or multi-objective infill criterion
     infill, infill_batch = get_default_infill(problem, n_parallel=n_parallel, min_pof=min_pof)

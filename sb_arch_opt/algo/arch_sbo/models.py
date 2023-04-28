@@ -29,6 +29,7 @@ try:
     from smt.surrogate_models.surrogate_model import SurrogateModel
 
     from smt.surrogate_models.krg import KRG
+    from smt.surrogate_models.kpls import KPLS
     from smt.surrogate_models.krg_based import MixIntKernelType, MixHrcKernelType
     from smt.applications.mixed_integer import MixedIntegerKrigingModel
 
@@ -150,21 +151,25 @@ class ModelFactory:
         check_dependencies()
         return KRG(print_global=False, **kwargs)
 
-    def get_md_kriging_model(self, **kwargs) -> Tuple['SurrogateModel', Normalization]:
+    def get_md_kriging_model(self, kpls_n_comp: int = None, **kwargs) -> Tuple['SurrogateModel', Normalization]:
         check_dependencies()
         normalization = self.get_md_normalization()
         norm_ds_spec = self.create_smt_design_space_spec(self.problem.design_space, md_normalize=True)
 
-        if norm_ds_spec.is_mixed_discrete:
-            kwargs['n_start'] = kwargs.get('n_start', 5)
-
-        surrogate = KRG(
+        kwargs.update(
             print_global=False,
             design_space=norm_ds_spec.design_space,
             categorical_kernel=MixIntKernelType.EXP_HOMO_HSPHERE,
             hierarchical_kernel=MixHrcKernelType.ALG_KERNEL,
-            **kwargs,
         )
+        if norm_ds_spec.is_mixed_discrete:
+            kwargs['n_start'] = kwargs.get('n_start', 5)
+
+        if kpls_n_comp is not None:
+            surrogate = KPLS(n_comp=kpls_n_comp, **kwargs)
+        else:
+            surrogate = KRG(**kwargs)
+
         if norm_ds_spec.is_mixed_discrete:
             surrogate = MixedIntegerKrigingModel(surrogate=surrogate)
         return surrogate, normalization
