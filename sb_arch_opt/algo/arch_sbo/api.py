@@ -36,7 +36,7 @@ def get_arch_sbo_rbf(init_size: int = 100, **kwargs):
 
 
 def get_arch_sbo_gp(problem: ArchOptProblemBase, init_size: int = 100, n_parallel=None, min_pof: float = None,
-                    kpls_n_dim: int = 20, **kwargs):
+                    kpls_n_dim: int = 10, **kwargs):
     """
     Get an architecture SBO algorithm using a mixed-discrete Gaussian Process (Kriging) model as its surrogate model.
     Appropriate (multi-objective) infills and constraint handling techniques are automatically selected.
