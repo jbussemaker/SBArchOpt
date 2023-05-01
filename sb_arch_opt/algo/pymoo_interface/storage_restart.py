@@ -30,6 +30,7 @@ from pymoo.core.initialization import Initialization
 
 from sb_arch_opt.util import capture_log
 from sb_arch_opt.problem import ArchOptProblemBase
+from sb_arch_opt.sampling import LargeDuplicateElimination
 
 __all__ = ['load_from_previous_results', 'initialize_from_previous_results', 'ResultsStorageCallback',
            'ArchOptEvaluator']
@@ -37,18 +38,18 @@ __all__ = ['load_from_previous_results', 'initialize_from_previous_results', 'Re
 log = logging.getLogger('sb_arch_opt.pymoo')
 
 
-def load_from_previous_results(problem: ArchOptProblemBase, result_folder: str) -> Optional[Population]:
+def load_from_previous_results(problem: ArchOptProblemBase, result_folder: str, cumulative=False) -> Optional[Population]:
     """Load a Population from previously-stored results"""
     capture_log()
 
     # Try to load using problem-specific function first
-    population = problem.load_previous_results(result_folder)
+    population = problem.load_previous_results(result_folder) if not cumulative else None
     if population is not None and len(population) > 0:
         log.info(f'Previous results loaded from problem results: {len(population)} design points')
 
     # Try to load from pymoo storage
     else:
-        population = ResultsStorageCallback.load_pop(result_folder)
+        population = ResultsStorageCallback.load_pop(result_folder, cumulative=cumulative)
         if population is not None and len(population) > 0:
             log.info(f'Previous results loaded from pymoo results: {len(population)} design points')
         else:
@@ -89,9 +90,12 @@ class ResultsStorageCallback(Callback):
         self.results_folder = results_folder
         os.makedirs(results_folder, exist_ok=True)
         self.callback = callback
+        self.cumulative_pop = None
         super().__init__()
 
     def initialize(self, algorithm: Algorithm):
+        self.cumulative_pop = None
+
         # Hook into the results function to store final results
         result_func = algorithm.result
 
@@ -129,15 +133,24 @@ class ResultsStorageCallback(Callback):
         pop: Population = algorithm.pop
         self.store_pop(pop)
 
+        # Store cumulative pymoo population
+        if self.cumulative_pop is None:
+            self.cumulative_pop = pop
+        else:
+            self.cumulative_pop = LargeDuplicateElimination().do(Population.merge(self.cumulative_pop, pop))
+        self.store_pop(self.cumulative_pop, cumulative=True)
+
         # Store problem-specific results
         self.store_intermediate_problem(algorithm.problem, final=final)
 
-    def store_pop(self, pop: Population):
-        with open(self._get_pop_file_path(self.results_folder), 'wb') as fp:
+    def store_pop(self, pop: Population, cumulative=False):
+        with open(self._get_pop_file_path(self.results_folder, cumulative=cumulative), 'wb') as fp:
             pickle.dump(pop, fp)
 
         if len(pop) > 0:
-            self.get_pop_as_df(pop).to_csv(os.path.join(self.results_folder, 'pymoo_population.csv'))
+            cumulative_str = '_cumulative' if cumulative else ''
+            csv_path = os.path.join(self.results_folder, f'pymoo_population{cumulative_str}.csv')
+            self.get_pop_as_df(pop).to_csv(csv_path)
 
     @staticmethod
     def get_pop_as_df(pop: Population) -> pd.DataFrame:
@@ -159,8 +172,8 @@ class ResultsStorageCallback(Callback):
             pickle.dump(result, fp)
 
     @classmethod
-    def load_pop(cls, results_folder: str) -> Optional[Population]:
-        pop_path = cls._get_pop_file_path(results_folder)
+    def load_pop(cls, results_folder: str, cumulative=False) -> Optional[Population]:
+        pop_path = cls._get_pop_file_path(results_folder, cumulative=cumulative)
         if not os.path.exists(pop_path):
             return
 
@@ -172,8 +185,9 @@ class ResultsStorageCallback(Callback):
         return pop
 
     @staticmethod
-    def _get_pop_file_path(results_folder) -> str:
-        return os.path.join(results_folder, 'pymoo_population.pkl')
+    def _get_pop_file_path(results_folder, cumulative=False) -> str:
+        cumulative_str = '_cumulative' if cumulative else ''
+        return os.path.join(results_folder, f'pymoo_population{cumulative_str}.pkl')
 
     def __call__(self, *args, **kwargs):
         super().__call__(*args, **kwargs)

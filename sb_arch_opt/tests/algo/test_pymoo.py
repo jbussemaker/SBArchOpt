@@ -113,10 +113,15 @@ def test_store_results_restart():
             assert os.path.exists(os.path.join(tmp_folder, 'pymoo_results.pkl'))
             assert os.path.exists(os.path.join(tmp_folder, 'pymoo_population.pkl'))
             assert os.path.exists(os.path.join(tmp_folder, 'pymoo_population.csv'))
+            assert os.path.exists(os.path.join(tmp_folder, 'pymoo_population_cumulative.pkl'))
+            assert os.path.exists(os.path.join(tmp_folder, 'pymoo_population_cumulative.csv'))
 
             assert problem.n_eval == 3+2*i  # 3 for initial population, 2 for next because the first is a restart
             assert problem.n_stored == 6+5*i
             assert problem.n_stored_final == 2*(i+1)  # because pymoo calls result() twice in the end
+
+            n_cumulative = load_from_previous_results(problem, tmp_folder, cumulative=True)
+            assert len(n_cumulative) <= 3*100*(i+1)
 
 
 def test_batch_storage_evaluator(problem: ArchOptProblemBase):
