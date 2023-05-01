@@ -14,6 +14,7 @@ limitations under the License.
 Copyright: (c) 2023, Deutsches Zentrum fuer Luft- und Raumfahrt e.V.
 Contact: jasper.bussemaker@dlr.de
 """
+import copy
 import numpy as np
 from typing import *
 from dataclasses import dataclass
@@ -28,10 +29,9 @@ try:
     from smt.surrogate_models.rbf import RBF
     from smt.surrogate_models.surrogate_model import SurrogateModel
 
-    from smt.surrogate_models.krg import KRG
+    from smt.surrogate_models.krg import KRG, KrgBased
     from smt.surrogate_models.kpls import KPLS
     from smt.surrogate_models.krg_based import MixIntKernelType, MixHrcKernelType
-    from smt.applications.mixed_integer import MixedIntegerKrigingModel
 
     from smt.utils.mixed_integer import XType
     from smt.utils.kriging import XSpecs, XRole
@@ -50,7 +50,11 @@ except ImportError:
     class BaseDesignSpace:
         pass
 
-__all__ = ['check_dependencies', 'HAS_ARCH_SBO', 'ModelFactory', 'MixedDiscreteNormalization', 'SBArchOptDesignSpace']
+    class SurrogateModel:
+        pass
+
+__all__ = ['check_dependencies', 'HAS_ARCH_SBO', 'ModelFactory', 'MixedDiscreteNormalization', 'SBArchOptDesignSpace',
+           'MultiSurrogateModel']
 
 
 def check_dependencies():
@@ -147,11 +151,14 @@ class ModelFactory:
         return RBF(print_global=False, d0=1., poly_degree=-1, reg=1e-10)
 
     @staticmethod
-    def get_kriging_model(**kwargs):
+    def get_kriging_model(multi=True, **kwargs):
         check_dependencies()
-        return KRG(print_global=False, **kwargs)
+        surrogate = KRG(print_global=False, **kwargs)
+        if multi:
+            surrogate = MultiSurrogateModel(surrogate)
+        return surrogate
 
-    def get_md_kriging_model(self, kpls_n_comp: int = None, **kwargs) -> Tuple['SurrogateModel', Normalization]:
+    def get_md_kriging_model(self, kpls_n_comp: int = None, multi=True, **kwargs) -> Tuple['SurrogateModel', Normalization]:
         check_dependencies()
         normalization = self.get_md_normalization()
         norm_ds_spec = self.create_smt_design_space_spec(self.problem.design_space, md_normalize=True)
@@ -170,8 +177,9 @@ class ModelFactory:
         else:
             surrogate = KRG(**kwargs)
 
-        if norm_ds_spec.is_mixed_discrete:
-            surrogate = MixedIntegerKrigingModel(surrogate=surrogate)
+        if multi:
+            surrogate = MultiSurrogateModel(surrogate)
+
         return surrogate, normalization
 
 
@@ -242,3 +250,49 @@ class SBArchOptDesignSpace(BaseDesignSpace):
 
     def __repr__(self):
         return f'{self.__class__.__name__}({self._ds!r})'
+
+
+class MultiSurrogateModel(SurrogateModel):
+    """SMT surrogate model wrapper that trains independent models for each provided output"""
+
+    def __init__(self, surrogate: 'SurrogateModel', **kwargs):
+        super().__init__(**kwargs)
+
+        self._surrogate = surrogate
+        self._models: List['SurrogateModel'] = []
+        self.supports = self._surrogate.supports
+        self.options["print_global"] = False
+
+    @property
+    def name(self):
+        return f'Multi{self._surrogate.name}'
+
+    def _initialize(self):
+        self.supports["derivatives"] = False
+
+    def set_training_values(self, xt: np.ndarray, yt: np.ndarray, name=None, is_acting=None) -> None:
+        self._models = models = []
+        for iy in range(yt.shape[1]):
+            model = copy.deepcopy(self._surrogate)
+            model.set_training_values(xt, yt[:, [iy]], is_acting=is_acting)
+            models.append(model)
+
+    def train(self) -> None:
+        theta0 = None
+        for i, model in enumerate(self._models):
+            if i > 0 and isinstance(model, KrgBased):
+                model.options['theta0'] = theta0
+
+            model.train()
+
+            if i == 0 and isinstance(model, KrgBased):
+                theta0 = list(model.optimal_theta)
+
+    def predict_values(self, x: np.ndarray, is_acting=None) -> np.ndarray:
+        return np.column_stack([model.predict_values(x, is_acting=is_acting) for model in self._models])
+
+    def predict_variances(self, x: np.ndarray, is_acting=None) -> np.ndarray:
+        return np.column_stack([model.predict_variances(x, is_acting=is_acting) for model in self._models])
+
+    def _predict_values(self, x: np.ndarray, is_acting=None) -> np.ndarray:
+        raise RuntimeError
