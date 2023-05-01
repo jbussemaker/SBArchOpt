@@ -125,7 +125,7 @@ class SBOInfill(InfillCriterion):
 
     def __init__(self, surrogate_model: 'SurrogateModel', infill: SurrogateInfill, pop_size=None,
                  termination: Union[Termination, int] = None, normalization: Normalization = None, verbose=False,
-                 repair: Repair = None, eliminate_duplicates: DuplicateElimination = None,
+                 repair: Repair = None, eliminate_duplicates: DuplicateElimination = None, aggregate_g=False,
                  force_new_points: bool = True, **kwargs):
 
         if eliminate_duplicates is None:
@@ -137,6 +137,7 @@ class SBOInfill(InfillCriterion):
         self.total_pop: Optional[Population] = None
         self._algorithm: Optional[Algorithm] = None
         self._normalization: Optional[Normalization] = normalization
+        self._aggregate_g = aggregate_g
 
         self._surrogate_model_base = surrogate_model
         self._surrogate_model = None
@@ -292,7 +293,10 @@ class SBOInfill(InfillCriterion):
         self._train_model()
 
     def _get_normalize_g(self, g: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        return self._normalize_y(g, keep_centered=True)
+        g_ref = g
+        if self._aggregate_g:
+            g_ref = np.array([np.max(g, axis=1)]).T
+        return self._normalize_y(g_ref, keep_centered=True)
 
     def _get_xy_train(self, x: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """Replace failed points with current worst values"""

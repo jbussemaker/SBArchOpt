@@ -36,7 +36,7 @@ def get_arch_sbo_rbf(init_size: int = 100, **kwargs):
 
 
 def get_arch_sbo_gp(problem: ArchOptProblemBase, init_size: int = 100, n_parallel=None, min_pof: float = None,
-                    kpls_n_dim: int = 10, **kwargs):
+                    kpls_n_dim: int = 10, aggregate_g: bool = None, **kwargs):
     """
     Get an architecture SBO algorithm using a mixed-discrete Gaussian Process (Kriging) model as its surrogate model.
     Appropriate (multi-objective) infills and constraint handling techniques are automatically selected.
@@ -53,9 +53,12 @@ def get_arch_sbo_gp(problem: ArchOptProblemBase, init_size: int = 100, n_paralle
     model, normalization = ModelFactory(problem).get_md_kriging_model(kpls_n_comp=kpls_n_comp)
 
     # Select the single- or multi-objective infill criterion
-    infill, infill_batch = get_default_infill(problem, n_parallel=n_parallel, min_pof=min_pof)
+    infill, infill_batch, aggregate_g_ = get_default_infill(problem, n_parallel=n_parallel, min_pof=min_pof)
+    if aggregate_g is None:
+        aggregate_g = aggregate_g_
 
-    return get_sbo(model, infill, infill_size=infill_batch, init_size=init_size, normalization=normalization, **kwargs)
+    return get_sbo(model, infill, infill_size=infill_batch, init_size=init_size, normalization=normalization,
+                   aggregate_g=aggregate_g, **kwargs)
 
 
 def get_arch_sbo_krg(init_size: int = 100, use_mvpf=True, use_ei=False, min_pof=None, **kwargs):

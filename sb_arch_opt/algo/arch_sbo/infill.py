@@ -40,7 +40,7 @@ except ImportError:
 
 
 def get_default_infill(problem: ArchOptProblemBase, n_parallel: int = None, min_pof: float = None) \
-        -> Tuple['ConstrainedInfill', int]:
+        -> Tuple['ConstrainedInfill', int, bool]:
     """
     Get the default infill criterion according to the following logic:
     - If evaluations can be run in parallel:
@@ -53,7 +53,7 @@ def get_default_infill(problem: ArchOptProblemBase, n_parallel: int = None, min_
       - Multi-objective:  Ensemble of MPoI, MEPoI  with n_batch = 1
     - Set Probability of Feasibility as constraint handling technique if min_pof != .5, otherwise use g-mean prediction
 
-    Returns the infill and the recommended infill batch size.
+    Returns the infill, the recommended infill batch size, and whether constraints should be aggregated.
     """
 
     # Determine number of evaluations that can be run in parallel
@@ -85,12 +85,14 @@ def get_default_infill(problem: ArchOptProblemBase, n_parallel: int = None, min_
     # Get infill and set constraint handling technique
     infill, n_batch = _get_infill()
 
+    aggregate_constraints = False
     if min_pof is not None and min_pof != .5:
+        aggregate_constraints = True
         infill.constraint_strategy = ProbabilityOfFeasibility(min_pof=min_pof)
     else:
         infill.constraint_strategy = MeanConstraintPrediction()
 
-    return infill, n_batch
+    return infill, n_batch, aggregate_constraints
 
 
 class SurrogateInfill:

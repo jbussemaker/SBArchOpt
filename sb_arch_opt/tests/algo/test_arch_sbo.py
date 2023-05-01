@@ -83,7 +83,7 @@ def test_arch_sbo_mvpf():
 def test_arch_sbo_gp(problem: ArchOptProblemBase):
     assert HAS_ARCH_SBO
 
-    _, n_batch = get_default_infill(problem)
+    _, n_batch, _ = get_default_infill(problem)
     assert n_batch == 1
 
     sbo = get_arch_sbo_gp(problem, init_size=10)
@@ -93,7 +93,7 @@ def test_arch_sbo_gp(problem: ArchOptProblemBase):
 
 @check_dependency()
 def test_arch_sbo_gp_batch(problem: ArchOptProblemBase):
-    _, n_batch = get_default_infill(problem, n_parallel=5)
+    _, n_batch, _ = get_default_infill(problem, n_parallel=5)
     assert n_batch == 5
 
     sbo = get_arch_sbo_gp(problem, init_size=10, n_parallel=5)
