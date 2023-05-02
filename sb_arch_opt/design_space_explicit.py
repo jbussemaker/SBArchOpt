@@ -348,6 +348,9 @@ class ExplicitArchDesignSpace(ArchDesignSpace):
         the imputation ratio"""
         # Currently only possible by generating all discrete x
 
+    def _get_n_active_cont_mean(self) -> Optional[int]:
+        """Currently only possible by generating all discrete x"""
+
     def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
         """Generate all possible discrete design vectors (if available). Returns design vectors and activeness
         information."""

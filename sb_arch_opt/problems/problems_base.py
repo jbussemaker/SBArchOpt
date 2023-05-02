@@ -91,6 +91,10 @@ class NoHierarchyProblemBase(ArchOptTestProblemBase):
         # No hierarchy, so the number of valid points is the same as the number of declared points
         return self.get_n_declared_discrete()
 
+    def _get_n_active_cont_mean(self) -> int:
+        # No hierarchy, so the mean nr of active continuous dimensions is the same as the nr of continuous dimensions
+        return int(np.sum(self.is_cont_mask))
+
     def _is_conditionally_active(self):
         return [False]*self.n_var
 

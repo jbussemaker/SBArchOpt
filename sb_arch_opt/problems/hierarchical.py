@@ -1124,6 +1124,9 @@ class NeuralNetwork(HierarchyProblemBase):
             n_base*6**3,  # x0 == 2
         ])
 
+    def _get_n_active_cont_mean(self) -> int:
+        return 2
+
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
         self._correct_x_impute(x, is_active_out)

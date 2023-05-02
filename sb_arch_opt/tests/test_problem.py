@@ -102,7 +102,9 @@ def test_repair(problem: ArchOptProblemBase):
 def test_imputation_ratio(problem: ArchOptProblemBase, discrete_problem: ArchOptProblemBase):
     assert problem.get_n_declared_discrete() == 10*10
     assert problem.get_n_valid_discrete() == 10 * 10
-    assert problem.get_imputation_ratio() == 1
+    assert problem.get_discrete_imputation_ratio() == 1
+    assert problem.get_continuous_imputation_ratio() == 1.2
+    assert problem.get_imputation_ratio() == 1.2
     problem.print_stats()
 
     x_discrete, is_active_discrete = problem.all_discrete_x
@@ -117,6 +119,8 @@ def test_imputation_ratio(problem: ArchOptProblemBase, discrete_problem: ArchOpt
 
     assert discrete_problem.get_n_declared_discrete() == 10*10
     assert discrete_problem.get_n_valid_discrete() == 10 * 5 + 5
+    assert discrete_problem.get_discrete_imputation_ratio() == 1/.55
+    assert discrete_problem.get_continuous_imputation_ratio() == 1.
     assert discrete_problem.get_imputation_ratio() == 1/.55
     discrete_problem.print_stats()
 

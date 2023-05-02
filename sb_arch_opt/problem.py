@@ -65,6 +65,7 @@ class ArchOptProblemBase(Problem):
                 self._correct_x,
                 self._is_conditionally_active,
                 self._get_n_valid_discrete,
+                self._get_n_active_cont_mean,
                 self._gen_all_discrete_x,
             )
         self.design_space = design_space
@@ -218,10 +219,13 @@ class ArchOptProblemBase(Problem):
         print(f'MO     : {self.n_obj > 1}')  # Is it a multi-objective problem?
 
         imp_ratio = self.get_imputation_ratio()
-        if not np.isnan(imp_ratio):
-            print(f'HIER         : {imp_ratio > 1}')  # Is it a hierarchical problem?
+        discrete_imp_ratio = self.get_discrete_imputation_ratio()
+        cont_imp_ratio = self.get_continuous_imputation_ratio()
+        if not np.isnan(imp_ratio) or not np.isnan(discrete_imp_ratio):
+            print(f'HIER         : {imp_ratio > 1 or discrete_imp_ratio > 1}')  # Is it a hierarchical problem?
             print(f'n_valid_discr: {self.get_n_valid_discrete()}')  # Number of valid discrete design points
-            print(f'imp_ratio    : {imp_ratio:.2f}')  # Imputation ratio: nr of declared designs / n_valid_discr
+            print(f'imp_ratio    : {imp_ratio:.2f} (discrete: {discrete_imp_ratio:.2f}; '
+                  f'continuous: {cont_imp_ratio:.2f})')  # Imputation ratio: nr of declared designs / n_valid_discr
 
         fail_rate = self.get_failure_rate()
         if fail_rate is not None and fail_rate > 0:
@@ -234,12 +238,28 @@ class ArchOptProblemBase(Problem):
 
     def get_imputation_ratio(self) -> float:
         """
-        Returns the ratio between declared and valid design points; gives an estimate on how much design variable
-        hierarchy plays a role for this problem. A value of 1 means there is no hierarchy, any value higher than 1
-        means there is hierarchy. The higher the value, the more difficult it is to "randomly" sample a valid design
-        vector (e.g. imputation ratio = 10 means that 1/10th of declared design vectors is valid).
+        Returns the problem-level imputation ratio, a measure of how hierarchical the problem is. It is calculated
+        from the product of the discrete and continuous imputation ratios.
         """
-        return self.design_space.get_imputation_ratio()
+        return self.design_space.imputation_ratio
+
+    def get_discrete_imputation_ratio(self) -> float:
+        """
+        Returns the imputation ratio considering only the discrete design vectors: it represents the ratio between
+        number of declared discrete dimensions (Cartesian product) and the number of valid discrete design vectors.
+        A value of 1 indicates no hierarchy, any value higher than 1 means there is hierarchy and the higher the value,
+        the more difficult it is to randomly sample a valid design vector.
+        """
+        return self.design_space.discrete_imputation_ratio
+
+    def get_continuous_imputation_ratio(self) -> float:
+        """
+        Returns the imputation ratio considering only the continuous design variables: it represents the nr of
+        continuous dimensions over the mean number of active continuous dimensions, as seen over all possible discrete
+        design vectors. The higher the number, the less continuous dimensions are active on average. A value of 1
+        indicates all continuous dimensions are always active.
+        """
+        return self.design_space.continuous_imputation_ratio
 
     def get_discrete_rates(self, force=False, show=False) -> Optional[pd.DataFrame]:
         """Returns for each discrete value of the discrete design variables, how often the relatively occur over all
@@ -259,6 +279,19 @@ class ArchOptProblemBase(Problem):
     def _get_n_valid_discrete(self) -> int:
         """Return the number of valid discrete design points (ignoring continuous dimensions); enables calculation of
         the imputation ratio. Not needed if an explicit design space is provided."""
+
+    def _get_n_active_cont_mean(self) -> int:
+        """
+        Get the mean number of active continuous dimensions, as seen over all discrete design vectors.
+
+        For example, if there are two discrete design vectors like this"
+        x_discrete x_continuous1 x_continuous2
+        0          Active        Active
+        1          Active        Inactive
+
+        Then the mean number of active continuous dimensions is:
+        3 (total nr of active continuous dimensions) / 2 (number of discrete vectors) = 1.5
+        """
 
     def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
         """Generate all possible discrete design vectors (if available). Returns design vectors and activeness

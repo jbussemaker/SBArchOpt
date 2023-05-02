@@ -31,6 +31,9 @@ class TestDesignSpace(ArchDesignSpace):
     def _get_n_valid_discrete(self):
         pass
 
+    def _get_n_active_cont_mean(self):
+        pass
+
     def _gen_all_discrete_x(self):
         pass
 
@@ -69,7 +72,9 @@ def test_init_no_vars():
     assert ds.n_var == 0
     assert ds.des_vars == []
     assert ds.get_n_declared_discrete() == 1
-    assert np.isnan(ds.get_imputation_ratio())
+    assert np.isnan(ds.discrete_imputation_ratio)
+    assert ds.continuous_imputation_ratio == 1.
+    assert np.isnan(ds.imputation_ratio)
 
     assert not ds.is_explicit()
 
@@ -105,14 +110,16 @@ def test_get_categorical_values():
 
 
 def test_x_generation(problem: ArchOptProblemBase, discrete_problem: ArchOptProblemBase):
-    for prob, n_valid in [
-        (problem, 10*10),
-        (discrete_problem, 10*5+5),
+    for prob, n_valid, cont_imp_ratio in [
+        (problem, 10*10, 1.2),
+        (discrete_problem, 10*5+5, 1.),
     ]:
         ds = prob.design_space
         assert ds.get_n_declared_discrete() == 10*10
         assert ds.get_n_valid_discrete() == n_valid
-        assert ds.get_imputation_ratio() == (10*10)/n_valid
+        assert ds.discrete_imputation_ratio == (10 * 10) / n_valid
+        assert ds.continuous_imputation_ratio == cont_imp_ratio
+        assert ds.imputation_ratio == cont_imp_ratio * (10*10)/n_valid
 
         assert not ds.is_explicit()
 

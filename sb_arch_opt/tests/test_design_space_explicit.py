@@ -11,7 +11,9 @@ def test_init_no_vars():
     assert ds.n_var == 0
     assert ds.des_vars == []
     assert ds.get_n_declared_discrete() == 1
-    assert ds.get_imputation_ratio() == 1.
+    assert ds.discrete_imputation_ratio == 1.
+    assert ds.continuous_imputation_ratio == 1
+    assert ds.imputation_ratio == 1
 
     assert ds.is_explicit()
 
@@ -38,6 +40,10 @@ def test_init_vars():
 
     assert ds.get_n_declared_discrete() == 4*2*3
 
+    assert ds.discrete_imputation_ratio == 1
+    assert ds.continuous_imputation_ratio == 1
+    assert ds.imputation_ratio == 1
+
 
 def test_num_x():
     ds = ExplicitArchDesignSpace([
@@ -59,7 +65,8 @@ def test_num_x():
 
     assert ds.get_n_declared_discrete() == 64
     assert ds.get_n_valid_discrete() == 64
-    assert ds.get_imputation_ratio() == 1
+    assert ds.discrete_imputation_ratio == 1
+    assert ds.continuous_imputation_ratio == 1
     assert np.all(~ds.is_conditionally_active)
 
     x, is_active = ds.quick_sample_discrete_x(1000)
@@ -93,7 +100,8 @@ def test_discrete_x():
 
     assert ds.get_n_declared_discrete() == 6
     assert ds.get_n_valid_discrete() == 6
-    assert ds.get_imputation_ratio() == 1
+    assert ds.discrete_imputation_ratio == 1
+    assert ds.continuous_imputation_ratio == 1
     assert np.all(~ds.is_conditionally_active)
 
     x, is_active = ds.quick_sample_discrete_x(100)
@@ -144,7 +152,9 @@ def test_hierarchy():
     ])
 
     assert ds.get_n_valid_discrete() == 5
-    assert ds.get_imputation_ratio() == 12/5
+    assert ds.discrete_imputation_ratio == 12 / 5
+    assert ds.continuous_imputation_ratio == 1/(3/5)
+    assert ds.imputation_ratio == (12/5) * (5/3)
 
     x, is_active = ds.quick_sample_discrete_x(100)
     assert x.shape == (100, 4)
@@ -256,6 +266,10 @@ def test_forbidden():
         [True, True, True, True],
         [True, True, True, True],
     ])
+
+    assert ds.discrete_imputation_ratio == 1.2
+    assert ds.continuous_imputation_ratio == 10/4
+    assert ds.imputation_ratio == (10/4) * 1.2
 
     x = HierarchicalSampling().do(ArchOptProblemBase(ds), 100).get('X')
     assert x.shape == (100, 4)

@@ -243,12 +243,21 @@ class ArchDesignSpace:
 
         return int(np.prod(n_opts_discrete, dtype=np.float))
 
-    def get_imputation_ratio(self) -> float:
+    @cached_property
+    def imputation_ratio(self) -> float:
         """
-        Returns the ratio between declared and valid design points; gives an estimate on how much design variable
-        hierarchy plays a role for this problem. A value of 1 means there is no hierarchy, any value higher than 1
-        means there is hierarchy. The higher the value, the more difficult it is to "randomly" sample a valid design
-        vector (e.g. imputation ratio = 10 means that 1/10th of declared design vectors is valid).
+        Returns the problem-level imputation ratio, a measure of how hierarchical the problem is. It is calculated
+        from the product of the discrete and continuous imputation ratios.
+        """
+        return self.discrete_imputation_ratio * self.continuous_imputation_ratio
+
+    @cached_property
+    def discrete_imputation_ratio(self) -> float:
+        """
+        Returns the imputation ratio considering only the discrete design vectors: it represents the ratio between
+        number of declared discrete dimensions (Cartesian product) and the number of valid discrete design vectors.
+        A value of 1 indicates no hierarchy, any value higher than 1 means there is hierarchy and the higher the value,
+        the more difficult it is to randomly sample a valid design vector.
         """
 
         # Get valid design points
@@ -259,8 +268,37 @@ class ArchDesignSpace:
             return 1.
 
         n_declared = self.get_n_declared_discrete()
-        imp_ratio = n_declared/n_valid
-        return imp_ratio
+        discrete_imp_ratio = n_declared/n_valid
+        return discrete_imp_ratio
+
+    @cached_property
+    def continuous_imputation_ratio(self) -> float:
+        """
+        Returns the imputation ratio considering only the continuous design variables: it represents the nr of
+        continuous dimensions over the mean number of active continuous dimensions, as seen over all possible discrete
+        design vectors. The higher the number, the less continuous dimensions are active on average. A value of 1
+        indicates all continuous dimensions are always active.
+        """
+
+        # Check if we have any continuous dimensions
+        i_is_cont = np.where(self.is_cont_mask)[0]
+        if len(i_is_cont) == 0:
+            return 1.
+
+        # Check if mean active continuous dimensions is explicitly defined
+        n_cont_active_mean = self._get_n_active_cont_mean()
+
+        # Get from discrete design vectors
+        if n_cont_active_mean is None:
+            x_all, is_active_all = self.all_discrete_x
+            if x_all is None:
+                return np.nan
+
+            n_cont_active_mean = np.sum(is_active_all[:, i_is_cont]) / x_all.shape[0]
+
+        # Calculate imputation ratio from declared / mean_active
+        n_cont_dim_declared = len(i_is_cont)
+        return n_cont_dim_declared / n_cont_active_mean
 
     def get_discrete_rates(self, force=False, show=False) -> Optional[pd.DataFrame]:
         """Returns for each discrete value of the discrete design variables, how often the relatively occur over all
@@ -445,6 +483,20 @@ class ArchDesignSpace:
         the imputation ratio"""
         raise NotImplementedError
 
+    def _get_n_active_cont_mean(self) -> Optional[int]:
+        """
+        Get the mean number of active continuous dimensions, as seen over all discrete design vectors.
+
+        For example, if there are two discrete design vectors like this"
+        x_discrete x_continuous1 x_continuous2
+        0          Active        Active
+        1          Active        Inactive
+
+        Then the mean number of active continuous dimensions is:
+        3 (total nr of active continuous dimensions) / 2 (number of discrete vectors) = 1.5
+        """
+        raise NotImplementedError
+
     def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
         """Generate all possible discrete design vectors (if available). Returns design vectors and activeness
         information."""
@@ -456,12 +508,13 @@ class ImplicitArchDesignSpace(ArchDesignSpace):
 
     def __init__(self, des_vars: List[Variable], correct_x_func: Callable[[np.ndarray, np.ndarray], None],
                  is_conditional_func: Callable[[], List[bool]],
-                 n_valid_discrete_func: Callable[[], int] = None,
+                 n_valid_discrete_func: Callable[[], int] = None, n_active_cont_mean: Callable[[], int] = None,
                  gen_all_discrete_x_func: Callable[[], Optional[Tuple[np.ndarray, np.ndarray]]] = None):
         self._variables = des_vars
         self._correct_x_func = correct_x_func
         self._is_conditional_func = is_conditional_func
         self._n_valid_discrete_func = n_valid_discrete_func
+        self._n_active_cont_mean = n_active_cont_mean
         self._gen_all_discrete_x_func = gen_all_discrete_x_func
         super().__init__()
 
@@ -493,6 +546,10 @@ class ImplicitArchDesignSpace(ArchDesignSpace):
     def _get_n_valid_discrete(self) -> Optional[int]:
         if self._n_valid_discrete_func is not None:
             return self._n_valid_discrete_func()
+
+    def _get_n_active_cont_mean(self) -> Optional[int]:
+        if self._n_active_cont_mean is not None:
+            return self._n_active_cont_mean()
 
     def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
         if self._gen_all_discrete_x_func is not None:
