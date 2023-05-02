@@ -11,7 +11,10 @@ from sb_arch_opt.algo.arch_sbo.algo import *
 from sb_arch_opt.problems.constrained import *
 from sb_arch_opt.algo.arch_sbo.infill import *
 from sb_arch_opt.algo.arch_sbo.models import *
+from sb_arch_opt.tests.algo.test_pymoo import CrashingProblem
+from sb_arch_opt.algo.pymoo_interface import load_from_previous_results
 from pymoo.optimize import minimize
+from pymoo.core.population import Population
 
 check_dependency = lambda: pytest.mark.skipif(not HAS_ARCH_SBO, reason='ArchSBO dependencies not installed')
 
@@ -124,6 +127,42 @@ def test_store_results_restart(problem: ArchOptProblemBase):
             n_eval = 11 if i == 0 else 1
             result = minimize(problem, sbo, termination=('n_eval', n_eval))
             assert len(result.pop) == 10+(i+1)
+
+
+def test_partial_doe_restart():
+    with tempfile.TemporaryDirectory() as tmp_folder:
+        for i in range(100):
+            try:
+                problem = CrashingProblem()
+                pop = load_from_previous_results(problem, tmp_folder)
+                evaluated = 0
+                if i == 0:
+                    assert pop is None
+                else:
+                    nx = 30 if i < 3 else 30+(i-3)
+                    assert isinstance(pop, Population)
+                    x = pop.get('X')
+                    assert np.all(np.isfinite(x))
+                    assert x.shape == (nx, problem.n_var)
+
+                    f = pop.get('F')
+                    assert f.shape == (nx, problem.n_obj)
+                    n_empty = np.sum(np.any(~np.isfinite(f), axis=1))
+                    if i >= 3:
+                        assert n_empty == 0
+                    else:
+                        assert n_empty == 30-i*10
+                    evaluated = f.shape[0]-n_empty
+
+                sbo = get_arch_sbo_rbf(init_size=30)
+                sbo.initialize_from_previous_results(problem, tmp_folder)
+                sbo.store_intermediate_results(tmp_folder)
+                result = minimize(problem, sbo, termination=('n_eval', 32-evaluated))
+                assert len(result.pop) == 32
+                break
+
+            except RuntimeError:
+                pass
 
 
 @check_dependency()

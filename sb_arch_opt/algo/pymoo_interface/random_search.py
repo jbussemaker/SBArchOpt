@@ -44,7 +44,7 @@ class RandomSearchAlgorithm(Algorithm):
     def __init__(self, n_init: int, **kwargs):
         super().__init__(
             outputs=EHVMultiObjectiveOutput(),
-            evaluator=ArchOptEvaluator(extreme_barrier=True),
+            evaluator=ArchOptEvaluator(),
             **kwargs)
         self.n_init = n_init
         self.sampling = HierarchicalSampling()

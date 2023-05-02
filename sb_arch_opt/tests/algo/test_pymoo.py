@@ -160,6 +160,59 @@ def test_doe_algo(problem: ArchOptProblemBase):
         assert np.all(pop_loaded.get('F') == pop.get('F'))
 
 
+class CrashingProblem(DummyResultSavingProblem):
+
+    def __init__(self):
+        super().__init__()
+        self.i_eval = 0
+
+    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
+                       h_out: np.ndarray, *args, **kwargs):
+        super()._arch_evaluate(x, is_active_out, f_out, g_out, h_out, *args, **kwargs)
+
+        self.i_eval += 1
+        if self.i_eval > 1:
+            raise RuntimeError
+
+    def get_n_batch_evaluate(self) -> Optional[int]:
+        return 10
+
+    def store_results(self, results_folder, final=False):
+        pass
+
+    def load_previous_results(self, results_folder) -> Optional[Population]:
+        pass
+
+
+def test_partial_doe_restart():
+    with tempfile.TemporaryDirectory() as tmp_folder:
+        for i in range(100):
+            try:
+                problem = CrashingProblem()
+                pop = load_from_previous_results(problem, tmp_folder)
+                if i == 0:
+                    assert pop is None
+                else:
+                    assert isinstance(pop, Population)
+                    x = pop.get('X')
+                    assert np.all(np.isfinite(x))
+                    assert x.shape == (30, problem.n_var)
+
+                    f = pop.get('F')
+                    assert f.shape == (30, problem.n_obj)
+                    n_empty = np.sum(np.any(~np.isfinite(f), axis=1))
+                    assert n_empty == 30-i*10
+
+                doe_algo = get_doe_algo(doe_size=30, results_folder=tmp_folder)
+                initialize_from_previous_results(doe_algo, problem, tmp_folder)
+                doe_algo.setup(problem)
+                doe_algo.run()
+                break
+
+            except RuntimeError:
+                pass
+
+
 def test_random_search(problem: ArchOptProblemBase):
     rs = RandomSearchAlgorithm(n_init=10)
     result = minimize(problem, rs, termination=('n_eval', 100))

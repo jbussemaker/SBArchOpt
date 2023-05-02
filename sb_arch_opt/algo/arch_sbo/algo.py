@@ -110,7 +110,7 @@ class InfillAlgorithm(Algorithm):
 
     def store_intermediate_results(self, results_folder: str):
         """Enable intermediate results storage to support restarting"""
-        self.evaluator = ArchOptEvaluator(extreme_barrier=False, results_folder=results_folder)
+        self.evaluator = ArchOptEvaluator(results_folder=results_folder)
         self.callback = ResultsStorageCallback(results_folder, callback=self.callback)
 
     def initialize_from_previous_results(self, problem: ArchOptProblemBase, result_folder: str) -> bool:

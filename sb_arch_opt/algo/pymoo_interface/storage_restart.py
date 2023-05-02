@@ -25,7 +25,7 @@ from pymoo.core.result import Result
 from pymoo.core.callback import Callback
 from pymoo.core.algorithm import Algorithm
 from pymoo.core.evaluator import Evaluator
-from pymoo.core.population import Population
+from pymoo.core.population import Population, Individual
 from pymoo.core.initialization import Initialization
 
 from sb_arch_opt.util import capture_log
@@ -56,7 +56,14 @@ def load_from_previous_results(problem: ArchOptProblemBase, result_folder: str, 
             return
 
     # Set evaluated flag
-    population.apply(lambda ind: ind.evaluated.update({'X', 'F', 'G', 'H'}))
+    def _set_eval(ind: Individual):
+        # Assume evaluated but failed points have Inf as output values
+        is_eval = ~np.all(np.isnan(ind.get('F')))
+        if is_eval:
+            ind.evaluated.update({'X', 'F', 'G', 'H'})
+
+    population.apply(_set_eval)
+
     return population
 
 
@@ -207,11 +214,26 @@ class ArchOptEvaluator(Evaluator):
     Also using the ResultsStorageCallback ensures that also final problem-specific results are stored.
     """
 
-    def __init__(self, *args, extreme_barrier=True, results_folder: str = None, n_batch=None, **kwargs):
-        self.extreme_barrier = extreme_barrier
+    def __init__(self, *args, results_folder: str = None, n_batch=None, **kwargs):
+        self.extreme_barrier = True
         self.results_folder = results_folder
         self.n_batch = n_batch
         super().__init__(*args, **kwargs)
+        self._skipping_pop = None
+
+    def eval(self, problem, pop: Population, skip_already_evaluated: bool = None, evaluate_values_of: list = None,
+             count_evals: bool = True, **kwargs):
+
+        evaluate_values_of = self.evaluate_values_of if evaluate_values_of is None else evaluate_values_of
+        skip_already_evaluated = self.skip_already_evaluated if skip_already_evaluated is None else skip_already_evaluated
+
+        self._skipping_pop = None
+        if skip_already_evaluated:
+            i_skipped = [i for i, ind in enumerate(pop) if all([e in ind.evaluated for e in evaluate_values_of])]
+            self._skipping_pop = pop[i_skipped]
+
+        return super().eval(problem, pop, skip_already_evaluated=skip_already_evaluated,
+                            evaluate_values_of=evaluate_values_of, count_evals=count_evals, **kwargs)
 
     def _eval(self, problem, pop, evaluate_values_of, **kwargs):
         if self.results_folder is None:
@@ -231,7 +253,7 @@ class ArchOptEvaluator(Evaluator):
                 batch_pop = pop[i_batch:i_batch+n_batch]
                 super()._eval(problem, batch_pop, evaluate_values_of, **kwargs)
 
-                callback.store_pop(self._normalize_pop(pop, evaluate_values_of))
+                callback.store_pop(self._normalize_pop(pop, evaluate_values_of, skipping_pop=self._skipping_pop))
                 callback.store_intermediate_problem(problem)
 
         # Apply extreme barrier: replace NaN with Inf
@@ -244,8 +266,11 @@ class ArchOptEvaluator(Evaluator):
         return pop
 
     @staticmethod
-    def _normalize_pop(pop: Population, evaluate_values_of, nan_as_inf=True) -> Population:
+    def _normalize_pop(pop: Population, evaluate_values_of, nan_as_inf=True, skipping_pop: Population = None) -> Population:
         """Ensure that the matrices in a Population are two-dimensional"""
+        if skipping_pop is not None:
+            pop = Population.merge(skipping_pop, pop)
+
         pop_data = {}
         for key in (['X']+evaluate_values_of):
             data = pop.get(key)
