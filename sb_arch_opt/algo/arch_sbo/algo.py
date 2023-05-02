@@ -69,7 +69,7 @@ class InfillAlgorithm(Algorithm):
         self.infill_obj = infill
 
         if init_sampling is None:
-            init_sampling = HierarchicalRandomSampling()
+            init_sampling = HierarchicalSampling()
         self.initialization = Initialization(
             init_sampling, repair=infill.repair, eliminate_duplicates=infill.eliminate_duplicates)
         self.survival = survival
@@ -171,7 +171,7 @@ class SBOInfill(InfillCriterion):
     def algorithm(self, infill_size=None, init_sampling: Sampling = None, init_size=100, survival: Survival = None,
                   **kwargs) -> InfillAlgorithm:
         if init_sampling is None and self.repair is not None:
-            init_sampling = HierarchicalRandomSampling(self.repair)
+            init_sampling = HierarchicalSampling(self.repair)
         return InfillAlgorithm(self, infill_size=infill_size, init_sampling=init_sampling, init_size=init_size,
                                survival=survival, **kwargs)
 
@@ -401,7 +401,7 @@ class SBOInfill(InfillCriterion):
         """Generate random infill points in case there were no valid points to train the surrogate with"""
 
         # Randomly sample some points
-        pop_infill = HierarchicalRandomSampling().do(self.problem, max(100, n_infill))
+        pop_infill = HierarchicalSampling().do(self.problem, max(100, n_infill))
         if len(pop_infill) <= n_infill:
             return pop_infill
 
@@ -471,7 +471,7 @@ class SBOInfill(InfillCriterion):
 
     def _get_infill_algorithm(self):
         repair = self._get_infill_repair()
-        return NSGA2(pop_size=self.pop_size, sampling=HierarchicalRandomSampling(repair), repair=repair)
+        return NSGA2(pop_size=self.pop_size, sampling=HierarchicalSampling(repair), repair=repair)
 
     def _get_infill_repair(self):
         if self.repair is None:

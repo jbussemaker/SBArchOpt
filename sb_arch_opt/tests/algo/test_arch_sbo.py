@@ -187,7 +187,7 @@ class MDNormProblem(ArchOptProblemBase):
 
 def test_md_normalization():
     problem = MDNormProblem()
-    x = HierarchicalRandomSampling().do(problem, 1000).get('X')
+    x = HierarchicalSampling().do(problem, 1000).get('X')
     assert np.all(np.round(np.min(x, axis=0)) == problem.xl)
     assert np.all(np.round(np.max(x, axis=0)) == problem.xu)
 

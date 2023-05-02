@@ -200,7 +200,7 @@ class SEGOMOEInterface:
         self._save_results()
 
     def _sample_doe(self, n: int) -> np.ndarray:
-        return HierarchicalLatinHypercubeSampling().do(self._problem, n).get('X')
+        return HierarchicalSampling().do(self._problem, n).get('X')
 
     def run_infills(self, n_infills: int = None):
         if n_infills is None:

@@ -17,7 +17,7 @@ Contact: jasper.bussemaker@dlr.de
 import logging
 import warnings
 import numpy as np
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 from scipy.stats.qmc import Sobol
 from scipy.spatial import distance
 
@@ -28,11 +28,11 @@ from pymoo.core.sampling import Sampling
 from pymoo.core.initialization import Initialization
 from pymoo.operators.sampling.rnd import FloatRandomSampling
 from pymoo.core.duplicate import DefaultDuplicateElimination
-from pymoo.operators.sampling.lhs import LatinHypercubeSampling, sampling_lhs_unit
+from pymoo.operators.sampling.lhs import sampling_lhs_unit
 
 from sb_arch_opt.problem import ArchOptProblemBase, ArchOptRepair
 
-__all__ = ['HierarchicalExhaustiveSampling', 'HierarchicalLatinHypercubeSampling', 'HierarchicalRandomSampling',
+__all__ = ['HierarchicalExhaustiveSampling', 'HierarchicalSampling',
            'get_init_sampler', 'LargeDuplicateElimination', 'TrailRepairWarning']
 
 log = logging.getLogger('sb_arch_opt.sampling')
@@ -43,7 +43,7 @@ def get_init_sampler(repair: Repair = None, remove_duplicates=True):
 
     if repair is None:
         repair = ArchOptRepair()
-    sampling = HierarchicalRandomSampling(repair=repair, sobol=True)
+    sampling = HierarchicalSampling(repair=repair, sobol=True)
 
     # Samples are already repaired because we're using the hierarchical samplers
     eliminate_duplicates = LargeDuplicateElimination() if remove_duplicates else None
@@ -163,52 +163,12 @@ class HierarchicalExhaustiveSampling(Sampling):
         return f'{self.__class__.__name__}()'
 
 
-class HierarchicalLatinHypercubeSampling(LatinHypercubeSampling):
-    """
-    Latin hypercube sampling only returning repaired samples. Additionally, the hierarchical random sampling procedure
-    is used to get the best distribution corresponding to the real distribution of hierarchical variables.
-    """
-
-    def __init__(self, repair: Repair = None, **kwargs):
-        super().__init__(**kwargs)
-        if repair is None:
-            repair = ArchOptRepair()
-        self._repair = repair
-
-    def _do(self, problem: Problem, n_samples, **kwargs):
-        if self._repair is None:
-            return super()._do(problem, n_samples, **kwargs)
-
-        # Prepare sampling
-        x_all, is_act = HierarchicalRandomSampling.get_hierarchical_cartesian_product(problem, self._repair)
-        xl, xu = problem.bounds()
-
-        # Sample several times to find the best-scored samples
-        best_x = best_score = None
-        random_sampler = HierarchicalRandomSampling()
-        for _ in range(self.iterations):
-            x, _ = random_sampler.randomly_sample(problem, n_samples, self._repair, x_all, is_act, lhs=True)
-            if self.criterion is None:
-                return x
-
-            x_unit = (x-xl)/(xu-xl)
-            score = self.criterion(x_unit)
-            if best_score is None or score > best_score:
-                best_x = x
-                best_score = score
-
-        return best_x
-
-    def __repr__(self):
-        return f'{self.__class__.__name__}()'
-
-
-class HierarchicalRandomSampling(FloatRandomSampling):
+class HierarchicalSampling(FloatRandomSampling):
     """
     Hierarchical mixed-discrete sampling. There are two ways the random sampling is performed:
     A: Generate and select:
        1. Generate all possible discrete design vectors
-       2. Separate discrete design vectors by nr of active discrete variables
+       2. Separate discrete design vectors by active discrete variables
        3. Within each group, uniformly sample discrete design vectors
        4. Concatenate and randomize active continuous variables
     B: One-shot:
@@ -331,23 +291,86 @@ class HierarchicalRandomSampling(FloatRandomSampling):
 
         return x, is_active
 
-    @classmethod
     def _sample_discrete_x(self, n_samples: int, is_cont_mask, x_all: np.ndarray, is_act_all: np.ndarray, sobol=False):
-        has_x_cont = np.any(is_cont_mask)
+        if x_all.shape[0] == 0:
+            raise ValueError('Set of discrete vectors cannot be empty!')
 
-        x = x_all
-        if n_samples < x.shape[0]:
-            i_x = self._choice(n_samples, x.shape[0], replace=False, sobol=sobol)
-        elif has_x_cont:
-            # If there are more samples requested than points available, only repeat points if there are continuous vars
-            i_x_add = self._choice(n_samples - x.shape[0], x.shape[0], sobol=sobol)
-            i_x = np.sort(np.concatenate([np.arange(x.shape[0]), i_x_add]))
+        def _choice(n_choose, n_from, replace=True):
+            return self._choice(n_choose, n_from, replace=replace, sobol=sobol)
+
+        # Separate design vectors into groups
+        groups = self.group_design_vectors(x_all, is_act_all, is_cont_mask)
+
+        # Apply weights to the different groups
+        weights = np.array(self._get_group_weights(groups, is_act_all))
+
+        # Uniformly choose from which group to sample
+        if len(groups) == 1:
+            selected_groups = np.zeros((n_samples,), dtype=int)
         else:
-            i_x = np.arange(x.shape[0])
+            unit_weights = weights/np.sum(weights)
+            selected_groups = np.zeros((n_samples,), dtype=int)
+            selected_pos = np.linspace(0, 1, n_samples)
+            for cum_weight in np.cumsum(unit_weights)[:-1]:
+                selected_groups[selected_pos > cum_weight] += 1
 
-        x = x[i_x, :]
-        is_active = is_act_all[i_x, :]
+        x = []
+        is_active = []
+        has_x_cont = np.any(is_cont_mask)
+        i_x_sampled = np.ones((x_all.shape[0],), dtype=bool)
+        for i_grp in range(len(groups)):
+            i_x_tgt = np.where(selected_groups == i_grp)[0]
+            if len(i_x_tgt) == 0:
+                continue
+
+            # Uniformly-randomly select values within group
+            i_x_group = groups[i_grp]
+            if len(i_x_tgt) < i_x_group.shape[0]:
+                n_sel = len(i_x_tgt)
+                n_avail = i_x_group.shape[0]
+                n_sel_unit = (np.arange(n_sel)+np.random.random(n_sel)*.9999)/n_sel
+                i_from_group = np.round(n_sel_unit*n_avail - .5).astype(int)
+
+            # If there are more samples requested than points available, only repeat points if there are continuous vars
+            elif has_x_cont:
+                i_x_add = _choice(len(i_x_tgt)-i_x_group.shape[0], i_x_group.shape[0])
+                i_from_group = np.sort(np.concatenate([np.arange(i_x_group.shape[0]), i_x_add]))
+            else:
+                i_from_group = np.arange(i_x_group.shape[0])
+
+            x_all_choose = i_x_group[i_from_group]
+            x.append(x_all[x_all_choose, :])
+            is_active.append(is_act_all[x_all_choose, :])
+            i_x_sampled[x_all_choose] = True
+
+        x = np.row_stack(x)
+        is_active = np.row_stack(is_active)
+
+        # Uniformly add discrete vectors if there are not enough (can happen if some groups are very small and there
+        # are no continuous dimensions)
+        if x.shape[0] < n_samples:
+            n_add = n_samples-x.shape[0]
+            x_available = x_all[~i_x_sampled, :]
+            is_act_available = is_act_all[~i_x_sampled, :]
+
+            if n_add < x_available.shape[0]:
+                i_from_group = _choice(n_add, x_available.shape[0], replace=False)
+            else:
+                i_from_group = np.arange(x_available.shape[0])
+
+            x = np.row_stack([x, x_available[i_from_group, :]])
+            is_active = np.row_stack([is_active, is_act_available[i_from_group, :]])
+
         return x, is_active
+
+    def group_design_vectors(self, x_all: np.ndarray, is_act_all: np.ndarray, is_cont_mask) -> List[np.ndarray]:
+        # Group by active design variables
+        is_active_unique, unique_indices = np.unique(is_act_all, axis=0, return_inverse=True)
+        return [np.where(unique_indices == i)[0] for i in range(len(is_active_unique))]
+
+    def _get_group_weights(self, groups: List[np.ndarray], is_act_all: np.ndarray) -> List[float]:
+        # Uniform sampling over groups
+        return [1.]*len(groups)
 
     @staticmethod
     def _sobol(n_samples, n_dims=None) -> np.ndarray:

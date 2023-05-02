@@ -22,7 +22,7 @@ import pymoo.core.variable as var
 from pymoo.core.problem import Problem
 from sb_arch_opt.problem import ArchOptProblemBase
 from sb_arch_opt.design_space import ArchDesignSpace
-from sb_arch_opt.sampling import HierarchicalRandomSampling
+from sb_arch_opt.sampling import HierarchicalSampling
 from pymoo.util.normalization import Normalization, SimpleZeroToOneNormalization
 
 try:
@@ -237,7 +237,7 @@ class SBArchOptDesignSpace(BaseDesignSpace):
         return x, is_active
 
     def _sample_valid_x(self, n: int) -> Tuple[np.ndarray, np.ndarray]:
-        sampler = HierarchicalRandomSampling()
+        sampler = HierarchicalSampling()
         stub_problem = ArchOptProblemBase(self._ds)
         x, is_active = sampler.sample_get_x(stub_problem, n)
 

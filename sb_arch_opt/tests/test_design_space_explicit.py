@@ -108,7 +108,7 @@ def test_discrete_x():
     assert np.all(x_imp == x)
     assert np.all(is_active_imp)
 
-    x, is_active = HierarchicalRandomSampling(sobol=False).randomly_sample(
+    x, is_active = HierarchicalSampling(sobol=False).randomly_sample(
         ArchOptProblemBase(ds), 100, ArchOptRepair(), x_all=None, is_act_all=None)
     assert x.shape == (6, 2)
     assert is_active.shape == x.shape
@@ -149,14 +149,14 @@ def test_hierarchy():
     x, is_active = ds.quick_sample_discrete_x(100)
     assert x.shape == (100, 4)
 
-    x, is_active = HierarchicalRandomSampling(sobol=False).randomly_sample(
+    x, is_active = HierarchicalSampling(sobol=False).randomly_sample(
         ArchOptProblemBase(ds), 100, ArchOptRepair(), x_all=None, is_act_all=None)
     assert x.shape == (100, 4)
     assert is_active.shape == x.shape
     _, is_active_ = ds.correct_x(x)
     assert np.all(is_active == is_active_)
 
-    x = HierarchicalRandomSampling().do(ArchOptProblemBase(ds), 100).get('X')
+    x = HierarchicalSampling().do(ArchOptProblemBase(ds), 100).get('X')
     assert x.shape == (100, 4)
 
     x_random = FloatRandomSampling().do(ArchOptProblemBase(ds), 100).get('X')
@@ -257,7 +257,7 @@ def test_forbidden():
         [True, True, True, True],
     ])
 
-    x = HierarchicalRandomSampling().do(ArchOptProblemBase(ds), 100).get('X')
+    x = HierarchicalSampling().do(ArchOptProblemBase(ds), 100).get('X')
     assert x.shape == (100, 4)
 
     x_random = FloatRandomSampling().do(ArchOptProblemBase(ds), 100).get('X')

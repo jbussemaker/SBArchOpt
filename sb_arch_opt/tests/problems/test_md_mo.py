@@ -36,7 +36,7 @@ def run_test_no_hierarchy(problem, exh_n_cont=3):
         except MemoryError:
             pass
     if pop is None:
-        pop = HierarchicalRandomSampling().do(problem, 100)
+        pop = HierarchicalSampling().do(problem, 100)
     Evaluator().eval(problem, pop)
     return pop
 

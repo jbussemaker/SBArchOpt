@@ -199,10 +199,10 @@ class HierarchicalGoldstein(HierarchyProblemBase):
     def validate_ranges(cls, n_samples=5000, show=True):
         """Compare to Pelamatti 2020, Fig. 6"""
         import matplotlib.pyplot as plt
-        from sb_arch_opt.sampling import HierarchicalLatinHypercubeSampling
+        from sb_arch_opt.sampling import HierarchicalSampling
 
         problem = cls()
-        x = HierarchicalLatinHypercubeSampling().do(problem, n_samples).get('X')
+        x = HierarchicalSampling().do(problem, n_samples).get('X')
 
         f, g = problem.evaluate(x)
         i_feasible = np.max(g, axis=1) <= 0.
@@ -348,10 +348,10 @@ class HierarchicalRosenbrock(HierarchyProblemBase):
     def validate_ranges(cls, n_samples=5000, show=True):
         """Compare to Pelamatti 2020, Fig. 13"""
         import matplotlib.pyplot as plt
-        from sb_arch_opt.sampling import HierarchicalLatinHypercubeSampling
+        from sb_arch_opt.sampling import HierarchicalSampling
 
         problem = cls()
-        x = HierarchicalLatinHypercubeSampling().do(problem, n_samples).get('X')
+        x = HierarchicalSampling().do(problem, n_samples).get('X')
 
         f, g = problem.evaluate(x)
         i_feasible = np.max(g, axis=1) <= 0.
@@ -1157,7 +1157,7 @@ class NeuralNetwork(HierarchyProblemBase):
         """Compare to: https://smt.readthedocs.io/en/latest/_images/neuralnetwork_Test_test_hier_neural_network.png"""
         import matplotlib.pyplot as plt
 
-        x = HierarchicalRandomSampling().do(self, n).get('X')
+        x = HierarchicalSampling().do(self, n).get('X')
         f = self.evaluate(x, return_as_dictionary=True)['F']
         plt.figure()
         plt.scatter(x[:, 0], f[:, 0], s=5)

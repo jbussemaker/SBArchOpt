@@ -18,7 +18,7 @@ import logging
 from sb_arch_opt.problem import *
 from sb_arch_opt.algo.pymoo_interface.api import ArchOptEvaluator
 from sb_arch_opt.algo.pymoo_interface.metrics import EHVMultiObjectiveOutput
-from sb_arch_opt.sampling import LargeDuplicateElimination, HierarchicalRandomSampling
+from sb_arch_opt.sampling import LargeDuplicateElimination, HierarchicalSampling
 
 from pymoo.core.algorithm import Algorithm
 from pymoo.core.population import Population
@@ -47,7 +47,7 @@ class RandomSearchAlgorithm(Algorithm):
             evaluator=ArchOptEvaluator(extreme_barrier=True),
             **kwargs)
         self.n_init = n_init
-        self.sampling = HierarchicalRandomSampling()
+        self.sampling = HierarchicalSampling()
         self.initialization = Initialization(
             self.sampling, repair=ArchOptRepair(), eliminate_duplicates=LargeDuplicateElimination())
 

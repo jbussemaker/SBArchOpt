@@ -32,7 +32,7 @@ from pymoo.core.initialization import Initialization
 from pymoo.algorithms.moo.nsga2 import calc_crowding_distance
 from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
 from pymoo.termination.default import DefaultMultiObjectiveTermination, DefaultSingleObjectiveTermination
-from sb_arch_opt.sampling import HierarchicalExhaustiveSampling, HierarchicalRandomSampling
+from sb_arch_opt.sampling import HierarchicalExhaustiveSampling, HierarchicalSampling
 
 __all__ = ['CachedParetoFrontMixin']
 
@@ -165,7 +165,7 @@ class CachedParetoFrontMixin(Problem):
         if show_approx_f_range:
             scatter.add(self.get_approx_f_range(), s=.1, color='white')
 
-            pop = Initialization(HierarchicalRandomSampling()).do(self, n_sample)
+            pop = Initialization(HierarchicalSampling()).do(self, n_sample)
             Evaluator().eval(self, pop)
             scatter.add(pop.get('F'), s=5)
 
@@ -177,7 +177,7 @@ class CachedParetoFrontMixin(Problem):
         plt.close(scatter.fig)
 
     def get_approx_f_range(self, n_sample=100):
-        pop = Initialization(HierarchicalRandomSampling()).do(self, n_sample)
+        pop = Initialization(HierarchicalSampling()).do(self, n_sample)
         Evaluator().eval(self, pop)
         f = pop.get('F')
         f_max = np.max(f, axis=0)
