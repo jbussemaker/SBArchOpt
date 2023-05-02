@@ -57,12 +57,17 @@ def load_from_previous_results(problem: ArchOptProblemBase, result_folder: str, 
 
     # Set evaluated flag
     def _set_eval(ind: Individual):
+        nonlocal n_evaluated
         # Assume evaluated but failed points have Inf as output values
         is_eval = ~np.all(np.isnan(ind.get('F')))
         if is_eval:
             ind.evaluated.update({'X', 'F', 'G', 'H'})
+            n_evaluated += 1
 
+    n_evaluated = 0
     population.apply(_set_eval)
+    log.info(f'Evaluation status: {n_evaluated} of {len(population)} ({(n_evaluated/len(population))*100:.1f}%) '
+             f'are already evaluated')
 
     return population
 
