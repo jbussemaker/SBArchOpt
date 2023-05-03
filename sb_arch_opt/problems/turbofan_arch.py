@@ -18,6 +18,7 @@ This test suite contains the mixed-discrete, hierarchical, multi-objective turbo
 (subject to hidden constraints).
 More information: https://github.com/jbussemaker/OpenTurbofanArchitecting
 """
+import pickle
 import numpy as np
 from typing import *
 import concurrent.futures
@@ -55,6 +56,8 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
     """
     _force_get_discrete_rates = False
     default_enable_pf_calc = False
+
+    _data_folder = 'turbofan_data'
 
     def __init__(self, open_turb_arch_problem: 'ArchitectingProblem', n_parallel=None):
         check_dependency()
@@ -144,6 +147,31 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
     def _convert_x(self, x) -> List[Union[float, int]]:
         mask = self.is_discrete_mask
         return [int(value) if mask[i] else float(value) for i, value in enumerate(x)]
+
+    def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
+        x_all_path = self._get_data_path(f'{self.__class__.__name__}_x_all.pkl')
+        if os.path.exists(x_all_path):
+            with open(x_all_path, 'rb') as fp:
+                data = pickle.load(fp)
+
+            if len(data) == 2:
+                x_all, is_act_all = data
+                if isinstance(x_all, np.ndarray) and isinstance(is_act_all, np.ndarray) and \
+                        x_all.shape == is_act_all.shape and x_all.shape[0] == self._get_n_valid_discrete():
+                    return x_all, is_act_all
+
+        x_all, is_act_all = self.design_space.all_discrete_x_by_trial_and_imputation
+        with open(x_all_path, 'wb') as fp:
+            pickle.dump((x_all, is_act_all), fp)
+        return x_all, is_act_all
+
+    @classmethod
+    def _get_data_path(cls, sub_path: str) -> str:
+        path = os.path.join(os.path.dirname(__file__), cls._data_folder)
+        os.makedirs(path, exist_ok=True)
+        if sub_path is not None:
+            path = os.path.join(path, sub_path)
+        return path
 
 
 class SimpleTurbofanArch(OpenTurbArchProblemWrapper):
@@ -236,9 +264,11 @@ class RealisticTurbofanArch(OpenTurbArchProblemWrapper):
         n_valid_fan[2] *= 3*3
 
         # Intercooler choice
-        n_valid_fan *= 2
-        n_valid_fan[1] *= 2
-        n_valid_fan[2] *= 3
+        n_valid_fan_include_ic = n_valid_fan.copy()
+        n_valid_fan_include_ic *= 250
+        n_valid_fan_include_ic[1] *= 2
+        n_valid_fan_include_ic[2] *= 3
+        n_valid_fan += n_valid_fan_include_ic
 
         return int(sum(n_valid_no_fan)+sum(n_valid_fan))
 
@@ -263,8 +293,19 @@ class RealisticTurbofanArch(OpenTurbArchProblemWrapper):
 
 
 if __name__ == '__main__':
-    SimpleTurbofanArch().print_stats()
-    RealisticTurbofanArch().print_stats()
+    # SimpleTurbofanArch().print_stats()
+    # RealisticTurbofanArch().print_stats()
+
+    import pandas as pd
+    problem = RealisticTurbofanArch()
+    problem.print_stats()
+    exit()
+    x_all, is_act_all = problem.design_space.all_discrete_x_by_trial_and_imputation
+    dr = problem.get_discrete_rates(force=True)
+    with pd.ExcelWriter('real_turbofan.xlsx') as writer:
+        pd.DataFrame(x_all, columns=[f'x{i}' for i in range(x_all.shape[1])]).to_excel(writer, sheet_name='x')
+        pd.DataFrame(is_act_all, columns=[f'x{i}' for i in range(x_all.shape[1])]).to_excel(writer, sheet_name='is_act')
+        dr.to_excel(writer, 'adr')
 
     # from pymoo.optimize import minimize
     # from sb_arch_opt.algo.pymoo_interface import get_nsga2

@@ -21,7 +21,7 @@ def test_simple_problem():
     problem.get_discrete_rates(force=True, show=True)
 
     _, is_act_all = problem.all_discrete_x
-    assert is_act_all is None
+    assert is_act_all is not None
     _, is_act_all = problem.design_space.all_discrete_x_by_trial_and_imputation
     assert np.all(problem.is_conditionally_active == np.any(~is_act_all, axis=0))
 
@@ -57,8 +57,10 @@ def test_realistic_problem():
     problem = RealisticTurbofanArch()
     problem.print_stats()
 
-    assert problem._get_n_valid_discrete() == 1163
-    # problem.get_discrete_rates(force=True, show=True)  # Takes several minutes
+    assert problem._get_n_valid_discrete() == 142243
+    problem.get_discrete_rates(show=True)  # Takes several minutes
+    x_all, is_act_all = problem.all_discrete_x
+    assert x_all.shape[0] == problem.get_n_valid_discrete()
 
     f_pf = problem.pareto_front()
     x_pf = problem.pareto_set()

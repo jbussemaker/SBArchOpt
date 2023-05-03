@@ -69,4 +69,7 @@ if __name__ == '__main__':
         },
         python_requires='>=3.7',
         packages=['sb_arch_opt'],
+        package_data={
+            'sb_arch_opt.problems': ['turbofan_data/*'],
+        },
     )

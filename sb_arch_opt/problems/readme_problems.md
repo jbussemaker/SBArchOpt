@@ -95,7 +95,7 @@ An overview of available test problems in `sb_arch_opt.problems` (* = recommende
 | ~~`HCMOHierarchicalTestProblem`~~ | 11      | 16     | 2     | 1     |     | Y   | Y   | Y    | Y   | 64            | 72        |              | fail_rate: 60%                   |
 | Module: `turbofan_arch`           |         |        |       |       |     |     |     |      |     |               |           | `ota`        |                                  |
 | `SimpleTurbofanArch`              | 6       | 9      | 1     | 5     |     | Y   |     | Y    | Y   | 70            | 3.1       | `ota`        | t_eval: 1-5 min; fail_rate: 51%  |
-| `RealisticTurbofanArch`           | 11      | 30     | 3     | 15    |     | Y   | Y   | Y    | Y   | 1163          | 1114      | `ota`        | t_eval: 1-5 min; fail_rate: 67%  |
+| `RealisticTurbofanArch`           | 11      | 30     | 3     | 15    |     | Y   | Y   | Y    | Y   | 142243        | 9.1       | `ota`        | t_eval: 1-5 min; fail_rate: 67%  |
 | Module: `assignment`              |         |        |       |       |     |     |     |      |     |               |           | `assignment` | dist_corr: 100% if not specified |
 | `Assignment`                      | 12      |        | 2     |       | Y   |     | Y   |      |     | 4096          |           | `assignment` |                                  |
 | `AssignmentLarge`                 | 16      |        | 2     |       | Y   |     | Y   |      |     | 65536         |           | `assignment` |                                  |
