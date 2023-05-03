@@ -45,7 +45,9 @@ To enable intermediate results storage, provide a path to a folder where results
 `get_nsga2`.
 
 To restart an optimization from a previous run, intermediate results storage must have been used in that previous run.
-To then initialize an algorithm, use the `initialize_from_previous_results` function.
+To then initialize an algorithm, use the `initialize_from_previous_results` function. Partial results are stored after
+each evaluation (or after `problem.get_n_batch_evaluate()` evaluations), so even partially-evaluated populations can
+be recovered.
 
 ```python
 from pymoo.optimize import minimize

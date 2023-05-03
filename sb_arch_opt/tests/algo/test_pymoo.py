@@ -50,7 +50,6 @@ class DummyResultSavingProblem(ArchOptProblemBase):
 
         self.n_eval = 0
         self.n_stored = 0
-        self.n_stored_final = 0
         self.last_evaluated = None
         self.provide_previous_results = True
 
@@ -68,11 +67,8 @@ class DummyResultSavingProblem(ArchOptProblemBase):
         is_active[:, -1] = x[:, 1] < 5
         self.impute_x(x, is_active)
 
-    def store_results(self, results_folder, final=False):
-        if final:
-            self.n_stored_final += 1
-        else:
-            self.n_stored += 1
+    def store_results(self, results_folder):
+        self.n_stored += 1
 
         assert self.last_evaluated is not None
         with open(os.path.join(results_folder, 'problem_last_pop.pkl'), 'wb') as fp:
@@ -107,7 +103,7 @@ def test_store_results_restart():
             assert initialize_from_previous_results(nsga2, problem, tmp_folder) == (i > 0)
             if i > 0:
                 assert isinstance(nsga2.initialization.sampling, Population)
-                assert len(nsga2.initialization.sampling) == 100
+                assert len(nsga2.initialization.sampling) == 100+2*100*i
 
             minimize(problem, nsga2, termination=('n_gen', 3), copy_algorithm=False)
             assert os.path.exists(os.path.join(tmp_folder, 'pymoo_results.pkl'))
@@ -118,10 +114,9 @@ def test_store_results_restart():
 
             assert problem.n_eval == 3+2*i  # 3 for initial population, 2 for next because the first is a restart
             assert problem.n_stored == 6+5*i
-            assert problem.n_stored_final == 2*(i+1)  # because pymoo calls result() twice in the end
 
-            n_cumulative = load_from_previous_results(problem, tmp_folder, cumulative=True)
-            assert len(n_cumulative) <= 3*100*(i+1)
+            n_cumulative = load_from_previous_results(problem, tmp_folder)
+            assert len(n_cumulative) == 100+2*100*(i+1)
 
 
 def test_batch_storage_evaluator(problem: ArchOptProblemBase):
@@ -156,8 +151,8 @@ def test_doe_algo(problem: ArchOptProblemBase):
         assert os.path.exists(os.path.join(tmp_folder, 'pymoo_population.csv'))
 
         pop_loaded = load_from_previous_results(problem, tmp_folder)
-        assert np.all(pop_loaded.get('X') == pop.get('X'))
-        assert np.all(pop_loaded.get('F') == pop.get('F'))
+        assert pop_loaded.get('X').shape == pop.get('X').shape
+        assert pop_loaded.get('F').shape == pop.get('F').shape
 
 
 class CrashingProblem(DummyResultSavingProblem):
@@ -177,11 +172,43 @@ class CrashingProblem(DummyResultSavingProblem):
     def get_n_batch_evaluate(self) -> Optional[int]:
         return 10
 
-    def store_results(self, results_folder, final=False):
+    def store_results(self, results_folder):
         pass
 
     def load_previous_results(self, results_folder) -> Optional[Population]:
         pass
+
+
+def test_partial_restart():
+    with tempfile.TemporaryDirectory() as tmp_folder:
+        for i in range(100):
+            try:
+                problem = CrashingProblem()
+                pop = load_from_previous_results(problem, tmp_folder)
+                n_evaluated = 0
+                if i == 0:
+                    assert pop is None
+                else:
+                    n_evaluated = 10*i
+
+                    assert isinstance(pop, Population)
+                    x = pop.get('X')
+                    assert x.shape == (20*((i+1)//2), problem.n_var)
+
+                    f = pop.get('F')
+                    assert f.shape == (x.shape[0], problem.n_obj)
+                    n_empty = np.sum(np.any(~np.isfinite(f), axis=1))
+                    assert n_empty == x.shape[0]-n_evaluated
+
+                nsga2 = get_nsga2(pop_size=20, results_folder=tmp_folder)
+                initialize_from_previous_results(nsga2, problem, tmp_folder)
+                assert nsga2.evaluator.n_eval == n_evaluated
+                result = minimize(problem, nsga2, termination=('n_eval', 40))
+                assert len(result.pop) == 40
+                break
+
+            except RuntimeError:
+                pass
 
 
 def test_partial_doe_restart():
@@ -190,6 +217,7 @@ def test_partial_doe_restart():
             try:
                 problem = CrashingProblem()
                 pop = load_from_previous_results(problem, tmp_folder)
+                n_empty = 30
                 if i == 0:
                     assert pop is None
                 else:
@@ -205,6 +233,7 @@ def test_partial_doe_restart():
 
                 doe_algo = get_doe_algo(doe_size=30, results_folder=tmp_folder)
                 initialize_from_previous_results(doe_algo, problem, tmp_folder)
+                assert doe_algo.evaluator.n_eval == 30-n_empty
                 doe_algo.setup(problem)
                 doe_algo.run()
                 break

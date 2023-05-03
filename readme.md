@@ -198,7 +198,7 @@ class DemoArchOptProblem(CachedParetoFrontMixin, ArchOptProblemBase):
         """Return for each design variable whether it is conditionally active (i.e. might become inactive). Not needed
         if an explicit design space is provided."""
 
-    def store_results(self, results_folder, final=False):  # Optional
+    def store_results(self, results_folder):  # Optional
         """Implement this function to enable problem-specific intermediate results storage"""
 
     def load_previous_results(self, results_folder):  # Optional

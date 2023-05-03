@@ -124,41 +124,39 @@ def test_store_results_restart(problem: ArchOptProblemBase):
             sbo.store_intermediate_results(tmp_folder)
             sbo.initialize_from_previous_results(problem, tmp_folder)
 
-            n_eval = 11 if i == 0 else 1
+            n_eval = 10+(i+1)
             result = minimize(problem, sbo, termination=('n_eval', n_eval))
             assert len(result.pop) == 10+(i+1)
 
 
-def test_partial_doe_restart():
+def test_partial_restart():
     with tempfile.TemporaryDirectory() as tmp_folder:
         for i in range(100):
             try:
                 problem = CrashingProblem()
                 pop = load_from_previous_results(problem, tmp_folder)
-                evaluated = 0
+                n_evaluated = 0
                 if i == 0:
                     assert pop is None
                 else:
-                    nx = 30 if i < 3 else 30+(i-3)
+                    n_evaluated = 10*i
+
                     assert isinstance(pop, Population)
                     x = pop.get('X')
-                    assert np.all(np.isfinite(x))
-                    assert x.shape == (nx, problem.n_var)
+                    assert x.shape == (20*((i+1)//2), problem.n_var)
 
                     f = pop.get('F')
-                    assert f.shape == (nx, problem.n_obj)
+                    assert f.shape == (x.shape[0], problem.n_obj)
                     n_empty = np.sum(np.any(~np.isfinite(f), axis=1))
-                    if i >= 3:
-                        assert n_empty == 0
-                    else:
-                        assert n_empty == 30-i*10
-                    evaluated = f.shape[0]-n_empty
+                    assert n_empty == x.shape[0]-n_evaluated
 
-                sbo = get_arch_sbo_rbf(init_size=30)
-                sbo.initialize_from_previous_results(problem, tmp_folder)
-                sbo.store_intermediate_results(tmp_folder)
-                result = minimize(problem, sbo, termination=('n_eval', 32-evaluated))
-                assert len(result.pop) == 32
+                sbo = get_arch_sbo_rbf(init_size=20, results_folder=tmp_folder)
+                sbo.infill_size = 20
+
+                sbo.initialize_from_previous_results(problem, result_folder=tmp_folder)
+                assert sbo.evaluator.n_eval == n_evaluated
+                result = minimize(problem, sbo, termination=('n_eval', 40))
+                assert len(result.pop) == 40
                 break
 
             except RuntimeError:

@@ -32,16 +32,11 @@ problem = ...  # Subclass of ArchOptProblemBase
 
 # Get Kriging or RBF algorithm
 n_init = 100
-gp_arch_sbo_algo = get_arch_sbo_gp(problem, init_size=n_init)
-
-# Enable intermediate results storage
 results_folder_path = 'path/to/results/folder'
-gp_arch_sbo_algo.store_intermediate_results(results_folder_path)
+gp_arch_sbo_algo = get_arch_sbo_gp(problem, init_size=n_init, results_folder=results_folder_path)
 
 # Start from previous results (skipped if no previous results are available)
-if gp_arch_sbo_algo.initialize_from_previous_results(problem, results_folder_path):
-    # No need to evaluate any initial points, as they have been previously evaluated
-    n_init = 0
+gp_arch_sbo_algo.initialize_from_previous_results(problem, results_folder_path)
 
 n_infill = 10
 result = minimize(problem, gp_arch_sbo_algo, termination=('n_eval', n_init + n_infill))

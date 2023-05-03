@@ -183,7 +183,7 @@ class SEGOMOEInterface:
             self.run_infills(n_infills)
 
         # Save final results and return Pareto front
-        self._save_results(final=True)
+        self._save_results()
         return self.opt
 
     def run_doe(self, n: int = None):
@@ -290,7 +290,7 @@ class SEGOMOEInterface:
             constraints.append(Constraint(con_type='=', bound=0., name=f'h{i}'))
         return constraints
 
-    def _save_results(self, final=False):
+    def _save_results(self):
         x_path, y_path, x_failed_path = self._get_doe_paths()
         if self._x is not None:
             np.save(x_path, self._x)
@@ -303,7 +303,7 @@ class SEGOMOEInterface:
         elif os.path.exists(x_failed_path):
             os.remove(x_failed_path)
 
-        self._problem.store_results(self._results_folder, final=final)
+        self._problem.store_results(self._results_folder)
 
     def _get_doe_paths(self):
         return self._get_sego_file_path('x'), self._get_sego_file_path('y'), self._get_sego_file_path('x_fails')
@@ -365,15 +365,11 @@ class SEGOMOEInterface:
         g = -g
         return np.column_stack([f, g, h])
 
-    def get_population(self, x: np.ndarray, y: np.ndarray, include_is_active=False) -> Population:
+    def get_population(self, x: np.ndarray, y: np.ndarray) -> Population:
         # Inequality constraint values are flipped to correctly calculate constraint violation values in pymoo
         f, g, h = self._split_y(y)
         kwargs = {'X': x, 'F': f, 'G': g, 'H': h}
         pop = Population.new(**kwargs)
-
-        if include_is_active:
-            pop = self._problem.extend_pop_data(pop)
-
         return pop
 
     @staticmethod

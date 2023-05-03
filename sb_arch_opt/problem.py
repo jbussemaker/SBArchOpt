@@ -191,14 +191,6 @@ class ArchOptProblemBase(Problem):
 
         return is_failed
 
-    def extend_pop_data(self, population: Population) -> Population:
-        """Extend the data in the Population (assuming at least X and F are present): impute X and provide is_active"""
-        population = population.copy()
-        x_imp, is_active = self.correct_x(population.get('X'))
-        population.set('X', x_imp)
-        population.set('is_active', is_active)
-        return population
-
     @staticmethod
     def get_repair():
         """Get the repair operator for architecture optimization problems"""
@@ -297,14 +289,12 @@ class ArchOptProblemBase(Problem):
         """Generate all possible discrete design vectors (if available). Returns design vectors and activeness
         information. Not needed if an explicit design space is provided."""
 
-    def store_results(self, results_folder, final=False):
-        """Callback function to store intermediate or final results in some results folder"""
+    def store_results(self, results_folder):
+        """Callback function to store intermediate or final results in some results folder. Should include all
+        previously evaluated design points."""
 
     def load_previous_results(self, results_folder) -> Optional[Population]:
-        """
-        Return a Population (with X and F (optionally G and H) defined) created from previous results.
-        Call `extend_pop_data` afterwards if is_active and is_failed are also needed as data.
-        """
+        """Return a Population (with X and F (optionally G and H) defined) created from previous results."""
 
     def might_have_hidden_constraints(self):
         """By default, it is assumed that at any time one or more points might fail to evaluate (i.e. return NaN).
