@@ -293,19 +293,18 @@ class RealisticTurbofanArch(OpenTurbArchProblemWrapper):
 
 
 if __name__ == '__main__':
-    # SimpleTurbofanArch().print_stats()
+    SimpleTurbofanArch().print_stats()
     # RealisticTurbofanArch().print_stats()
 
-    import pandas as pd
-    problem = RealisticTurbofanArch()
-    problem.print_stats()
-    exit()
-    x_all, is_act_all = problem.design_space.all_discrete_x_by_trial_and_imputation
-    dr = problem.get_discrete_rates(force=True)
-    with pd.ExcelWriter('real_turbofan.xlsx') as writer:
-        pd.DataFrame(x_all, columns=[f'x{i}' for i in range(x_all.shape[1])]).to_excel(writer, sheet_name='x')
-        pd.DataFrame(is_act_all, columns=[f'x{i}' for i in range(x_all.shape[1])]).to_excel(writer, sheet_name='is_act')
-        dr.to_excel(writer, 'adr')
+    # import pandas as pd
+    # problem = RealisticTurbofanArch()
+    # problem.print_stats()
+    # x_all, is_act_all = problem.design_space.all_discrete_x_by_trial_and_imputation
+    # dr = problem.get_discrete_rates(force=True)
+    # with pd.ExcelWriter('real_turbofan.xlsx') as writer:
+    #     pd.DataFrame(x_all, columns=[f'x{i}' for i in range(x_all.shape[1])]).to_excel(writer, sheet_name='x')
+    #     pd.DataFrame(is_act_all, columns=[f'x{i}' for i in range(x_all.shape[1])]).to_excel(writer, sheet_name='is_act')
+    #     dr.to_excel(writer, 'adr')
 
     # from pymoo.optimize import minimize
     # from sb_arch_opt.algo.pymoo_interface import get_nsga2

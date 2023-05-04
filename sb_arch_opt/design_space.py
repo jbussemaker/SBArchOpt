@@ -347,10 +347,16 @@ class ArchDesignSpace:
         df = pd.concat([df, pd.Series(diversity, name='diversity').to_frame().T,
                         pd.Series(active_diversity, name='active-diversity').to_frame().T], axis=0)
 
+        max_diversity = np.zeros((len(df),))*np.nan
+        max_diversity[-2] = df.iloc[-2, :].max()
+        max_diversity[-1] = df.iloc[-1, :].max()
+        df = pd.concat([df, pd.Series(index=df.index, data=max_diversity, name='max')], axis=1)
+
         if show:
+            is_discrete_mask = np.concatenate([self.is_discrete_mask, [True]])
             with pd.option_context('display.max_rows', None, 'display.max_columns', None,
                                    'display.expand_frame_repr', False, 'max_colwidth', -1):
-                print(df.iloc[:, self.is_discrete_mask].replace(np.nan, ''))
+                print(df.iloc[:, is_discrete_mask].replace(np.nan, ''))
 
         return df
 
