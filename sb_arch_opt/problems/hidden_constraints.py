@@ -24,7 +24,7 @@ from pymoo.core.variable import Real
 from sb_arch_opt.problems.constrained import *
 from sb_arch_opt.problems.hierarchical import *
 from sb_arch_opt.problems.problems_base import *
-from sb_arch_opt.problems.continuous import Branin
+from sb_arch_opt.problems.continuous import Branin, Rosenbrock
 from sb_arch_opt.problem import ArchOptProblemBase
 from sb_arch_opt.sampling import HierarchicalSampling
 from pymoo.problems.single.ackley import Ackley
@@ -33,7 +33,8 @@ __all__ = ['SampledFailureRateMixin', 'Mueller01', 'Mueller02', 'Mueller08', 'MO
            'MOHierarchicalRosenbrockHC', 'HCMOHierarchicalTestProblem', 'RandomHiddenConstraintsBase', 'HCSphere',
            'HierarchicalRosenbrockHC', 'ConstraintHiderMetaProblem', 'CantileveredBeamHC', 'MDCantileveredBeamHC',
            'CarsideHC', 'MDCarsideHC', 'CarsideHCLess', 'MDMueller02', 'MDMueller08', 'MDMOMueller08',
-           'HierMueller02', 'HierMueller08', 'MOHierMueller08', 'AlimoEdge', 'HierAlimo', 'HierAlimoEdge']
+           'HierMueller02', 'HierMueller08', 'MOHierMueller08', 'AlimoEdge', 'HierAlimo', 'HierAlimoEdge',
+           'Tfaily01', 'Tfaily02', 'Tfaily03', 'Tfaily04']
 
 
 class SampledFailureRateMixin(ArchOptProblemBase):
@@ -429,6 +430,92 @@ class MDCarsideHC(ConstraintHiderMetaProblem):
         super().__init__(MDCarside(), i_g_hc=[3, 7])
 
 
+class Tfaily01(SampledFailureRateMixin, NoHierarchyProblemBase):
+    """
+    Test problem 1 from:
+    Tfaily et al., "Efficient Acquisition Functions for Bayesian Optimization in the Presence of Hidden Constraints",
+    AIAA Aviation 2023 Forum
+    """
+
+    def __init__(self):
+        des_vars = [
+            Real(bounds=(-2, 2)),
+            Real(bounds=(-2, 2)),
+        ]
+        super().__init__(des_vars)
+
+    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
+                       h_out: np.ndarray, *args, **kwargs):
+
+        def w(z):
+            return np.exp(-(z-1)**2) + np.exp(-.8*(z+1)**2) - .5*np.sin(8*(z+.1))
+
+        f_out[:, 0] = -w(x[:, 0])*w(x[:, 1])
+
+        # Add the 45-deg rotated ellipse as failure region
+        alpha = .25*np.pi
+        xx_ = np.cos(alpha)*x[:, 0] + np.sin(alpha)*x[:, 1]
+        yy_ = np.sin(alpha)*x[:, 0] - np.cos(alpha)*x[:, 1]
+        is_failed = (xx_/2)**2 + yy_**2 < 1
+        f_out[is_failed, :] = np.nan
+
+
+class Tfaily02(SampledFailureRateMixin, Branin):
+    """
+    Test problem 2 from:
+    Tfaily et al., "Efficient Acquisition Functions for Bayesian Optimization in the Presence of Hidden Constraints",
+    AIAA Aviation 2023 Forum
+    """
+
+    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
+                       h_out: np.ndarray, *args, **kwargs):
+        super()._arch_evaluate(x, is_active_out, f_out, g_out, h_out, *args, **kwargs)
+
+        is_failed = (np.abs(x[:, 0] - .5) < .5) & (np.abs(x[:, 1] - .5) < .4)
+        f_out[is_failed, :] = np.nan
+
+
+class Tfaily03(SampledFailureRateMixin, Rosenbrock):
+    """
+    Test problem 3 from:
+    Tfaily et al., "Efficient Acquisition Functions for Bayesian Optimization in the Presence of Hidden Constraints",
+    AIAA Aviation 2023 Forum
+    """
+
+    def __init__(self):
+        super().__init__(n_var=4)
+
+    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
+                       h_out: np.ndarray, *args, **kwargs):
+        super()._arch_evaluate(x, is_active_out, f_out, g_out, h_out, *args, **kwargs)
+
+        is_failed = np.zeros(x.shape, dtype=bool)
+        is_failed[:, :2] = (0 < x[:, :2]) & (x[:, :2] < 1)
+        is_failed[:, 2:] = (1 < x[:, 2:]) & (x[:, 2:] < 2)
+        is_failed = np.any(is_failed, axis=1)
+        f_out[is_failed, :] = np.nan
+
+
+class Tfaily04(SampledFailureRateMixin, NoHierarchyProblemBase):
+    """
+    Test problem 4 from:
+    Tfaily et al., "Efficient Acquisition Functions for Bayesian Optimization in the Presence of Hidden Constraints",
+    AIAA Aviation 2023 Forum
+    """
+
+    def __init__(self):
+        des_vars = [Real(bounds=(-500, 500)) for _ in range(6)]
+        super().__init__(des_vars)
+
+    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
+                       h_out: np.ndarray, *args, **kwargs):
+
+        f_out[:, 0] = 2513.895 - np.sum(x*np.sin(np.sqrt(np.abs(x))), axis=1)
+
+        is_failed = np.any((350 < x) & (x < 420), axis=1)
+        f_out[is_failed, :] = np.nan
+
+
 if __name__ == '__main__':
     # MOHierarchicalRosenbrockHC().print_stats()
     # HierarchicalRosenbrockHC().print_stats()
@@ -463,8 +550,8 @@ if __name__ == '__main__':
     # AlimoEdge().print_stats()
     # Alimo().plot_design_space()
     # AlimoEdge().plot_design_space()
-    HierAlimo().print_stats()
-    HierAlimoEdge().print_stats()
+    # HierAlimo().print_stats()
+    # HierAlimoEdge().print_stats()
     # HCBranin().print_stats()
     # HCBranin().plot_design_space()
     # HCSphere().print_stats()
@@ -475,3 +562,9 @@ if __name__ == '__main__':
     # CarsideHC().print_stats()
     # CarsideHCLess().print_stats()
     # MDCarsideHC().print_stats()
+
+    Tfaily01().print_stats()
+    Tfaily02().print_stats()
+    Tfaily03().print_stats()
+    Tfaily04().print_stats()
+    # Tfaily04().plot_design_space()

@@ -80,6 +80,10 @@ An overview of available test problems in `sb_arch_opt.problems` (* = recommende
 | `AlimoEdge`                       |         | 2      | 1     |       |     |     |     |      | Y   |               |           |              | fail_rate: 53%                   |
 | `HCBranin`                        |         | 2      | 1     |       |     |     |     |      | Y   |               |           |              | fail_rate: 33%                   |
 | `HCSphere`                        |         | 2      | 1     |       |     |     |     |      | Y   |               |           |              | fail_rate: 51%                   |
+| `Tfaily01`                        |         | 2      | 1     |       |     |     |     |      | Y   |               |           |              | fail_rate: 39%                   |
+| `Tfaily02`                        |         | 2      | 1     |       |     |     |     |      | Y   |               |           |              | fail_rate: 80%                   |
+| `Tfaily03`                        |         | 4      | 1     |       |     |     |     |      | Y   |               |           |              | fail_rate: 67%                   |
+| `Tfaily04`                        |         | 6      | 1     |       |     |     |     |      | Y   |               |           |              | fail_rate: 35%                   |
 | `CantileveredBeamHC`              |         | 4      | 1     | 1     |     |     |     |      | Y   |               |           |              | fail_rate: 83%                   |
 | `MDCantileveredBeamHC`            | 2       | 2      | 1     | 1     |     | Y   |     |      | Y   | 100           |           |              | fail_rate: 81%                   |
 | `CarsideHC`                       |         | 7      | 3     | 8     |     |     | Y   |      | Y   |               |           |              | fail_rate: 66%                   |

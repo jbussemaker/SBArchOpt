@@ -54,3 +54,10 @@ def test_carside():
     run_test_no_hierarchy(CarsideHC())
     run_test_no_hierarchy(CarsideHCLess())
     run_test_no_hierarchy(MDCarsideHC())
+
+
+def test_tfaily():
+    run_test_no_hierarchy(Tfaily01())
+    run_test_no_hierarchy(Tfaily02())
+    run_test_no_hierarchy(Tfaily03())
+    run_test_no_hierarchy(Tfaily04())
