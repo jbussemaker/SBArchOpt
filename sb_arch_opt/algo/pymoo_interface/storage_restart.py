@@ -164,8 +164,6 @@ class ArchOptEvaluator(Evaluator):
     """
 
     def __init__(self, *args, results_folder: str = None, n_batch=None, **kwargs):
-        self.extreme_barrier = True
-
         self.results_folder = results_folder
         if results_folder is not None:
             os.makedirs(results_folder, exist_ok=True)
@@ -221,24 +219,25 @@ class ArchOptEvaluator(Evaluator):
                 batch_pop = pop[i_batch:i_batch+n_batch]
                 super()._eval(problem, batch_pop, evaluate_values_of, **kwargs)
 
+                self._apply_extreme_barrier(batch_pop)
                 intermediate_pop = self._normalize_pop(pop, evaluate_values_of, evaluated_pop=self._evaluated_pop)
                 self.store_intermediate(problem, intermediate_pop)
 
         # Apply extreme barrier: replace NaN with Inf
-        if self.extreme_barrier:
-            for key in ['F', 'G', 'H']:
-                values = pop.get(key)
-                values[np.isnan(values)] = np.inf
-                pop.set(key, values)
+        self._apply_extreme_barrier(pop)
 
         return pop
 
     @staticmethod
+    def _apply_extreme_barrier(pop: Population):
+        for key in ['F', 'G', 'H']:
+            values = pop.get(key)
+            values[np.isnan(values)] = np.inf
+            pop.set(key, values)
+
+    @staticmethod
     def _normalize_pop(pop: Population, evaluate_values_of, nan_as_inf=True, evaluated_pop: Population = None) -> Population:
         """Ensure that the matrices in a Population are two-dimensional"""
-        if evaluated_pop is not None:
-            pop = Population.merge(evaluated_pop, pop)
-
         pop_data = {}
         for key in (['X']+evaluate_values_of):
             data = pop.get(key)
@@ -254,7 +253,11 @@ class ArchOptEvaluator(Evaluator):
                 data = partial_data
 
             pop_data[key] = data
-        return Population.new(**pop_data)
+
+        normalized_pop = Population.new(**pop_data)
+        if evaluated_pop is not None:
+            normalized_pop = Population.merge(evaluated_pop, normalized_pop)
+        return normalized_pop
 
     def store_intermediate(self, problem, pop: Population):
         # Store pymoo population
