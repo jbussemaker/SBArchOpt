@@ -147,7 +147,7 @@ def test_partial_restart():
 
                     f = pop.get('F')
                     assert f.shape == (x.shape[0], problem.n_obj)
-                    n_empty = np.sum(np.any(~np.isfinite(f), axis=1))
+                    n_empty = np.sum(np.any(np.isnan(f), axis=1))
                     assert n_empty == x.shape[0]-n_evaluated
 
                 sbo = get_arch_sbo_rbf(init_size=20, results_folder=tmp_folder)

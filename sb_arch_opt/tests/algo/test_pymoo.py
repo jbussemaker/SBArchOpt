@@ -157,13 +157,19 @@ def test_doe_algo(problem: ArchOptProblemBase):
 
 class CrashingProblem(DummyResultSavingProblem):
 
-    def __init__(self):
+    def __init__(self, failed_evals=True):
+        self.failed_evals = failed_evals
         super().__init__()
         self.i_eval = 0
 
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
         super()._arch_evaluate(x, is_active_out, f_out, g_out, h_out, *args, **kwargs)
+
+        if self.failed_evals:
+            i_failed = np.arange(0, x.shape[0])[::2]
+            f_out[i_failed, :] = np.nan
+            g_out[i_failed, :] = np.nan
 
         self.i_eval += 1
         if self.i_eval > 1:
@@ -197,7 +203,7 @@ def test_partial_restart():
 
                     f = pop.get('F')
                     assert f.shape == (x.shape[0], problem.n_obj)
-                    n_empty = np.sum(np.any(~np.isfinite(f), axis=1))
+                    n_empty = np.sum(np.any(np.isnan(f), axis=1))
                     assert n_empty == x.shape[0]-n_evaluated
 
                 nsga2 = get_nsga2(pop_size=20, results_folder=tmp_folder)
@@ -228,7 +234,7 @@ def test_partial_doe_restart():
 
                     f = pop.get('F')
                     assert f.shape == (30, problem.n_obj)
-                    n_empty = np.sum(np.any(~np.isfinite(f), axis=1))
+                    n_empty = np.sum(np.any(np.isnan(f), axis=1))
                     assert n_empty == 30-i*10
 
                 doe_algo = get_doe_algo(doe_size=30, results_folder=tmp_folder)

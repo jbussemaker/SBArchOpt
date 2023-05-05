@@ -306,6 +306,7 @@ class SBOInfill(InfillCriterion):
 
         x = x.copy()
         y = y.copy()
+        y[~np.isfinite(y)] = np.nan
 
         n_obj = self.problem.n_obj
         y[:, :n_obj] = np.nanmax(y[:, :n_obj], axis=0)  # f
