@@ -1,8 +1,8 @@
 import pytest
 import tempfile
 import numpy as np
+from sb_arch_opt.sampling import *
 from sb_arch_opt.problems.turbofan_arch import *
-from sb_arch_opt.sampling import HierarchicalExhaustiveSampling
 from sb_arch_opt.algo.pymoo_interface import get_nsga2
 from pymoo.optimize import minimize
 from pymoo.core.population import Population
@@ -20,10 +20,24 @@ def test_simple_problem():
 
     problem.get_discrete_rates(force=True, show=True)
 
-    _, is_act_all = problem.all_discrete_x
-    assert is_act_all is not None
-    _, is_act_all = problem.design_space.all_discrete_x_by_trial_and_imputation
+    x_all, is_act_all = problem.design_space.all_discrete_x_by_trial_and_imputation
     assert np.all(problem.is_conditionally_active == np.any(~is_act_all, axis=0))
+    x_all_corr, is_act_all_corr = problem.correct_x(x_all)
+    assert np.all(x_all_corr == x_all)
+    assert np.all(is_act_all_corr == is_act_all)
+
+    x_all, is_act_all = problem.all_discrete_x
+    assert is_act_all is not None
+    x_all_corr, is_act_all_corr = problem.correct_x(x_all)
+    assert np.all(x_all_corr == x_all)
+    assert np.all(is_act_all_corr == is_act_all)
+
+    x = HierarchicalSampling().do(problem, 1000).get('X')
+    x_corr, is_act = problem.correct_x(x)
+    assert np.all(x_corr == x)
+    x_corr2, is_act2 = problem.correct_x(x_corr)
+    assert np.all(x_corr2 == x_corr)
+    assert np.all(is_act2 == is_act)
 
 
 @pytest.mark.skip('Takes about 1 minute')
@@ -61,6 +75,18 @@ def test_realistic_problem():
     problem.get_discrete_rates(show=True)  # Takes several minutes
     x_all, is_act_all = problem.all_discrete_x
     assert x_all.shape[0] == problem.get_n_valid_discrete()
+
+    i_random = np.random.choice(x_all.shape[0], 1000, replace=False)
+    x_all_corr, is_act_all_corr = problem.correct_x(x_all[i_random])
+    assert np.all(x_all_corr == x_all[i_random])
+    assert np.all(is_act_all_corr == is_act_all[i_random])
+
+    x = HierarchicalSampling().do(problem, 100).get('X')
+    x_corr, is_act = problem.correct_x(x)
+    assert np.all(x_corr == x)
+    x_corr2, is_act2 = problem.correct_x(x_corr)
+    assert np.all(x_corr2 == x_corr)
+    assert np.all(is_act2 == is_act)
 
     f_pf = problem.pareto_front()
     x_pf = problem.pareto_set()
