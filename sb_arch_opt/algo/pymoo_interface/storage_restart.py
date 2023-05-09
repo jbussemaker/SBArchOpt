@@ -173,6 +173,7 @@ class ArchOptEvaluator(Evaluator):
         super().__init__(*args, **kwargs)
 
         self._evaluated_pop = None
+        self._non_eval_cumulative_pop = None
 
     def initialize_cumulative(self, cumulative_pop: Population):
         # Set cumulative population and correct the nr of evaluations
@@ -190,12 +191,19 @@ class ArchOptEvaluator(Evaluator):
             i_evaluated = self._get_idx_evaluated(pop, evaluate_values_of=evaluate_values_of)
             self._evaluated_pop = pop[i_evaluated]
 
+        # Get portion of the cumulative population that is currently not under evaluation
+        self._non_eval_cumulative_pop = None
+        if self._cumulative_pop is not None:
+            is_duplicate = LargeDuplicateElimination.eliminate(self._cumulative_pop.get('X'), pop.get('X'))
+            self._non_eval_cumulative_pop = self._cumulative_pop[~is_duplicate]
+
         results = super().eval(problem, pop, skip_already_evaluated=skip_already_evaluated,
                                evaluate_values_of=evaluate_values_of, count_evals=count_evals, **kwargs)
 
         # Post-evaluation storage
         if self.results_folder is not None:
-            self.store_intermediate(problem, pop)
+            self._store_intermediate(problem, pop)
+        self._non_eval_cumulative_pop = None
 
         return results
 
@@ -221,7 +229,7 @@ class ArchOptEvaluator(Evaluator):
 
                 self._apply_extreme_barrier(batch_pop)
                 intermediate_pop = self._normalize_pop(pop, evaluate_values_of, evaluated_pop=self._evaluated_pop)
-                self.store_intermediate(problem, intermediate_pop)
+                self._store_intermediate(problem, intermediate_pop)
 
         # Apply extreme barrier: replace NaN with Inf
         self._apply_extreme_barrier(pop)
@@ -259,17 +267,16 @@ class ArchOptEvaluator(Evaluator):
             normalized_pop = Population.merge(evaluated_pop, normalized_pop)
         return normalized_pop
 
-    def store_intermediate(self, problem, pop: Population):
+    def _store_intermediate(self, problem, pop: Population):
         # Store pymoo population
         self._store_pop(pop)
 
         # Store cumulative pymoo population
-        if self._cumulative_pop is None:
-            self._cumulative_pop = pop
+        if self._non_eval_cumulative_pop is not None:
+            unique_non_eval_pop = LargeDuplicateElimination().do(self._non_eval_cumulative_pop, pop, to_itself=False)
+            self._cumulative_pop = Population.merge(unique_non_eval_pop, pop)
         else:
-            unique_cumulative_pop = LargeDuplicateElimination().do(self._cumulative_pop, pop, to_itself=False)
-            self._cumulative_pop = Population.merge(unique_cumulative_pop, pop) \
-                if len(unique_cumulative_pop) > 0 else pop
+            self._cumulative_pop = pop
         self._store_pop(self._cumulative_pop, cumulative=True)
 
         # Store problem-specific results
