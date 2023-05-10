@@ -34,15 +34,8 @@ try:
     from smt.surrogate_models.krg_based import MixIntKernelType, MixHrcKernelType
 
     from smt.applications.mixed_integer import MixedIntegerKrigingModel
-    from smt.utils.mixed_integer import XType
-    from smt.utils.kriging import XSpecs, XRole
     from smt.utils.design_space import BaseDesignSpace
     import smt.utils.design_space as ds
-
-    # Temp fix: fix class name of XRole enum
-    from enum import Enum
-    import smt.utils.kriging as krg_utils
-    krg_utils.XRole = Enum("XRole", ["NEUTRAL", "META", "DECREED"])
 
     HAS_ARCH_SBO = True
 except ImportError:
@@ -66,8 +59,6 @@ def check_dependencies():
 @dataclass
 class SMTDesignSpaceSpec:
     var_defs: List[dict]  # [{'name': name, 'lb': lb, 'ub', ub}, ...]
-    var_types: List[Union[str, Tuple[str, int]]]  # FLOAT, INT, ENUM
-    var_limits: List[Union[Tuple[float, float], list]]  # Bounds (options for an enum)
     design_space: 'SBArchOptDesignSpace'
     is_mixed_discrete: bool
 
@@ -126,15 +117,11 @@ class ModelFactory:
         design_space = SBArchOptDesignSpace(arch_design_space, md_normalize=md_normalize)
         is_mixed_discrete = not np.all(arch_design_space.is_cont_mask)
 
-        var_types = design_space.get_x_types()
-        var_limits = design_space.get_x_limits()
         var_defs = [{'name': f'x{i}', 'lb': bounds[0], 'ub': bounds[1]}
                     for i, bounds in enumerate(design_space.get_num_bounds())]
 
         return SMTDesignSpaceSpec(
             var_defs=var_defs,
-            var_types=var_types,
-            var_limits=var_limits,
             design_space=design_space,
             is_mixed_discrete=is_mixed_discrete,
         )
@@ -198,7 +185,7 @@ class SBArchOptDesignSpace(BaseDesignSpace):
     def arch_design_space(self) -> ArchDesignSpace:
         return self._ds
 
-    def _get_design_variables(self) -> List[ds.DesignVariable]:
+    def _get_design_variables(self) -> List['ds.DesignVariable']:
         """Return the design variables defined in this design space if not provided upon initialization of the class"""
         smt_des_vars = []
         is_conditional = self._ds.is_conditionally_active

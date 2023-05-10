@@ -254,8 +254,9 @@ class SEGOMOEInterface:
             **self.model_options,
         }
         if design_space_spec.is_mixed_discrete:
-            model_type['xtypes'] = design_space_spec.var_types
-            model_type['xlimits'] = design_space_spec.var_limits
+            raise RuntimeError('Mixed-discrete API currently not supported')
+            # model_type['xtypes'] = design_space_spec.var_types
+            # model_type['xlimits'] = design_space_spec.var_limits
 
         optim_settings = {
             'grouped_eval': True,
