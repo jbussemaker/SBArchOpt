@@ -117,9 +117,6 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
 
-        if self._robust_correct_x:
-            self._correct_x_impute(x, is_active_out)
-
         if self.n_parallel is None:
             results = [self._arch_evaluate_x(x[i, :]) for i in range(x.shape[0])]
         else:
@@ -144,14 +141,9 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
         return x_imp, f, g, is_active
 
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
-        n_correct = 3 if self._robust_correct_x else 1
-        for i_corr in range(n_correct):
-            if i_corr > 0:
-                self.impute_x(x, is_active)
-
-            for i in range(x.shape[0]):
-                __, x[i, :] = self._problem.generate_architecture(self._convert_x(x[i, :]))
-                is_active[i, :] = self._problem.get_last_is_active()
+        for i in range(x.shape[0]):
+            __, x[i, :] = self._problem.generate_architecture(self._convert_x(x[i, :]))
+            is_active[i, :] = self._problem.get_last_is_active()
 
     def _convert_x(self, x) -> List[Union[float, int]]:
         mask = self.is_discrete_mask
@@ -243,7 +235,6 @@ class RealisticTurbofanArch(OpenTurbArchProblemWrapper):
     Available here:
     https://www.researchgate.net/publication/353530868_System_Architecture_Optimization_An_Open_Source_Multidisciplinary_Aircraft_Jet_Engine_Architecting_Problem
     """
-    _robust_correct_x = True
 
     def __init__(self, n_parallel=None):
         check_dependency()
