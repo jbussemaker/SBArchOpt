@@ -417,8 +417,8 @@ class ArchDesignSpace:
 
         # Create and repair the sampled design vectors in batches
         n_batch = 1000
-        x_repaired = np.zeros((0, len(opt_values)), dtype=int)
-        is_active_repaired = np.zeros(x_repaired.shape, dtype=bool)
+        x_discr = np.zeros((0, len(opt_values)))
+        is_act_discr = np.zeros(x_discr.shape, dtype=bool)
         while True:
             # Get next batch
             x_repair = []
@@ -429,7 +429,7 @@ class ArchDesignSpace:
                 x_repair.append(x_next)
             if len(x_repair) == 0:
                 break
-            x_repair = np.array(x_repair).astype(int)
+            x_repair = np.array(x_repair)
 
             # Repair current batch
             # print(f'Sampling {x_repair.shape[0]} ({x_repaired.shape[0]} sampled)')
@@ -441,11 +441,8 @@ class ArchDesignSpace:
             x_repair = x_repair[is_not_repaired, :]
             is_active = is_active[is_not_repaired, :]
 
-            x_repaired = np.row_stack([x_repaired, x_repair])
-            is_active_repaired = np.row_stack([is_active_repaired, is_active.astype(bool)])
-
-        x_discr = np.row_stack(x_repaired).astype(float)
-        is_act_discr = np.row_stack(is_active_repaired)
+            x_discr = np.row_stack([x_discr, x_repair])
+            is_act_discr = np.row_stack([is_act_discr, is_active.astype(bool)])
 
         # Impute continuous values
         self.impute_x(x_discr, is_act_discr)

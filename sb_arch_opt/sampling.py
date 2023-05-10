@@ -275,12 +275,12 @@ class HierarchicalSampling(FloatRandomSampling):
 
             x[:, is_cont_mask] = x_unit_abs
 
-        if needs_repair:
+        if isinstance(problem, ArchOptProblemBase):
+            x, is_active = problem.correct_x(x)
+        else:
             x = repair.do(problem, x)
             if isinstance(repair, ArchOptRepair) and repair.latest_is_active is not None:
                 is_active = repair.latest_is_active
-            elif isinstance(problem, ArchOptProblemBase):
-                x, is_active = problem.correct_x(x)
         if is_active is None:
             raise ValueError('Unexpectedly empty is_active!')
 

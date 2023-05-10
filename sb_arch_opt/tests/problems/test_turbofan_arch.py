@@ -1,8 +1,8 @@
 import pytest
 import tempfile
 import numpy as np
+from sb_arch_opt.sampling import *
 from sb_arch_opt.problems.turbofan_arch import *
-from sb_arch_opt.sampling import HierarchicalExhaustiveSampling
 from sb_arch_opt.algo.pymoo_interface import get_nsga2
 from pymoo.optimize import minimize
 from pymoo.core.population import Population
@@ -20,13 +20,27 @@ def test_simple_problem():
 
     problem.get_discrete_rates(force=True, show=True)
 
-    _, is_act_all = problem.all_discrete_x
-    assert is_act_all is not None
-    _, is_act_all = problem.design_space.all_discrete_x_by_trial_and_imputation
+    x_all, is_act_all = problem.design_space.all_discrete_x_by_trial_and_imputation
     assert np.all(problem.is_conditionally_active == np.any(~is_act_all, axis=0))
+    x_all_corr, is_act_all_corr = problem.correct_x(x_all)
+    assert np.all(x_all_corr == x_all)
+    assert np.all(is_act_all_corr == is_act_all)
+
+    x_all, is_act_all = problem.all_discrete_x
+    assert is_act_all is not None
+    x_all_corr, is_act_all_corr = problem.correct_x(x_all)
+    assert np.all(x_all_corr == x_all)
+    assert np.all(is_act_all_corr == is_act_all)
+
+    x = HierarchicalSampling().do(problem, 1000).get('X')
+    x_corr, is_act = problem.correct_x(x)
+    assert np.all(x_corr == x)
+    x_corr2, is_act2 = problem.correct_x(x_corr)
+    assert np.all(x_corr2 == x_corr)
+    assert np.all(is_act2 == is_act)
 
 
-@pytest.mark.skip('Takes about 1 minute')
+# @pytest.mark.skip('Takes about 1 minute')
 @check_dependency()
 def test_simple_problem_eval():
     with tempfile.TemporaryDirectory() as tmp_folder:
@@ -34,20 +48,14 @@ def test_simple_problem_eval():
         algo = get_nsga2(pop_size=2, results_folder=tmp_folder)
 
         algo.initialization = Initialization(Population.new(X=np.array([
-            [0.00000000e+00, 7.25000000e+00, 1.45000000e+00, 0.00000000e+00,
-             5.56433341e+01, 0.00000000e+00, 0.00000000e+00, 2.16132276e+03,
-             1.05000000e+04, 1.05000000e+04, 0.00000000e+00, 3.00000000e+00,
-             0.00000000e+00, 0.00000000e+00, 0.00000000e+00],
-            [1.00000000e+00, 3.24903112e+00, 1.79150862e+00, 1.00000000e+00,
-             3.38760525e+00, 1.72941504e-01, 0.00000000e+00, 1.12242658e+04,
-             1.52650779e+04, 1.05000000e+04, 1.00000000e+00, 4.93314012e+00,
-             1.00000000e+00, 1.00000000e+00, 1.00000000e+00],
+            [1, 12.34088028, 1.293692084, 2, 49.95762965, 0.333333333, 0.333333333, 14857.31833, 16919.26153, 8325.806323, 0, 3, 0, 0, 0],
+            [0, 7.25, 1.45, 1, 23.04752703, 0.176817974, 0, 14412.5685, 14436.53056, 10500, 0, 3, 0, 1, 0],
         ])))
 
         result = minimize(problem, algo, termination=('n_eval', 2))
         f, g = result.pop.get('F'), result.pop.get('G')
-        assert np.all(np.abs(f[0, :]-np.array([21.9345935])) < 1e-2)
-        assert np.all(np.abs(g[0, :]-np.array([0.85551435, -0.9, 40.64333408, -14., -14.])) < 1e-2)
+        assert np.all(np.abs(f[0, :]-np.array([7.038242017])) < 1e-2)
+        assert np.all(np.abs(g[0, :]-np.array([-0.219864891, -0.566666667, -11.61994603, -11.61994603, -11.61994603])) < 1e-2)
         assert np.isinf(f[1, 0])
         assert np.all(np.isinf(g[1, :]))
 
@@ -61,6 +69,18 @@ def test_realistic_problem():
     problem.get_discrete_rates(show=True)  # Takes several minutes
     x_all, is_act_all = problem.all_discrete_x
     assert x_all.shape[0] == problem.get_n_valid_discrete()
+
+    i_random = np.random.choice(x_all.shape[0], 1000, replace=False)
+    x_all_corr, is_act_all_corr = problem.correct_x(x_all[i_random])
+    assert np.all(x_all_corr == x_all[i_random])
+    assert np.all(is_act_all_corr == is_act_all[i_random])
+
+    x = HierarchicalSampling().do(problem, 100).get('X')
+    x_corr, is_act = problem.correct_x(x)
+    assert np.all(x_corr == x)
+    x_corr2, is_act2 = problem.correct_x(x_corr)
+    assert np.all(x_corr2 == x_corr)
+    assert np.all(is_act2 == is_act)
 
     f_pf = problem.pareto_front()
     x_pf = problem.pareto_set()
