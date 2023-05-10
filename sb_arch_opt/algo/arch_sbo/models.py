@@ -33,6 +33,7 @@ try:
     from smt.surrogate_models.kpls import KPLS
     from smt.surrogate_models.krg_based import MixIntKernelType, MixHrcKernelType
 
+    from smt.applications.mixed_integer import MixedIntegerKrigingModel
     from smt.utils.mixed_integer import XType
     from smt.utils.kriging import XSpecs, XRole
     from smt.utils.design_space import BaseDesignSpace
@@ -174,6 +175,8 @@ class ModelFactory:
 
         if kpls_n_comp is not None:
             surrogate = KPLS(n_comp=kpls_n_comp, **kwargs)
+            if norm_ds_spec.is_mixed_discrete:
+                surrogate = MixedIntegerKrigingModel(surrogate)
         else:
             surrogate = KRG(**kwargs)
 
@@ -286,7 +289,10 @@ class MultiSurrogateModel(SurrogateModel):
             model.train()
 
             if i == 0 and isinstance(model, KrgBased):
-                theta0 = list(model.optimal_theta)
+                try:
+                    theta0 = list(model.optimal_theta)
+                except AttributeError:
+                    pass
 
     def predict_values(self, x: np.ndarray, is_acting=None) -> np.ndarray:
         return np.column_stack([model.predict_values(x, is_acting=is_acting) for model in self._models])
