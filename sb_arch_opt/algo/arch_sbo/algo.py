@@ -243,6 +243,10 @@ class SBOInfill(InfillCriterion):
         return self._surrogate_model
 
     @property
+    def _model_is_hierarchical(self):
+        return self.surrogate_model.supports['x_hierarchy']
+
+    @property
     def normalization(self) -> Normalization:
         if self._normalization is None:
             if self.problem is None:
@@ -318,8 +322,11 @@ class SBOInfill(InfillCriterion):
 
     def _train_model(self):
         s = timeit.default_timer()
+
+        kwargs = {'is_acting': self.is_active_train} if self._model_is_hierarchical else {}
         self.surrogate_model.set_training_values(
-            self.normalization.forward(self.x_train), self.y_train, is_acting=self.is_active_train)
+            self.normalization.forward(self.x_train), self.y_train, **kwargs)
+
         self.infill.set_samples(self.x_train, self.is_active_train, self.y_train)
 
         if self.x_train.shape[0] > 1:

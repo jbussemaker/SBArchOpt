@@ -249,6 +249,7 @@ class MultiSurrogateModel(SurrogateModel):
         super().__init__(**kwargs)
 
         self._surrogate = surrogate
+        self._is_krg = isinstance(surrogate, KrgBased)
         self._models: List['SurrogateModel'] = []
         self.supports = self._surrogate.supports
         self.options["print_global"] = False
@@ -263,8 +264,11 @@ class MultiSurrogateModel(SurrogateModel):
     def set_training_values(self, xt: np.ndarray, yt: np.ndarray, name=None, is_acting=None) -> None:
         self._models = models = []
         for iy in range(yt.shape[1]):
-            model = copy.deepcopy(self._surrogate)
-            model.set_training_values(xt, yt[:, [iy]], is_acting=is_acting)
+            model: Union['KrgBased', 'SurrogateModel'] = copy.deepcopy(self._surrogate)
+            if self._is_krg:
+                model.set_training_values(xt, yt[:, [iy]], is_acting=is_acting)
+            else:
+                model.set_training_values(xt, yt[:, [iy]])
             models.append(model)
 
     def train(self) -> None:
@@ -282,10 +286,20 @@ class MultiSurrogateModel(SurrogateModel):
                     pass
 
     def predict_values(self, x: np.ndarray, is_acting=None) -> np.ndarray:
-        return np.column_stack([model.predict_values(x, is_acting=is_acting) for model in self._models])
+        model: Union['SurrogateModel', 'KrgBased']
+        if self._is_krg:
+            values = [model.predict_values(x, is_acting=is_acting) for model in self._models]
+        else:
+            values = [model.predict_values(x) for model in self._models]
+        return np.column_stack(values)
 
     def predict_variances(self, x: np.ndarray, is_acting=None) -> np.ndarray:
-        return np.column_stack([model.predict_variances(x, is_acting=is_acting) for model in self._models])
+        model: Union['SurrogateModel', 'KrgBased']
+        if self._is_krg:
+            values = [model.predict_variances(x, is_acting=is_acting) for model in self._models]
+        else:
+            values = [model.predict_variances(x) for model in self._models]
+        return np.column_stack(values)
 
     def _predict_values(self, x: np.ndarray, is_acting=None) -> np.ndarray:
         raise RuntimeError

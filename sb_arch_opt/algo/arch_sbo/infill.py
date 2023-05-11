@@ -35,6 +35,7 @@ __all__ = ['SurrogateInfill', 'FunctionEstimateInfill', 'ConstrainedInfill', 'Fu
 
 try:
     from smt.surrogate_models.surrogate_model import SurrogateModel
+    from smt.surrogate_models.krg_based import KrgBased
 except ImportError:
     pass
 
@@ -102,7 +103,7 @@ class SurrogateInfill:
 
     def __init__(self):
         self.problem: Optional[Problem] = None
-        self.surrogate_model: Optional['SurrogateModel'] = None
+        self.surrogate_model: Optional[Union['SurrogateModel', 'KrgBased']] = None
         self.normalization: Optional[Normalization] = None
         self.n_obj = 0
         self.n_constr = 0
@@ -134,17 +135,17 @@ class SurrogateInfill:
 
     def predict(self, x: np.ndarray, is_active: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         try:
-            y = self.surrogate_model.predict_values(self.normalization.forward(x), is_acting=is_active.astype(bool))
+            kwargs = {'is_acting': is_active.astype(bool)} if self.surrogate_model.supports['x_hierarchy'] else {}
+            y = self.surrogate_model.predict_values(self.normalization.forward(x), **kwargs)
         except FloatingPointError:
             y = np.zeros((x.shape[0], self.surrogate_model.ny))*np.nan
 
         return self._split_f_g(y)
 
     def predict_variance(self, x: np.ndarray, is_active: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-
         try:
-            y_var = self.surrogate_model.predict_variances(
-                self.normalization.forward(x), is_acting=is_active.astype(bool))
+            kwargs = {'is_acting': is_active.astype(bool)} if self.surrogate_model.supports['x_hierarchy'] else {}
+            y_var = self.surrogate_model.predict_variances(self.normalization.forward(x), **kwargs)
         except FloatingPointError:
             y_var = np.zeros((x.shape[0], self.surrogate_model.ny))*np.nan
 
