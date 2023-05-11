@@ -734,6 +734,12 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
                  diversity_range: float = .25, n_opts=3, cont_ratio=1., repr_str=None):
         self._repr_str = repr_str
 
+        self._imp_ratio = imp_ratio
+        self._n_subproblem = n_subproblem
+        self._n_opts = n_opts
+        self._diversity_range = diversity_range
+        self._cont_ratio = cont_ratio
+
         # Create design vectors by repeatedly separating with the given diversity range
         # Variables are separated according to _sep_group: round(x**sep_power*(n_opts-.01)-.5) with x [0..1]
         # The largest group is selected where x**sep_power*(n_opts-.01) == 1 --> x_lrg ~= (1/n_opts)**(1/sep_power)
