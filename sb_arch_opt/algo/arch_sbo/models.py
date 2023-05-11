@@ -270,7 +270,7 @@ class MultiSurrogateModel(SurrogateModel):
     def train(self) -> None:
         theta0 = None
         for i, model in enumerate(self._models):
-            if i > 0 and isinstance(model, KrgBased):
+            if i > 0 and isinstance(model, KrgBased) and theta0 is not None:
                 model.options['theta0'] = theta0
 
             model.train()
