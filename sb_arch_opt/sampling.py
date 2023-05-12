@@ -323,20 +323,9 @@ class HierarchicalSampling(FloatRandomSampling):
             if len(i_x_tgt) == 0:
                 continue
 
-            # Uniformly-randomly select values within group
             i_x_group = groups[i_grp]
-            if len(i_x_tgt) < i_x_group.shape[0]:
-                n_sel = len(i_x_tgt)
-                n_avail = i_x_group.shape[0]
-                n_sel_unit = (np.arange(n_sel)+np.random.random(n_sel)*.9999)/n_sel
-                i_from_group = np.round(n_sel_unit*n_avail - .5).astype(int)
-
-            # If there are more samples requested than points available, only repeat points if there are continuous vars
-            elif has_x_cont:
-                i_x_add = _choice(len(i_x_tgt)-i_x_group.shape[0], i_x_group.shape[0])
-                i_from_group = np.sort(np.concatenate([np.arange(i_x_group.shape[0]), i_x_add]))
-            else:
-                i_from_group = np.arange(i_x_group.shape[0])
+            i_from_group = self._sample_discrete_from_group(
+                x_all[i_x_group, :], is_act_all[i_x_group, :], len(i_x_tgt), _choice, has_x_cont)
 
             x_all_choose = i_x_group[i_from_group]
             x.append(x_all[x_all_choose, :])
@@ -362,6 +351,21 @@ class HierarchicalSampling(FloatRandomSampling):
             is_active = np.row_stack([is_active, is_act_available[i_from_group, :]])
 
         return x, is_active
+
+    def _sample_discrete_from_group(self, x_group: np.ndarray, is_act_group: np.ndarray, n_sel: int, choice_func,
+                                    has_x_cont: bool) -> np.ndarray:
+        n_in_group = x_group.shape[0]
+        if n_sel < n_in_group:
+            n_avail = n_in_group
+            n_sel_unit = (np.arange(n_sel)+np.random.random(n_sel)*.9999)/n_sel
+            return np.round(n_sel_unit*n_avail - .5).astype(int)
+
+        # If there are more samples requested than points available, only repeat points if there are continuous vars
+        if has_x_cont:
+            i_x_add = choice_func(n_sel-n_in_group, n_in_group)
+            return np.sort(np.concatenate([np.arange(n_in_group), i_x_add]))
+
+        return np.arange(n_in_group)
 
     def group_design_vectors(self, x_all: np.ndarray, is_act_all: np.ndarray, is_cont_mask) -> List[np.ndarray]:
         # Group by active design variables
