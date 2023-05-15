@@ -1,5 +1,4 @@
 import pytest
-import tempfile
 from sb_arch_opt.problem import *
 from sb_arch_opt.algo.hebo_interface import *
 from sb_arch_opt.problems.constrained import ArchCantileveredBeam

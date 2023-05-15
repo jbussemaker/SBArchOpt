@@ -17,7 +17,7 @@ pip install -e .[hebo]
 
 ## Usage
 
-The `get_hebo` function can be used to get an interface object for running the optimization.
+The `get_hebo_optimizer` function can be used to get an interface object for running the optimization.
 The `hebo` object also has an ask-tell interface if needed.
 
 ```python
