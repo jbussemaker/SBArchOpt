@@ -186,6 +186,7 @@ class HierarchicalSampling(FloatRandomSampling):
             repair = ArchOptRepair()
         self._repair = repair
         self.sobol = sobol
+        self.n_iter = 10
         super().__init__()
 
     def _do(self, problem, n_samples, **kwargs):
@@ -354,18 +355,38 @@ class HierarchicalSampling(FloatRandomSampling):
 
     def _sample_discrete_from_group(self, x_group: np.ndarray, is_act_group: np.ndarray, n_sel: int, choice_func,
                                     has_x_cont: bool) -> np.ndarray:
+        # Get the number of design points to sample
         n_in_group = x_group.shape[0]
-        if n_sel < n_in_group:
-            n_avail = n_in_group
-            n_sel_unit = (np.arange(n_sel)+np.random.random(n_sel)*.9999)/n_sel
-            return np.round(n_sel_unit*n_avail - .5).astype(int)
+        n_sel = n_sel
+        i_x_selected = np.array([], dtype=int)
+        while n_sel >= n_in_group:
+            # If we have to sample a multiple of the available points or if we cannot sample duplicate points (because
+            # there are no continuous variables), return all points
+            if n_sel == n_in_group or not has_x_cont:
+                return np.concatenate([i_x_selected, np.arange(n_in_group)])
 
-        # If there are more samples requested than points available, only repeat points if there are continuous vars
-        if has_x_cont:
-            i_x_add = choice_func(n_sel-n_in_group, n_in_group)
-            return np.sort(np.concatenate([np.arange(n_in_group), i_x_add]))
+            # Pre-select all points once
+            i_x_selected = np.concatenate([i_x_selected, np.arange(n_in_group)])
+            n_sel = n_sel-n_in_group
 
-        return np.arange(n_in_group)
+        # Randomly sample several times to get the best distribution of points
+        i_x_tries = []
+        metrics = []
+        for _ in range(self.n_iter):
+            i_x_try = choice_func(n_sel, n_in_group, replace=False)
+            i_x_tries.append(i_x_try)
+
+            x_try = x_group[i_x_try, :]
+            dist = distance.cdist(x_try, x_try, metric='cityblock')
+            np.fill_diagonal(dist, np.nan)
+
+            min_dist = np.nanmin(dist)
+            median_dist = np.nanmean(dist)
+            metrics.append((min_dist, median_dist))
+
+        # Get the distribution with max minimum distance and max mean distance
+        i_best = sorted(range(len(metrics)), key=metrics.__getitem__)[-1]
+        return np.concatenate([i_x_selected, i_x_tries[i_best]])
 
     def group_design_vectors(self, x_all: np.ndarray, is_act_all: np.ndarray, is_cont_mask) -> List[np.ndarray]:
         # Group by active design variables
@@ -373,8 +394,10 @@ class HierarchicalSampling(FloatRandomSampling):
         return [np.where(unique_indices == i)[0] for i in range(len(is_active_unique))]
 
     def _get_group_weights(self, groups: List[np.ndarray], is_act_all: np.ndarray) -> List[float]:
-        # Uniform sampling over groups
-        return [1.]*len(groups)
+        # Weight subgroups by nr of active variables
+        nr_active = np.sum(is_act_all, axis=1)
+        avg_nr_active = [np.sum(nr_active[group])/len(group) for group in groups]
+        return avg_nr_active
 
     @staticmethod
     def _sobol(n_samples, n_dims=None) -> np.ndarray:
