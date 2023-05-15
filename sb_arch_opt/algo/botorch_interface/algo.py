@@ -62,6 +62,7 @@ class AxInterface:
             experiment=experiment,
             num_trials=n_eval_total,
             num_initialization_trials=n_init,
+            max_parallelism_override=self._problem.get_n_batch_evaluate(),
         )
 
         return OptimizationLoop(

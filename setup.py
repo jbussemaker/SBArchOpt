@@ -63,9 +63,9 @@ if __name__ == '__main__':
             'tpe': [
                 'tpe==0.0.8',
             ],
-            # 'hebo': [
-            #     'HEBO',
-            # ],
+            'hebo': [
+                'HEBO @ git+https://github.com/huawei-noah/HEBO@f050865fd2f554b5ca94642667257b365c753f29#subdirectory=HEBO',
+            ],
         },
         python_requires='>=3.7',
         packages=['sb_arch_opt'],
