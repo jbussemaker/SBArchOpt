@@ -227,7 +227,6 @@ class HierarchicalSampling(FloatRandomSampling):
         is_cont_mask = HierarchicalExhaustiveSampling.get_is_cont_mask(problem)
         has_x_cont = np.any(is_cont_mask)
         xl, xu = problem.xl, problem.xu
-        needs_repair = False
         sobol = self.sobol
 
         def _choice(n_choose, n_from, replace=True):
@@ -246,7 +245,6 @@ class HierarchicalSampling(FloatRandomSampling):
 
         else:
             might_contain_duplicates = True
-            needs_repair = True
             opt_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(problem, n_cont=1)
             x = np.empty((n_samples, problem.n_var))
             for i_dv in range(problem.n_var):
@@ -257,7 +255,6 @@ class HierarchicalSampling(FloatRandomSampling):
         # Randomize continuous variables
         if has_x_cont:
             if is_active is None:
-                needs_repair = True
                 is_active = np.ones(x.shape, dtype=bool)
 
             nx_cont = len(np.where(is_cont_mask)[0])
