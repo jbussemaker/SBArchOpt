@@ -779,8 +779,6 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
 
             # If no separation was needed, we stop separating
             if not needed_separation:
-                x_discrete = np.column_stack(x_columns)
-                is_act_discrete = np.column_stack(is_active_columns)
                 break
 
             x_columns.append(x_column)
@@ -790,62 +788,76 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
             # Stop separating according to the desired diversity range if the imputation ratio would become too large
             if diverse_separation:
                 n_group_max = max(len(grp) for grp in next_x_groups)
-                n_dv_remain = np.ceil(np.log(n_group_max)/np.log(n_opts))+1  # the +1 is a heuristic
+                n_dv_remain = np.ceil(np.log(n_group_max)/np.log(n_opts))+.5  # The .5 is a heuristic
                 min_imp_ratio = (n_opts**(len(x_columns) + n_dv_remain))/n_subproblem
                 if min_imp_ratio > imp_ratio:
                     diverse_separation = False
+
+        x_discrete = np.column_stack(x_columns)
+        is_act_discrete = np.column_stack(is_active_columns)
 
         # Separate design variables until we meet the imputation ratio requirement
         def _imp_ratio(x_discrete_):
             return np.prod(np.max(x_discrete_, axis=0)+1)/x_discrete_.shape[0]
 
-        current_sep_mask = np.arange(x_discrete.shape[0])
-        ix_started = [set() for _ in range(x_discrete.shape[1])]
-        nothing_found_flag = False
+        i_x_sep_at_min = x_discrete.shape[1]
+        i_unique_blocked: List[Set[int]] = [set() for _ in range(x_discrete.shape[1])]
         while _imp_ratio(x_discrete) < imp_ratio:
-            ix_chain = []
-            for i_dv in range(x_discrete.shape[1]):
-                if np.any(~is_act_discrete[current_sep_mask, i_dv]):
-                    continue
-                x_discrete_i = x_discrete[current_sep_mask, i_dv]
-                x_unique = np.where(np.bincount(x_discrete_i) > 0)[0]
-                i_value_sel = [tuple(ix_chain+[ix]) for ix in range(len(x_unique))]
-                i_value_sel = [iv for iv in i_value_sel if iv not in ix_started[i_dv]]
-                if len(i_value_sel) > 1:
-                    next_sep_mask = current_sep_mask[x_discrete_i == i_value_sel[0][-1]]
-                    if len(next_sep_mask) > 1:
-                        ix_started[i_dv].add(i_value_sel[0])
-                        break
-                ix_chain.append(x_unique[0])
-            else:
-                if nothing_found_flag:
-                    break
-                current_sep_mask = np.arange(x_discrete.shape[0])
-                nothing_found_flag = True
-                continue
-            nothing_found_flag = False
+            # Search from the end for groups to separate
+            i_sep_sel = next_sep_mask = i_group_sep = None
+            for i_sep in reversed(list(range(1, i_x_sep_at_min))):
+                # Get different groups by unique vectors to the left
+                x_sel_unique, idx_unique = np.unique(x_discrete[:, :i_sep], axis=0, return_inverse=True)
 
-            # Determine which variable to separate: separate the first variable from the end where of the remaining
-            # vectors there would be at least one active variable
-            for i_sep in reversed(list(range(1, x_discrete.shape[1]))):
-                is_active_remain = is_act_discrete[:, i_sep].copy()
-                is_active_remain[next_sep_mask] = False
-                to_remain_not_active = np.all(~is_active_remain)
-                if to_remain_not_active:
+                for i_unique in range(len(x_sel_unique)):
+                    # Check if this subgroup is blocked from separating (because of too high imputation ratio)
+                    if i_unique in i_unique_blocked[i_sep]:
+                        continue
+
+                    # Check if group has at least 2 elements and is active
+                    next_sep_mask = idx_unique == i_unique
+                    if np.sum(next_sep_mask) <= 1:
+                        continue
+
+                    is_active_sep = np.any(is_act_discrete[next_sep_mask, i_sep])
+                    if not is_active_sep:
+                        continue
+
+                    # Check if after separation there are any active variables left for this design variable
+                    is_active_remain = is_act_discrete[:, i_sep].copy()
+                    is_active_remain[next_sep_mask] = False
+                    to_remain_not_active = np.all(~is_active_remain)
+                    if to_remain_not_active:
+                        continue
+                    i_group_sep = i_unique
+                    break
+
+                # Nothing found for this variable: move to the left
+                else:
                     continue
+
+                # Group to separate was found!
+                # Next time, start search from this same level
+                i_x_sep_at_min = i_sep+1
+                i_sep_sel = i_sep
                 break
-            else:
+            if i_sep_sel is None:
                 break
+
+            # Determine where to move from and where to move to
+            i_move_from = np.arange(i_sep_sel, x_discrete.shape[1])
+            move_from_any_active = np.any(is_act_discrete[np.ix_(next_sep_mask, i_move_from)], axis=0)
+            i_move_from = i_move_from[move_from_any_active]
+            i_move_into = np.arange(x_discrete.shape[1]+1-len(i_move_from), x_discrete.shape[1]+1)
 
             # Separate the selected design variable into a new variable at the end of the vector
-            n_dv_sep = x_discrete.shape[1]-i_sep
             x_discrete_sep = np.column_stack([x_discrete, np.zeros((x_discrete.shape[0],), dtype=int)])
-            x_discrete_sep[next_sep_mask, i_sep:] = 0
-            x_discrete_sep[next_sep_mask, -n_dv_sep:] = x_discrete[next_sep_mask, i_sep:]
+            x_discrete_sep[next_sep_mask, i_sep_sel:] = 0
+            x_discrete_sep[np.ix_(next_sep_mask, i_move_into)] = x_discrete[np.ix_(next_sep_mask, i_move_from)]
 
             is_act_sep = np.column_stack([is_act_discrete, np.zeros((x_discrete.shape[0],), dtype=bool)])
-            is_act_sep[next_sep_mask, i_sep:] = False
-            is_act_sep[next_sep_mask, -n_dv_sep:] = is_act_discrete[next_sep_mask, i_sep:]
+            is_act_sep[next_sep_mask, i_sep_sel:] = False
+            is_act_sep[np.ix_(next_sep_mask, i_move_into)] = is_act_discrete[np.ix_(next_sep_mask, i_move_from)]
 
             # Remove newly created columns with no active variables
             has_active = np.any(is_act_sep, axis=0)
@@ -854,11 +866,10 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
 
             # Check imputation ratio constraint
             if _imp_ratio(x_discrete_sep) > imp_ratio:
-                break
+                i_unique_blocked[i_sep_sel].add(i_group_sep)
+                continue
             x_discrete = x_discrete_sep
             is_act_discrete = is_act_sep
-            current_sep_mask = next_sep_mask
-            ix_started.append(set())
 
         self._x_sub = x_discrete
         self._is_act_sub = is_act_discrete
