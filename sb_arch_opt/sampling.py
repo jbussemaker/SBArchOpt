@@ -366,6 +366,10 @@ class HierarchicalSampling(FloatRandomSampling):
             i_x_selected = np.concatenate([i_x_selected, np.arange(n_in_group)])
             n_sel = n_sel-n_in_group
 
+        if n_sel == 1:
+            i_x_take = choice_func(1, n_in_group, replace=False)
+            return np.concatenate([i_x_selected, i_x_take])
+
         # Randomly sample several times to get the best distribution of points
         i_x_tries = []
         metrics = []

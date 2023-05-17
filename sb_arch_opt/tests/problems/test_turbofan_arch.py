@@ -39,6 +39,13 @@ def test_simple_problem():
     assert np.all(x_corr2 == x_corr)
     assert np.all(is_act2 == is_act)
 
+    x_pf = problem.pareto_set()
+    assert len(x_pf) == 1
+    f_pf = problem.pareto_front()
+    assert len(f_pf) == 1
+
+    assert problem._load_evaluated()
+
 
 # @pytest.mark.skip('Takes about 1 minute')
 @check_dependency()
@@ -87,6 +94,7 @@ def test_realistic_problem():
     x_pf_corr, is_act_pf = problem.correct_x(x_pf)
     assert np.all(x_pf_corr == x_pf)
     assert not np.all(is_act_pf)
+    assert problem._load_evaluated()
 
     f_eval = problem.evaluate(x_pf[[0], :], return_as_dictionary=True)['F']
     assert np.all(np.isfinite(f_eval))
