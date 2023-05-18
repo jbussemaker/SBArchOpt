@@ -457,6 +457,19 @@ class ArchDesignSpace:
         # Get values to be sampled for each design variable
         return [np.linspace(xl[i], xu[i], n_cont) if is_cont[i] else np.arange(xl[i], xu[i]+1) for i in range(len(xl))]
 
+    def _quick_random_sample_discrete_x(self, n: int) -> Tuple[np.ndarray, np.ndarray]:
+        opt_values = self.get_exhaustive_sample_values(n_cont=1)
+        x = np.empty((n, self.n_var))
+        is_discrete_mask = self.is_discrete_mask
+        for i_dv in range(self.n_var):
+            if is_discrete_mask[i_dv]:
+                i_opt_sampled = np.random.choice(len(opt_values[i_dv]), n, replace=True)
+                x[:, i_dv] = opt_values[i_dv][i_opt_sampled]
+
+        is_active = np.ones(x.shape, dtype=bool)
+        self._correct_x(x, is_active)
+        return x, is_active
+
     def is_explicit(self) -> bool:
         """Whether this design space is defined explicitly, that is: a model of the design space is available and
         correct, and therefore the problem evaluation function never needs to correct any design vector"""
@@ -534,17 +547,7 @@ class ImplicitArchDesignSpace(ArchDesignSpace):
         self._correct_x_func(x, is_active)
 
     def _quick_sample_discrete_x(self, n: int) -> Tuple[np.ndarray, np.ndarray]:
-        opt_values = self.get_exhaustive_sample_values(n_cont=1)
-        x = np.empty((n, self.n_var))
-        is_discrete_mask = self.is_discrete_mask
-        for i_dv in range(self.n_var):
-            if is_discrete_mask[i_dv]:
-                i_opt_sampled = np.random.choice(len(opt_values[i_dv]), n, replace=True)
-                x[:, i_dv] = opt_values[i_dv][i_opt_sampled]
-
-        is_active = np.ones(x.shape, dtype=bool)
-        self._correct_x(x, is_active)
-        return x, is_active
+        return self._quick_random_sample_discrete_x(n)
 
     def _get_n_valid_discrete(self) -> Optional[int]:
         if self._n_valid_discrete_func is not None:
