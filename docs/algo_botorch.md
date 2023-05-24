@@ -12,7 +12,7 @@ The framework is mostly interacted with through [Ax](https://ax.dev/).
 ## Installation
 
 ```
-pip install -e .[botorch]
+pip install sbarchopt[botorch]
 ```
 
 ## Usage

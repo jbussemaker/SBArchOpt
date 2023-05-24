@@ -16,7 +16,7 @@ to train and evaluate.
 ## Installation
 
 ```
-pip install -e .[arch_sbo]
+pip install sbarchopt[arch_sbo]
 ```
 
 ## Usage

@@ -13,7 +13,7 @@ unconstrained optimization problems.
 ## Installation
 
 ```
-pip install -e .[tpe]
+pip install sbarchopt[tpe]
 ```
 
 ## Usage

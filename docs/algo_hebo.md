@@ -12,7 +12,7 @@ Artificial Intelligence Research, 74, pp.1269-1349, DOI: [10.1613/jair.1.13643](
 ## Installation
 
 ```
-pip install -e .[hebo]
+pip install sbarchopt[hebo]
 ```
 
 ## Usage
