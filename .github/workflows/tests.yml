@@ -37,6 +37,7 @@ jobs:
       run: |
         pip install --upgrade pip setuptools
         pip install pytest
+        pip install openmdao==3.4.0
         pip install -e .[arch_sbo,ota,assignment,botorch,trieste,tpe,hebo]
 
     - name: Test with pytest
