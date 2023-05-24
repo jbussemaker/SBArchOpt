@@ -39,9 +39,8 @@ if __name__ == '__main__':
             'Programming Language :: Python :: 3',
             'License :: OSI Approved :: MIT License',
         ],
-        license='GPLv3',
+        license='MIT',
         install_requires=[
-            'pytest',
             'numpy',
             'pymoo~=0.6.0.1',
             'scipy',
