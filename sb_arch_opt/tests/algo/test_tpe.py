@@ -47,6 +47,6 @@ def test_store_results_restart():
             tpe = TPEAlgorithm(n_init=10, results_folder=tmp_folder)
             initialize_from_previous_results(tpe, problem, tmp_folder)
 
-            n_eval = 11 if i == 0 else 1
+            n_eval = 11+i
             result = minimize(problem, tpe, termination=('n_eval', n_eval))
             assert len(result.pop) == 10+(i+1)

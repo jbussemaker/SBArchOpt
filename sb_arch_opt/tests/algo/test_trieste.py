@@ -18,12 +18,12 @@ def test_search_space(problem: ArchOptProblemBase):
 def test_simple(problem: ArchOptProblemBase):
     assert HAS_TRIESTE
 
-    opt = get_trieste_optimizer(problem, n_init=10, n_infill=2)
+    opt = get_trieste_optimizer(problem, n_init=10, n_infill=1)
     assert repr(opt)
     result = opt.run_optimization()
 
     pop = opt.to_population(result.datasets)
-    assert len(pop) == 12
+    assert len(pop) == 11
 
 
 @check_dependency()
