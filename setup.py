@@ -15,6 +15,8 @@ Copyright: (c) 2023, Deutsches Zentrum fuer Luft- und Raumfahrt e.V.
 Contact: jasper.bussemaker@dlr.de
 """
 import os
+import sys
+sys.path.insert(0, os.path.dirname(__file__))
 from sb_arch_opt import __version__
 from setuptools import setup
 
