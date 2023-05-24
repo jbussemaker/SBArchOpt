@@ -1,0 +1,7 @@
+[project]
+name = "sbarchopt"
+description = "SBArchOpt: Surrogate-Based Architecture Optimization"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"

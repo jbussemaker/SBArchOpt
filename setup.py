@@ -14,22 +14,30 @@ limitations under the License.
 Copyright: (c) 2023, Deutsches Zentrum fuer Luft- und Raumfahrt e.V.
 Contact: jasper.bussemaker@dlr.de
 """
+import os
 from sb_arch_opt import __version__
 from setuptools import setup
 
+
+def _get_readme():
+    with open(os.path.join(os.path.dirname(__file__), 'readme.md'), 'r') as fp:
+        return fp.read()
+
+
 if __name__ == '__main__':
     setup(
-        name='sb-arch-opt',
+        name='sbarchopt',
         version=__version__,
-        description='SBArchOpt',
-        long_description='Surrogate-Based Architecture Optimization',
+        description='SBArchOpt: Surrogate-Based Architecture Optimization',
+        long_description=_get_readme(),
+        long_description_content_type='text/markdown',
         author='Jasper Bussemaker',
         author_email='jasper.bussemaker@dlr.de',
         classifiers=[
             'Intended Audience :: Science/Research',
             'Topic :: Scientific/Engineering',
             'Programming Language :: Python :: 3',
-            'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+            'License :: OSI Approved :: MIT License',
         ],
         license='GPLv3',
         install_requires=[
@@ -45,7 +53,7 @@ if __name__ == '__main__':
         ],
         extras_require={
             'arch_sbo': [
-                # 'smt==1.3.0',  # Code currently works with a non-merged version
+                'smt~=2.0b3',
             ],
             'ota': [
                 'open_turb_arch @ git+https://github.com/jbussemaker/OpenTurbofanArchitecting@pymoo_optional#egg=open_turb_arch',
