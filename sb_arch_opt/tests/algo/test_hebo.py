@@ -18,24 +18,24 @@ def test_design_space(problem: ArchOptProblemBase):
 def test_simple(problem: ArchOptProblemBase):
     assert HAS_HEBO
 
-    hebo = get_hebo_optimizer(problem, n_init=10)
+    hebo = get_hebo_optimizer(problem, n_init=20)
     hebo.optimize(n_infill=2)
 
     pop = hebo.pop
-    assert len(pop) == 12
+    assert len(pop) == 22
 
 
 @check_dependency()
 def test_constrained():
-    opt = get_hebo_optimizer(ArchCantileveredBeam(), n_init=10)
+    opt = get_hebo_optimizer(ArchCantileveredBeam(), n_init=20)
     opt.optimize(n_infill=1)
-    assert len(opt.pop) == 11
+    assert len(opt.pop) == 21
 
 
 @check_dependency()
 def test_simple_failing(failing_problem: ArchOptProblemBase):
-    hebo = get_hebo_optimizer(failing_problem, n_init=10)
+    hebo = get_hebo_optimizer(failing_problem, n_init=20)
     hebo.optimize(n_infill=1)
 
     pop = hebo.pop
-    assert len(pop) == 5
+    assert len(pop) == 10
