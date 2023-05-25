@@ -355,7 +355,7 @@ class ArchDesignSpace:
         if show:
             is_discrete_mask = np.concatenate([self.is_discrete_mask, [True]])
             with pd.option_context('display.max_rows', None, 'display.max_columns', None,
-                                   'display.expand_frame_repr', False, 'max_colwidth', -1):
+                                   'display.expand_frame_repr', False, 'max_colwidth', None):
                 print(df.iloc[:, is_discrete_mask].replace(np.nan, ''))
 
         return df
