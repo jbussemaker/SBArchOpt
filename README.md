@@ -2,7 +2,7 @@
 
 SBArchOpt (es-bee-ARK-opt) provides a set of classes and interfaces for applying Surrogate-Based Optimization (SBO)
 for system architecture optimization problems:
-- Expensive black-box problems: evaluating one candidate architecture might computationally expensive
+- Expensive black-box problems: evaluating one candidate architecture might be computationally expensive
 - Mixed-discrete design variables: categorical architectural decisions mixed with continuous sizing variables
 - Hierarchical design variables: decisions can deactivate/activate (parts of) downstream decisions
 - Multi-objective: stemming from conflicting stakeholder needs
@@ -33,7 +33,7 @@ conda activate opt
 Then install the package:
 ```
 conda install numpy
-pip install sbarchopt
+pip install sb-arch-opt
 ```
 
 Note: there are optional dependencies for the connected optimization frameworks and test problems.
