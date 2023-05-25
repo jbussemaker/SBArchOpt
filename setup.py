@@ -68,6 +68,8 @@ if __name__ == '__main__':
             ],
             'trieste': [
                 'trieste~=1.0.0',
+                # Until https://github.com/GPflow/GPflow/pull/2050 is merged and GPflow has been updated
+                'gpflow==2.7.0', 'keras==2.10.0',
             ],
             'tpe': [
                 'tpe==0.0.8',
