@@ -182,7 +182,8 @@ class ArchOptBayesianOptimizer(BayesianOptimizer):
             n_infill = self.n_infill - (n_available-self.n_init)
             log.info(f'Running optimization: {n_infill} infill points')
             opt_results = self.optimize(
-                n_infill, datasets, models, self.rule, self._state, early_stop_callback=self._exec_callback)
+                n_infill, datasets, models, self.rule, self._state,
+                early_stop_callback=self._exec_callback, track_state=False)
 
             record = opt_results.final_result.unwrap()
             self._datasets = record.datasets
