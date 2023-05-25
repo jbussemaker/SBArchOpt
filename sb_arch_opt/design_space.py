@@ -110,7 +110,7 @@ class ArchDesignSpace:
             raise ValueError(f'Design variable is not categorical: {i_dv}')
 
         x_values = x[:, i_dv]
-        values = x_values.astype(np.str)
+        values = x_values.astype(str)
         for i_cat, value in enumerate(self._choice_value_map[i_dv]):
             values[x_values == i_cat] = value
         return values
@@ -200,7 +200,7 @@ class ArchDesignSpace:
             x_discrete[x_discrete[:, ix] > xu[ix], ix] = xu[ix]
 
         x_stretched = (x_discrete-xl)*((diff+.9999)/diff)-.5
-        x_rounded = (np.round(x_stretched)+xl).astype(np.int)
+        x_rounded = (np.round(x_stretched)+xl).astype(int)
 
         x[:, is_discrete_mask] = x_rounded
 

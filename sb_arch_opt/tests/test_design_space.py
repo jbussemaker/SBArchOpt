@@ -6,7 +6,7 @@ from sb_arch_opt.design_space import *
 from pymoo.core.variable import Real, Integer, Binary, Choice
 
 
-class TestDesignSpace(ArchDesignSpace):
+class DesignSpaceTest(ArchDesignSpace):
 
     def __init__(self, des_vars):
         self._des_vars = des_vars
@@ -39,7 +39,7 @@ class TestDesignSpace(ArchDesignSpace):
 
 
 def test_rounding():
-    ds = TestDesignSpace([Integer(bounds=(0, 5)), Integer(bounds=(-1, 1)), Integer(bounds=(2, 4))])
+    ds = DesignSpaceTest([Integer(bounds=(0, 5)), Integer(bounds=(-1, 1)), Integer(bounds=(2, 4))])
 
     assert np.all(ds.is_discrete_mask)
     x = np.array(list(itertools.product(np.linspace(0, 5, 20), np.linspace(-1, 1, 20), np.linspace(2, 4, 20))))
@@ -68,7 +68,7 @@ def test_rounding():
 
 
 def test_init_no_vars():
-    ds = TestDesignSpace([])
+    ds = DesignSpaceTest([])
     assert ds.n_var == 0
     assert ds.des_vars == []
     assert ds.get_n_declared_discrete() == 1
@@ -80,7 +80,7 @@ def test_init_no_vars():
 
 
 def test_init_vars():
-    ds = TestDesignSpace([
+    ds = DesignSpaceTest([
         Real(bounds=(1, 5)),
         Integer(bounds=(1, 4)),
         Binary(),
@@ -100,7 +100,7 @@ def test_init_vars():
 
 
 def test_get_categorical_values():
-    ds = TestDesignSpace([Choice(options=['A', 'B', 'C'])])
+    ds = DesignSpaceTest([Choice(options=['A', 'B', 'C'])])
     x_all, _ = ds.all_discrete_x_by_trial_and_imputation
     assert x_all.shape == (3, 1)
 

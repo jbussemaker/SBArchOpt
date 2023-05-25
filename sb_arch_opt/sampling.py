@@ -157,7 +157,7 @@ class HierarchicalExhaustiveSampling(Sampling):
     @classmethod
     def get_n_sample_exhaustive(cls, problem: Problem, n_cont=5):
         values = cls.get_exhaustive_sample_values(problem, n_cont=n_cont)
-        return int(np.prod([len(opts) for opts in values], dtype=np.float))
+        return int(np.prod([len(opts) for opts in values], dtype=float))
 
     def __repr__(self):
         return f'{self.__class__.__name__}()'
@@ -432,7 +432,7 @@ class HierarchicalSampling(FloatRandomSampling):
             x_unit = cls._sobol(n_choose)
 
             # Scale to nr of possible values and round
-            return np.round(x_unit*(n_from-.01)-.5).astype(np.int)
+            return np.round(x_unit*(n_from-.01)-.5).astype(int)
 
         # If we cannot replace, we cannot choose more values than available
         if n_choose > n_from:
@@ -484,7 +484,7 @@ class LargeDuplicateElimination(DefaultDuplicateElimination):
         if n == 0:
             return is_duplicate
         n_batches = int(np.ceil(n / n_per_batch))
-        n_in_batch = np.ones((n_batches,), dtype=np.int16)*n_per_batch
+        n_in_batch = np.ones((n_batches,), dtype=int)*n_per_batch
         n_in_batch[-1] = n - (n_batches-1)*n_per_batch
 
         for ib, n_batch in enumerate(n_in_batch):

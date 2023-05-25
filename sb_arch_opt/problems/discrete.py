@@ -248,7 +248,7 @@ class Halstrup04(NoHierarchyProblemBase):
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
         x_ = x[:, :5]
-        z_ = x[:, 5:].astype(np.int)
+        z_ = x[:, 5:].astype(int)
 
         d = 8
         x2_term = 2**(np.arange(5)/(d-1))
