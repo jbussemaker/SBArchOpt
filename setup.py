@@ -22,7 +22,7 @@ from setuptools import setup
 
 
 def _get_readme():
-    with open(os.path.join(os.path.dirname(__file__), 'readme.md'), 'r') as fp:
+    with open(os.path.join(os.path.dirname(__file__), 'README.md'), 'r') as fp:
         return fp.read()
 
 
