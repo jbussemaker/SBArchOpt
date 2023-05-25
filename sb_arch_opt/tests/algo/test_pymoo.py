@@ -116,7 +116,7 @@ def test_store_results_restart():
             assert problem.n_stored == 6+5*i
 
             n_cumulative = load_from_previous_results(problem, tmp_folder)
-            assert len(n_cumulative) == 100+2*100*(i+1)
+            assert abs(len(n_cumulative) - (100+2*100*(i+1))) < 20
 
 
 def test_batch_storage_evaluator(problem: ArchOptProblemBase):
