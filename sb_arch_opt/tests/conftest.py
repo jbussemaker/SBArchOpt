@@ -98,3 +98,9 @@ def discrete_problem():
 @pytest.fixture
 def failing_problem():
     return DummyProblem(fail=True)
+
+
+def pytest_sessionstart(session):
+    from sb_arch_opt.util import _prevent_capture
+    print('PREVENT CAPTURE')
+    _prevent_capture()

@@ -3,6 +3,11 @@ import logging.config
 _debug_log_captured = False
 
 
+def _prevent_capture():
+    global _debug_log_captured
+    _debug_log_captured = True
+
+
 def capture_log(level='INFO'):
     """Displays logging output in the console"""
     global _debug_log_captured
