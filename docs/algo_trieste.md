@@ -13,7 +13,7 @@ Picheny et al., "Trieste: Efficiently Exploring The Depths of Black-box Function
 ## Installation
 
 ```
-pip install sbarchopt[trieste]
+pip install sb-arch-opt[trieste]
 ```
 
 ## Usage

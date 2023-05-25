@@ -28,7 +28,7 @@ def _get_readme():
 
 if __name__ == '__main__':
     setup(
-        name='sbarchopt',
+        name='sb-arch-opt',
         version=__version__,
         description='SBArchOpt: Surrogate-Based Architecture Optimization',
         long_description=_get_readme(),
@@ -69,7 +69,7 @@ if __name__ == '__main__':
             'trieste': [
                 'trieste~=1.0.0',
                 # Until https://github.com/GPflow/GPflow/pull/2050 is merged and GPflow has been updated
-                'gpflow==2.7.0', 'keras==2.10.0',
+                'gpflow==2.7.0', 'keras==2.10.0', 'tensorflow-probability==0.18.0',
             ],
             'tpe': [
                 'tpe==0.0.8',

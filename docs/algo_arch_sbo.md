@@ -16,7 +16,7 @@ to train and evaluate.
 ## Installation
 
 ```
-pip install sbarchopt[arch_sbo]
+pip install sb-arch-opt[arch_sbo]
 ```
 
 ## Usage

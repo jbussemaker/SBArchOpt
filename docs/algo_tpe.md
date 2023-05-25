@@ -13,7 +13,7 @@ unconstrained optimization problems.
 ## Installation
 
 ```
-pip install sbarchopt[tpe]
+pip install sb-arch-opt[tpe]
 ```
 
 ## Usage
