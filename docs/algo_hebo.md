@@ -12,7 +12,7 @@ Artificial Intelligence Research, 74, pp.1269-1349, DOI: [10.1613/jair.1.13643](
 ## Installation
 
 ```
-pip install sb-arch-opt[hebo]
+pip install -r requirements-hebo.txt
 ```
 
 ## Usage

@@ -56,12 +56,12 @@ if __name__ == '__main__':
             'arch_sbo': [
                 'smt~=2.0b3',
             ],
-            'ota': [
-                'open_turb_arch @ git+https://github.com/jbussemaker/OpenTurbofanArchitecting@pymoo_optional#egg=open_turb_arch',
-            ],
-            'assignment': [
-                'assign_enc @ git+https://github.com/jbussemaker/AssignmentEncoding#egg=assign_enc',
-            ],
+            # 'ota': [  # pip install -r requirements-ota.txt
+            #     'open_turb_arch @ git+https://github.com/jbussemaker/OpenTurbofanArchitecting@pymoo_optional#egg=open_turb_arch',
+            # ],
+            # 'assignment': [  # pip install -r requirements-assignment.txt
+            #     'assign_enc @ git+https://github.com/jbussemaker/AssignmentEncoding#egg=assign_enc',
+            # ],
             'botorch': [
                 'ax-platform~=0.3.0',
                 'botorch~=0.8.2',
@@ -74,9 +74,9 @@ if __name__ == '__main__':
             'tpe': [
                 'tpe==0.0.8',
             ],
-            'hebo': [
-                'HEBO @ git+https://github.com/huawei-noah/HEBO@f050865fd2f554b5ca94642667257b365c753f29#subdirectory=HEBO',
-            ],
+            # 'hebo': [  # pip install -r requirements-hebo.txt
+            #     'HEBO',  # Disabled until commit f050865fd2f554b5ca94642667257b365c753f29 has been released on PyPI
+            # ],
         },
         python_requires='>=3.7',
         packages=['sb_arch_opt'],
