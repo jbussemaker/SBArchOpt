@@ -12,7 +12,6 @@ tags:
 authors:
   - name: Jasper H. Bussemaker
     orcid: 0000-0002-5421-6419
-    equal-contrib: true
     affiliation: 1
 affiliations:
  - name: Institute of System Architectures in Aeronautics, German Aerospace Center (DLR), Hamburg, Germany
@@ -41,6 +40,7 @@ understanding of the design space and more informed decision-making.
 
 Architecture optimization problems feature several behavioral characteristics that make them a particularly
 challenging class of optimization problem [@Bussemaker2021]:
+
 - Evaluation functions are non-linear *black-box* functions that are *expensive* to evaluate: it might for example
   take several hours to evaluate the performance of only one architecture alternative.
 - There might be *multiple conflicting objectives* (i.e. design goals) to optimize for, meaning that rather than one
@@ -52,8 +52,8 @@ challenging class of optimization problem [@Bussemaker2021]:
   *mixed-discrete* problem.
 - Decisions can be conditionally active based on other decisions: there is a *hierarchy* between decisions.
 
-Such optimization problems can be readily solved by Multi-Objective Evolutionary Algorithms (MOEA's). However, they
-need many function evaluations to converge [@Chugh2019], which is a problem for expensive evaluation functions.
+Such optimization problems can be readily solved by Multi-Objective Evolutionary Algorithms (MOEA's). However, these
+need many function evaluations to converge [@Chugh2019] which is a problem for expensive evaluation functions.
 Surrogate-Based Optimization (SBO) algorithms and in particular Bayesian Optimization (BO) algorithms [@Garnett2023]
 instead build a surrogate model (also known as response surface or regression function) of the design space and use
 that model to suggest new design points to evaluate. This approach is powerful, although existing SBO algorithms
@@ -71,6 +71,7 @@ and decision hierarchy. The latter namely requires the automatic correction and 
 no duplicate design vectors are generated [@Bussemaker2021].
 
 The purpose of SBArchOpt is to provide a one-stop solution for solving architecture optimization problems, by:
+
 1. Providing a common interface for implementing architecture optimization problems, ensuring that all information
    needed by optimization algorithms is available.
 2. Providing several options for optimization algorithms that work out-of-the-box for most architecture optimization
@@ -87,10 +88,11 @@ using ADORE [@Bussemaker2022], software developed by the German Aerospace Center
 German and European research projects.
 ADORE already implements the problem definition API of *SBArchOpt*.
 
-# Library Features
+# Library features
 
-The problem definition API extends the `Problem` class of pymoo [@Blank2020], an evolutionary optimization framework,
-with several additional features:
+The problem definition API `ArchOptProblemBase` extends the `Problem` class of pymoo [@Blank2020],
+an evolutionary optimization framework, with several additional features:
+
 1. A unified way to define continuous, integer, and categorical design variables.
 2. An interface for accepting modified design vectors from the evaluation function.
 3. A function for correcting design vectors without running an evaluation (`_correct_x`).
@@ -105,11 +107,13 @@ The explicit design space definition uses [ConfigSpace](https://github.com/autom
 activation and value-pair constraints.
 
 Then, *SBArchOpt* implements several features that may be used by any optimizer, using pymoo's API:
+
 1. A sampling algorithm for hierarchical design spaces.
 2. A repair operator that calls the correction function of the problem class.
 3. Intermediate results storage and restart capabilities.
 
 To solve optimization problems, *SBArchOpt* implements the following (interfaces to) optimization libraries/algorithms:
+
 1. pymoo: *SBArchOpt* provides a pre-configured version of the NSGA2 evolutionary optimization algorithm.
 2. ArchSBO: a custom implementation of a mixed-discrete, multi-objective Surrogate-Based Optimization algorithm, with
    support for design variable correction, hidden constraints, and restart.
@@ -119,6 +123,7 @@ To solve optimization problems, *SBArchOpt* implements the following (interfaces
 5. A Tree Parzen Estimator (TPE) algorithm with support for hidden constraints.
 
 Finally, to support development of optimization algorithms, *SBArchOpt* also provides a database of test functions:
+
 1. Many analytical test problems with various combinations of characteristics: continuous vs mixed-discrete,
    single- or multi-objective, with or without constraints, hierarchy, and/or hidden constraints.
 2. A Guidance, Navigation and Control (GNC) optimization problem from [@Apaza2021] trading-off system mass against
