@@ -64,6 +64,7 @@ need to be extended to support all architecture optimization challenges describe
 Several open-source Surrogate-Based Optimization (SBO) libraries already exist, in particular
 BoTorch [@Balandat2020],
 Trieste [@Picheny2023],
+SMAC3 [@Lindauer2022],
 and
 HEBO [@CowenRivers2022].
 These libraries support multi-objective and mixed-discrete optimization, however do not all support hidden constraints
@@ -78,7 +79,7 @@ The purpose of SBArchOpt is to provide a one-stop solution for solving architect
    problems.
 
 *SBArchOpt* implements experience with solving architecture optimization problems
-(e.g. [@Bussemaker2021; Bussemaker2023]) in an open-source Python library.
+(e.g. [@Bussemaker2021], [@Bussemaker2023]) in an open-source Python library.
 An accompanying publication will be prepared in the near future detailing more about the implemented optimization
 features.
 Target users are systems engineers and researchers in the field of (architecture) optimization.
@@ -103,8 +104,8 @@ an evolutionary optimization framework, with several additional features:
 
 Optionally, the hierarchical design space structure can also be specified using the `ExplicitDesignSpace` class,
 which then relieves the user from implementing correction, conditional-activeness and statistics-related functions.
-The explicit design space definition uses [ConfigSpace](https://github.com/automl/ConfigSpace) to model conditional
-activation and value-pair constraints.
+The explicit design space definition uses [ConfigSpace](https://github.com/automl/ConfigSpace) [@Lindauer2022] to model
+conditional activation and value-pair constraints.
 
 Then, *SBArchOpt* implements several features that may be used by any optimizer, using pymoo's API:
 
@@ -116,7 +117,8 @@ To solve optimization problems, *SBArchOpt* implements the following (interfaces
 
 1. pymoo: *SBArchOpt* provides a pre-configured version of the NSGA2 evolutionary optimization algorithm.
 2. ArchSBO: a custom implementation of a mixed-discrete, multi-objective Surrogate-Based Optimization algorithm, with
-   support for design variable correction, hidden constraints, and restart.
+   support for design variable correction, hidden constraints, and restart,
+   using state-of-the-art mixed-discrete, hierarchical Gaussian Process models [@Saves2023].
 3. Three open-source Bayesian Optimization libraries:
    BoTorch (Ax) [@Balandat2020], Trieste [@Picheny2023], and HEBO [@CowenRivers2022].
 4. Two proprietary Bayesian Optimization libraries: SEGOMOE [@Bartoli2019] and SMARTy [@Bekemeyer2022].
