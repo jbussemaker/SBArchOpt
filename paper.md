@@ -29,14 +29,18 @@ influence on final system performance, for example in terms of how well the func
 cost and in what timeframe.
 However, architecture design spaces (i.e. the set of all possible architecture alternatives) can be very large due to
 the combinatorial nature of architecture decisions, making it infeasible to compare all alternatives to each other.
-Additionally, for new systems there might not be any prior experience to start from, requiring the use of physics-based
-simulation to estimate system performance.
+Additionally, for new systems there might not be any prior experience to start from, requiring the use of
+(typically) computationally-expensive physics-based simulation to estimate system performance.
 
 The field of *system architecture optimization* aims to enable the use of physics-based simulation for
 exploring the large combinatorial architecture design space, by formulating the system architecting process as a
-numerical optimization problem [@Bussemaker2022c].
-This way, more architecture alternatives can be considered in the early design phase with the expected result of better
-understanding of the design space and more informed decision-making.
+numerical optimization problem [@Bussemaker2022c]. In optimization, the goal is to minimize (or maximize) one or more
+objective functions by modifying design variables, while ensuring that design constraints are satisfied.
+For example, for an aircraft propulsion system the objectives could be to minimize energy consumption and operating
+costs, by changing number of propellers, mechanical power generation source, fuel type, and operating strategy
+(i.e. the design variable), while ensuring that thermodynamic stress and reliability constraints are satisfied.
+By applying architecture optimization, more architecture alternatives can be considered in the early design phase with
+the expected result of better understanding of the design space and more informed decision-making.
 
 Architecture optimization problems feature several behavioral characteristics that make them a particularly
 challenging class of optimization problem [@Bussemaker2021]:
@@ -55,9 +59,10 @@ challenging class of optimization problem [@Bussemaker2021]:
 Such optimization problems can be readily solved by Multi-Objective Evolutionary Algorithms (MOEA's). However, these
 need many function evaluations to converge [@Chugh2019] which is a problem for expensive evaluation functions.
 Surrogate-Based Optimization (SBO) algorithms and in particular Bayesian Optimization (BO) algorithms [@Garnett2023]
-instead build a surrogate model (also known as response surface or regression function) of the design space and use
-that model to suggest new design points to evaluate. This approach is powerful, although existing SBO algorithms
-need to be extended to support all architecture optimization challenges described above.
+instead build a surrogate model (also known as response surface or regression function) of the design space, use
+that model to suggest new design points to evaluate, and repeat the process after updating the surrogate model.
+This approach is powerful, although existing SBO algorithms need to be extended to support all architecture optimization
+challenges described above.
 
 # Statement of need
 
@@ -96,8 +101,8 @@ an evolutionary optimization framework, with several additional features:
 
 1. A unified way to define continuous, integer, and categorical design variables.
 2. An interface for accepting modified design vectors from the evaluation function.
-3. A function for correcting design vectors without running an evaluation (`_correct_x`).
-4. A function for returning which design variables are conditionally active (`_is_conditionally_active`).
+3. A function for correcting design vectors without running an evaluation.
+4. A function for returning which design variables are conditionally active.
 5. An interface for storing and loading problem-specific intermediate results.
 6. Several functions for compiling statistics about the design space, such as the number of valid architectures, the
    average number of active design variables, and more.
