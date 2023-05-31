@@ -42,7 +42,7 @@ Architecture optimization measure implementation status
 | Aspect: measure                        | pymoo     | ArchSBO   | SEGOMOE   | BoTorch (Ax) | Trieste   | HEBO      | SMARTy    | TPE       |
 |----------------------------------------|-----------|-----------|-----------|--------------|-----------|-----------|-----------|-----------|
 | MD: continuous surrogates              |           | SBArchOpt | N         | Lib          | Lib       | Lib       | Lib       |           |
-| MD: kernels                            |           | N         | Lib       | Lib          | N         | N         | N         |           |
+| MD: kernels                            |           | SBArchOpt | Lib       | Lib          | N         | N         | N         |           |
 | MD: one-hot encoding                   |           | N         | Lib       | N            | N         | N         | N         |           |
 | MD: force new infill point selection   |           | SBArchOpt | N         | N            | N         | N         | N         |           |
 | MO: multi-objective infill             |           | SBArchOpt | Lib       | Lib          | Lib       | NbP       | Lib       | N         |
@@ -50,13 +50,13 @@ Architecture optimization measure implementation status
 | HIER: imputation during evaluation     | SBArchOpt | SBArchOpt | SBArchOpt | N            | SBArchOpt | SBArchOpt | N         | SBArchOpt |
 | HIER: imputation during infill search  |           | SBArchOpt | N         | N            | N         | N         | N         | N         |
 | HIER: discard non-canonical DVs        | N         | N         | N         | Lib          | N         | N         | N         | N         |
-| HIER: kernels                          |           |           |           | N            | N         | N         | N         | N         |
-| HIER: design space def (list)          | N         |           |           | NbP          | N         | N         | N         | N         |
-| HIER: design space def (tree)          | N         |           |           | NbP          | N         | N         | N         | N         |
-| HIER: design space def (acyclic graph) | N         |           |           | N            | N         | N         | N         | N         |
+| HIER: kernels                          |           | SBArchOpt |           | N            | N         | N         | N         | N         |
+| HIER: design space def (list)          | N         | SBArchOpt |           | NbP          | N         | N         | N         | N         |
+| HIER: design space def (tree)          | N         | SBArchOpt |           | NbP          | N         | N         | N         | N         |
+| HIER: design space def (acyclic graph) | N         | SBArchOpt |           | N            | N         | N         | N         | N         |
 | HIER: design space def (graph)         | N         | N         | N         | N            | N         | N         | N         | N         |
 | HC: process NaNs                       | Lib       | SBArchOpt | Lib       | Lib          | Lib       | Lib       | N         | Lib       |
-| HC: predict area                       |           | N         | Lib       | N            | Lib       | N         | N         | Lib       |
+| HC: predict area                       |           | SBArchOpt | Lib       | N            | Lib       | N         | N         | Lib       |
 | EXP: intermediate result storage       | SBArchOpt | SBArchOpt | Lib       | NbP          | Lib       | NbP       | NbP       | SBArchOpt |
 | EXP: resuming optimizations            | SBArchOpt | SBArchOpt | Lib       | NbP          | Lib       | NbP       | NbP       | SBArchOpt |
 | EXP: ask-tell interface                | Lib       | SBArchOpt | NbP       | NbP          | NbP       | Lib       | N         | SBArchOpt |

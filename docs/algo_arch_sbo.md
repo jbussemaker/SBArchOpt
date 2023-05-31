@@ -8,6 +8,8 @@ AIAA Aviation 2021, DOI: [10.2514/6.2021-3095](https://arc.aiaa.org/doi/10.2514/
 
 The algorithm uses state-of-the-art mixed-discrete hierarchical Gaussian Process (Kriging) surrogate models and ensures
 that all evaluated and selected infill points are imputed (and therefore valid).
+In case of presence of hidden constraints (i.e. simulation/evaluation failures), the failure area is predicted using
+a random forest classifier to ensure that only the viable area is explored.
 
 Either an RBF or a Kriging surrogate model is used. Kriging has as advantage that it also can predict the amount of
 uncertainty next to the model mean, and therefore allows for more interesting infill criteria. RBF, however, is faster
