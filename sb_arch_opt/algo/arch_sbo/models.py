@@ -53,7 +53,7 @@ __all__ = ['check_dependencies', 'HAS_ARCH_SBO', 'ModelFactory', 'MixedDiscreteN
 
 def check_dependencies():
     if not HAS_ARCH_SBO:
-        raise ImportError(f'arch_sbo dependencies not installed: python setup.py install[arch_sbo]')
+        raise ImportError(f'ArchSBO dependencies not installed: pip install sb-arch-opt[arch_sbo]')
 
 
 @dataclass

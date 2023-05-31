@@ -20,6 +20,7 @@ from typing import *
 from scipy.stats import norm
 from scipy.special import ndtr
 from sb_arch_opt.problem import ArchOptProblemBase
+from sb_arch_opt.algo.arch_sbo.hc_strategy import HiddenConstraintStrategy
 
 from pymoo.core.problem import Problem
 from pymoo.core.population import Population
@@ -31,7 +32,7 @@ from pymoo.algorithms.moo.nsga2 import RankAndCrowdingSurvival, calc_crowding_di
 __all__ = ['SurrogateInfill', 'FunctionEstimateInfill', 'ConstrainedInfill', 'FunctionEstimateConstrainedInfill',
            'ExpectedImprovementInfill', 'MinVariancePFInfill', 'ConstraintStrategy', 'MeanConstraintPrediction',
            'ProbabilityOfFeasibility', 'ProbabilityOfImprovementInfill', 'LowerConfidenceBoundInfill',
-           'MinimumPoIInfill', 'EnsembleInfill', 'IgnoreConstraints', 'get_default_infill']
+           'MinimumPoIInfill', 'EnsembleInfill', 'IgnoreConstraints', 'get_default_infill', 'HCInfill']
 
 try:
     from smt.surrogate_models.surrogate_model import SurrogateModel
@@ -709,3 +710,54 @@ class IgnoreConstraints(ConstraintStrategy):
 
     def evaluate(self, x: np.ndarray, g: np.ndarray, g_var: np.ndarray) -> np.ndarray:
         return np.zeros((x.shape[0], 0))
+
+
+class HCInfill(SurrogateInfill):
+    """Infill that wraps another infill and modifies it for dealing with hidden constraints"""
+
+    def __init__(self, infill: SurrogateInfill, hc_strategy: HiddenConstraintStrategy):
+        self._infill = infill
+        self._hc_strategy = hc_strategy
+        super().__init__()
+
+    @property
+    def needs_variance(self):
+        return self._infill.needs_variance
+
+    def set_samples(self, x_train: np.ndarray, is_active_train: np.ndarray, y_train: np.ndarray):
+        self._infill.set_samples(x_train, is_active_train, y_train)
+
+    def predict(self, x: np.ndarray, is_active: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        return self._infill.predict(x, is_active)
+
+    def _initialize(self):
+        self._infill.initialize(self.problem, self.surrogate_model, self.normalization)
+
+    def select_infill_solutions(self, population, infill_problem, n_infill):
+        return self._infill.select_infill_solutions(population, infill_problem, n_infill)
+
+    def reset_infill_log(self):
+        super().reset_infill_log()
+        self._infill.reset_infill_log()
+
+    def predict_variance(self, x: np.ndarray, is_active: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        return self._infill.predict_variance(x, is_active)
+
+    def get_n_infill_objectives(self) -> int:
+        return self._infill.get_n_infill_objectives()
+
+    def get_n_infill_constraints(self) -> int:
+        n_constr = self._infill.get_n_infill_constraints()
+        if self._hc_strategy.adds_infill_constraint():
+            n_constr += 1
+        return n_constr
+
+    def _evaluate(self, x: np.ndarray, is_active: np.ndarray) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+        f_infill, g_infill = self._infill.evaluate(x, is_active)
+        f_infill = self._hc_strategy.mod_infill_objectives(x, f_infill)
+
+        if self._hc_strategy.adds_infill_constraint():
+            g_hc = self._hc_strategy.evaluate_infill_constraint(x)
+            g_infill = np.column_stack([g_infill, g_hc]) if g_infill is not None else np.array([g_hc]).T
+
+        return f_infill, g_infill

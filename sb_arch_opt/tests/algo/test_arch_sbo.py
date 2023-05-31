@@ -5,16 +5,19 @@ from typing import Tuple
 from sb_arch_opt.problem import *
 from sb_arch_opt.sampling import *
 from pymoo.core.variable import Real, Integer, Choice
-from sb_arch_opt.algo.arch_sbo import *
 from sb_arch_opt.problems.md_mo import *
-from sb_arch_opt.algo.arch_sbo.algo import *
 from sb_arch_opt.problems.constrained import *
-from sb_arch_opt.algo.arch_sbo.infill import *
-from sb_arch_opt.algo.arch_sbo.models import *
+from sb_arch_opt.problems.hidden_constraints import *
 from sb_arch_opt.tests.algo.test_pymoo import CrashingProblem
 from sb_arch_opt.algo.pymoo_interface import load_from_previous_results
 from pymoo.optimize import minimize
 from pymoo.core.population import Population
+
+from sb_arch_opt.algo.arch_sbo import *
+from sb_arch_opt.algo.arch_sbo.algo import *
+from sb_arch_opt.algo.arch_sbo.infill import *
+from sb_arch_opt.algo.arch_sbo.models import *
+from sb_arch_opt.algo.arch_sbo.hc_strategy import *
 
 check_dependency = lambda: pytest.mark.skipif(not HAS_ARCH_SBO, reason='ArchSBO dependencies not installed')
 
@@ -47,28 +50,23 @@ def test_arch_sbo_rbf_failing(failing_problem: ArchOptProblemBase):
 
 
 @check_dependency()
-def test_arch_sbo_krg(problem: ArchOptProblemBase):
+def test_arch_sbo_y(problem: ArchOptProblemBase):
     assert HAS_ARCH_SBO
 
-    sbo = get_arch_sbo_krg(init_size=10)
+    model = ModelFactory.get_kriging_model()
+    infill = FunctionEstimateConstrainedInfill()
+    sbo = get_sbo(model, infill, init_size=10)
     result = minimize(problem, sbo, termination=('n_eval', 12))
     assert len(result.pop) == 12
 
 
 @check_dependency()
-def test_arch_sbo_krg_y(problem: ArchOptProblemBase):
+def test_arch_sbo_ei(problem: ArchOptProblemBase):
     assert HAS_ARCH_SBO
 
-    sbo = get_arch_sbo_krg(init_size=10, use_mvpf=False)
-    result = minimize(problem, sbo, termination=('n_eval', 12))
-    assert len(result.pop) == 12
-
-
-@check_dependency()
-def test_arch_sbo_krg_ei(problem: ArchOptProblemBase):
-    assert HAS_ARCH_SBO
-
-    sbo = get_arch_sbo_krg(init_size=10, use_ei=True)
+    model = ModelFactory.get_kriging_model()
+    infill = ExpectedImprovementInfill()
+    sbo = get_sbo(model, infill, init_size=10)
     result = minimize(problem, sbo, termination=('n_eval', 12))
     assert len(result.pop) == 12
 
@@ -83,12 +81,50 @@ def test_arch_sbo_mvpf():
 
 
 @check_dependency()
+def test_arch_sbo_hc_rf():
+    assert HAS_ARCH_SBO
+
+    hc_strategy = PredictionHCStrategy(RandomForestClassifier())
+
+    problem = Mueller01()
+    model = ModelFactory.get_kriging_model()
+    infill = MinVariancePFInfill()
+    sbo = get_sbo(model, infill, hc_strategy=hc_strategy, init_size=10)
+    result = minimize(problem, sbo, termination=('n_eval', 11))
+    assert len(result.pop) == 11
+
+
+@check_dependency()
+def test_arch_sbo_hc_md_gp():
+    assert HAS_ARCH_SBO
+
+    hc_strategy = PredictionHCStrategy(MDGPRegressor())
+
+    problem = Mueller01()
+    model = ModelFactory.get_kriging_model()
+    infill = MinVariancePFInfill()
+    sbo = get_sbo(model, infill, hc_strategy=hc_strategy, init_size=10)
+    result = minimize(problem, sbo, termination=('n_eval', 11))
+    assert len(result.pop) == 11
+
+
+@check_dependency()
 def test_arch_sbo_gp(problem: ArchOptProblemBase):
     assert HAS_ARCH_SBO
 
     _, n_batch, _ = get_default_infill(problem)
     assert n_batch == 1
 
+    sbo = get_arch_sbo_gp(problem, init_size=10)
+    result = minimize(problem, sbo, termination=('n_eval', 12))
+    assert len(result.pop) == 12
+
+
+@check_dependency()
+def test_arch_sbo_gp_failing():
+    assert HAS_ARCH_SBO
+
+    problem = Mueller01()
     sbo = get_arch_sbo_gp(problem, init_size=10)
     result = minimize(problem, sbo, termination=('n_eval', 12))
     assert len(result.pop) == 12

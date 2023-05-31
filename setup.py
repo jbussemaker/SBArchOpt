@@ -55,6 +55,7 @@ if __name__ == '__main__':
         extras_require={
             'arch_sbo': [
                 'smt~=2.0b3',
+                'scikit-learn',
             ],
             # 'ota': [  # pip install -r requirements-ota.txt
             #     'open_turb_arch @ git+https://github.com/jbussemaker/OpenTurbofanArchitecting@pymoo_optional#egg=open_turb_arch',

@@ -46,6 +46,7 @@ try:
     from smt.surrogate_models.surrogate_model import SurrogateModel
     from sb_arch_opt.algo.arch_sbo.infill import *
     from sb_arch_opt.algo.arch_sbo.models import *
+    from sb_arch_opt.algo.arch_sbo.hc_strategy import *
 except ImportError:
     pass
 
@@ -126,7 +127,7 @@ class SBOInfill(InfillCriterion):
     def __init__(self, surrogate_model: 'SurrogateModel', infill: SurrogateInfill, pop_size=None,
                  termination: Union[Termination, int] = None, normalization: Normalization = None, verbose=False,
                  repair: Repair = None, eliminate_duplicates: DuplicateElimination = None, aggregate_g=False,
-                 force_new_points: bool = True, **kwargs):
+                 force_new_points: bool = True, hc_strategy: 'HiddenConstraintStrategy' = None, **kwargs):
 
         if eliminate_duplicates is None:
             eliminate_duplicates = LargeDuplicateElimination()
@@ -137,6 +138,7 @@ class SBOInfill(InfillCriterion):
         self.total_pop: Optional[Population] = None
         self._algorithm: Optional[Algorithm] = None
         self._normalization: Optional[Normalization] = normalization
+        self._hc_strategy: Optional['HiddenConstraintStrategy'] = hc_strategy
         self._aggregate_g = aggregate_g
 
         self._surrogate_model_base = surrogate_model
@@ -243,6 +245,16 @@ class SBOInfill(InfillCriterion):
         return self._surrogate_model
 
     @property
+    def hc_strategy(self) -> 'HiddenConstraintStrategy':
+        if self._hc_strategy is None:
+            self._hc_strategy = GlobalWorstReplacement()
+        return self._hc_strategy
+
+    @hc_strategy.setter
+    def hc_strategy(self, hc_strategy: 'HiddenConstraintStrategy'):
+        self._hc_strategy = hc_strategy
+
+    @property
     def _model_is_hierarchical(self):
         return self.surrogate_model.supports['x_hierarchy']
 
@@ -263,12 +275,15 @@ class SBOInfill(InfillCriterion):
 
     def _build_model(self):
         """Update the underlying model. New population is given, total population is available from self.total_pop"""
+        self.hc_strategy.initialize(self.problem)
 
         # Get input and output training points
         x = self.total_pop.get('X')
         y = self.total_pop.get('F')
         if self.problem.n_ieq_constr > 0:
             y = np.column_stack([y, self.total_pop.get('G')])
+        x_in = x.copy()
+        y_in = y.copy()
 
         # Select training values
         x, y = self._get_xy_train(x, y)
@@ -296,6 +311,8 @@ class SBOInfill(InfillCriterion):
         self.pf_estimate = None
         self._train_model()
 
+        self.hc_strategy.prepare_infill_search(x_in, y_in)
+
     def _get_normalize_g(self, g: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         g_ref = g
         if self._aggregate_g:
@@ -303,22 +320,7 @@ class SBOInfill(InfillCriterion):
         return self._normalize_y(g_ref, keep_centered=True)
 
     def _get_xy_train(self, x: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        """Replace failed points with current worst values"""
-        is_failed = np.any(~np.isfinite(y), axis=1)
-        if ~np.any(is_failed):
-            return x, y
-
-        x = x.copy()
-        y = y.copy()
-        y[~np.isfinite(y)] = np.nan
-
-        n_obj = self.problem.n_obj
-        y[:, :n_obj] = np.nanmax(y[:, :n_obj], axis=0)  # f
-        y[:, n_obj:] = 1.  # g
-
-        y[np.isnan(y)] = 1.
-
-        return x, y
+        return self.hc_strategy.mod_xy_train(x, y)
 
     def _train_model(self):
         s = timeit.default_timer()
@@ -457,8 +459,11 @@ class SBOInfill(InfillCriterion):
         if force_new_points is None:
             force_new_points = self.force_new_points
 
+        # Apply hidden constraints strategy
+        hc_infill = HCInfill(infill, self.hc_strategy)
+
         x_exist = self.total_pop.get('X') if force_new_points else None
-        return SurrogateInfillOptimizationProblem(infill, self.problem, x_exist=x_exist)
+        return SurrogateInfillOptimizationProblem(hc_infill, self.problem, x_exist=x_exist)
 
     def _get_termination(self, n_obj):
         termination = self.termination
