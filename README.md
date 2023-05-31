@@ -1,5 +1,9 @@
 # SBArchOpt: Surrogate-Based Architecture Optimization
 
+[![Tests](https://github.com/jbussemaker/SBArchOpt/workflows/Tests/badge.svg)](https://github.com/jbussemaker/SBArchOpt/actions/workflows/tests.yml?query=workflow%3ATests)
+[![PyPI](https://img.shields.io/pypi/v/sb-arch-opt.svg)](https://pypi.org/project/sb-arch-opt)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 SBArchOpt (es-bee-ARK-opt) provides a set of classes and interfaces for applying Surrogate-Based Optimization (SBO)
 for system architecture optimization problems:
 - Expensive black-box problems: evaluating one candidate architecture might be computationally expensive
