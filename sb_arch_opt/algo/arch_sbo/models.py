@@ -139,9 +139,14 @@ class ModelFactory:
         return RBF(print_global=False, d0=1., poly_degree=-1, reg=1e-10)
 
     @staticmethod
-    def get_kriging_model(multi=True, **kwargs):
+    def get_kriging_model(multi=True, kpls_n_comp: int = None, **kwargs):
         check_dependencies()
-        surrogate = KRG(print_global=False, **kwargs)
+
+        if kpls_n_comp is not None:
+            surrogate = KPLS(print_global=False, n_comp=kpls_n_comp, **kwargs)
+        else:
+            surrogate = KRG(print_global=False, **kwargs)
+
         if multi:
             surrogate = MultiSurrogateModel(surrogate)
         return surrogate
