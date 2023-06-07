@@ -388,7 +388,7 @@ class RealisticTurbofanArch(OpenTurbArchProblemWrapper):
 
         is_cond_active[4] = False  # Nr of shafts
         is_cond_active[5] = False  # Shaft 1 PR
-        is_cond_active[6] = False  # Shaft 1 RPM
+        is_cond_active[8] = False  # Shaft 1 RPM
 
         return is_cond_active
 
