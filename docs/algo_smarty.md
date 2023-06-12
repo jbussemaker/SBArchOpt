@@ -1,4 +1,4 @@
-# SBArchOpt Interface to SMARTy: Super Efficient Global Optimization with Mixture of Experts
+# SBArchOpt Interface to SMARTy: Surrogate Modeling for Aero-Data Toolbox
 
 SMARTy is a surrogate modeling toolbox with optimization capabilities developed by the DLR. For more information refer to:
 
