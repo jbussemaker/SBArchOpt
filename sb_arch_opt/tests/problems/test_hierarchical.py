@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 from sb_arch_opt.sampling import *
+from sb_arch_opt.problems.continuous import *
 from sb_arch_opt.problems.hierarchical import *
 from pymoo.core.evaluator import Evaluator
 
@@ -88,3 +89,12 @@ def test_hier_carside():
 
 def test_hier_nn():
     run_test_hierarchy(NeuralNetwork(), 2.51)
+
+
+def test_tunable_hierarchical_meta_problem():
+    prob1 = TunableHierarchicalMetaProblem(lambda n: Branin(), imp_ratio=10, n_subproblem=4, diversity_range=.5)
+    prob1.print_stats()
+
+    prob2 = TunableHierarchicalMetaProblem(lambda n: Branin(), imp_ratio=10, n_subproblem=5, diversity_range=.25)
+    prob2.print_stats()
+    assert prob1._pf_cache_path() != prob2._pf_cache_path()

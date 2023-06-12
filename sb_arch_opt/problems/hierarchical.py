@@ -1053,7 +1053,9 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
     def __repr__(self):
         if self._repr_str is not None:
             return self._repr_str
-        return f'{self.__class__.__name__}()'
+        return f'{self.__class__.__name__}({self._problem!r}, imp_ratio={self._imp_ratio}, ' \
+               f'n_subproblem={self._n_subproblem}, n_opts={self._n_opts}, diversity_range={self._diversity_range}, ' \
+               f'cont_ratio={self._cont_ratio})'
 
 
 class HierBranin(TunableHierarchicalMetaProblem):
