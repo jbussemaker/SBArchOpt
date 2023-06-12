@@ -366,6 +366,9 @@ class ArchDesignSpace:
         x, is_active = self._quick_sample_discrete_x(n)
         if x.shape[1] != self.n_var or is_active.shape[1] != self.n_var:
             raise RuntimeError(f'Inconsistent design vector dimensions: {x.shape[1]} != {self.n_var}')
+        if x.shape[0] > n:
+            x = x[:n, :]
+            is_active = is_active[:n, :]
         x = x.astype(float)  # Otherwise continuous variables cannot be imputed
 
         self.round_x_discrete(x)
