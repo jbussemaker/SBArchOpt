@@ -1,6 +1,7 @@
 import pytest
 from sb_arch_opt.problem import *
 from sb_arch_opt.algo.hebo_interface import *
+from sb_arch_opt.problems.md_mo import MOZDT1
 from sb_arch_opt.problems.constrained import ArchCantileveredBeam
 from sb_arch_opt.algo.hebo_interface.algo import HEBOArchOptInterface
 
@@ -15,10 +16,10 @@ def test_design_space(problem: ArchOptProblemBase):
 
 
 @check_dependency()
-def test_simple(problem: ArchOptProblemBase):
+def test_simple():
     assert HAS_HEBO
 
-    hebo = get_hebo_optimizer(problem, n_init=20)
+    hebo = get_hebo_optimizer(MOZDT1(), n_init=20)
     hebo.optimize(n_infill=2)
 
     pop = hebo.pop
