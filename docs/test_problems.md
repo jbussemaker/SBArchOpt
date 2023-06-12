@@ -144,3 +144,20 @@ Nomenclature:
 - fail_rate: fraction of randomly-sampled points that fail to evaluate
 - t_eval: rough estimate of the time it takes to evaluate one design point (practically instantaneous if left empty)
 - dist_corr: distance correlation between design vectors and assignment patterns (higher is better)
+
+## Tunable Hierarchical Meta Problem
+
+Some of the hierarchical test problems are created using the `TunableHierarchicalMetaProblem`. This meta problem can
+be used to turn any non-hierarchical problem into a hierarchical problem with specific characteristics, so it is
+useful to drive further research into hierarchical optimization.
+
+Assuming a non-hierarchical underlying test problem, the following behavioral parameters can be selected:
+- *Discrete imputation ratio*: the ratio between number of declared and valid design vectors; a value of 1 indicates no
+  hierarchy, higher values indicate more difficult hierarchical problems
+- *Max rate diversity*: difference between least and most occurring design variable value; higher values indicate
+  more diverse hierarchical problems
+- *Number of sub-problems*
+- *Number of options* per selection variable
+- *Underlying problem dimension*
+
+For more details and usage, see [the tutorial](tutorial_tunable_meta_problem.ipynb).

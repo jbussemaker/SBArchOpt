@@ -77,6 +77,10 @@ Following Python SBO frameworks are not implemented, however deserve an acknowle
 
 ## Usage
 
+See also the tutorials:
+- [SBArchOpt Tutorial](tutorial.ipynb): optimization, implementing new problems
+- [Tunable Hierarchical Meta Problem Tutorial](tutorial_tunable_meta_problem.ipynb)
+
 ### Connecting to Optimization Frameworks
 
 Interfaces to optimization frameworks are located in the `sb_arch_opt.algo` module.
