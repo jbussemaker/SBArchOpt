@@ -19,11 +19,12 @@ def test_design_space(problem: ArchOptProblemBase):
 def test_simple():
     assert HAS_HEBO
 
-    hebo = get_hebo_optimizer(MOZDT1(), n_init=20)
+    n_init = 30
+    hebo = get_hebo_optimizer(MOZDT1(), n_init=30)
     hebo.optimize(n_infill=2)
 
     pop = hebo.pop
-    assert len(pop) == 22
+    assert len(pop) == n_init+2
 
 
 @check_dependency()
