@@ -39,13 +39,14 @@ def get_arch_sbo_rbf(init_size: int = 100, results_folder=None, **kwargs):
 
 
 def get_arch_sbo_gp(problem: ArchOptProblemBase, init_size: int = 100, n_parallel=None, min_pof: float = None,
-                    kpls_n_dim: int = 10, aggregate_g: bool = None, results_folder=None, **kwargs):
+                    kpls_n_dim: int = 10, g_aggregation: ConstraintAggregation = None, results_folder=None, **kwargs):
     """
     Get an architecture SBO algorithm using a mixed-discrete Gaussian Process (Kriging) model as its surrogate model.
     Appropriate (multi-objective) infills and constraint handling techniques are automatically selected.
 
     For constraint handling, increase min_pof to between 0.50 and 0.75 to be more conservative (i.e. require a higher
-    probability of being feasible for infill points) or decrease below 0.50 to be more exploratory.
+    probability of being feasible for infill points) or decrease below 0.50 to be more exploratory. Optionally defined
+    an aggregation strategy to reduce the number of models to train.
 
     To reduce model training times for high-dimensional problems, KPLS is used instead of Kriging when the problem
     dimension exceeds kpls_n_dim. Note that the DoE should then contain at least kpls_n_dim+1 points.
@@ -55,16 +56,15 @@ def get_arch_sbo_gp(problem: ArchOptProblemBase, init_size: int = 100, n_paralle
     kpls_n_comp = kpls_n_dim if kpls_n_dim is not None and problem.n_var > kpls_n_dim else None
     model, normalization = ModelFactory(problem).get_md_kriging_model(kpls_n_comp=kpls_n_comp)
 
-    # Select the single- or multi-objective infill criterion
-    infill, infill_batch, aggregate_g_ = get_default_infill(problem, n_parallel=n_parallel, min_pof=min_pof)
-    if aggregate_g is None:
-        aggregate_g = aggregate_g_
+    # Select the single- or multi-objective infill criterion, including constraint handling strategy
+    infill, infill_batch = get_default_infill(
+        problem, n_parallel=n_parallel, min_pof=min_pof, g_aggregation=g_aggregation)
 
     # Get default hidden constraint strategy
     hc_strategy = get_hc_strategy()
 
     return get_sbo(model, infill, infill_size=infill_batch, init_size=init_size, normalization=normalization,
-                   aggregate_g=aggregate_g, results_folder=results_folder, hc_strategy=hc_strategy, **kwargs)
+                   results_folder=results_folder, hc_strategy=hc_strategy, **kwargs)
 
 
 def get_sbo(surrogate_model, infill: 'SurrogateInfill', infill_size: int = 1, init_size: int = 100,
@@ -73,7 +73,7 @@ def get_sbo(surrogate_model, infill: 'SurrogateInfill', infill_size: int = 1, in
     """Create the SBO algorithm given some SMT surrogate model and an infill criterion"""
 
     sbo = SBOInfill(surrogate_model, infill, pop_size=infill_pop_size, termination=infill_gens, repair=repair,
-                     normalization=normalization, hc_strategy=hc_strategy, verbose=True)\
+                    normalization=normalization, hc_strategy=hc_strategy, verbose=True)\
         .algorithm(infill_size=infill_size, init_size=init_size, **kwargs)
 
     if results_folder is not None:

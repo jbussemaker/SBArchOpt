@@ -17,6 +17,7 @@ Contact: jasper.bussemaker@dlr.de
 import timeit
 import numpy as np
 from typing import *
+from enum import Enum
 from scipy.stats import norm
 from scipy.special import ndtr
 from sb_arch_opt.problem import ArchOptProblemBase
@@ -32,7 +33,8 @@ from pymoo.algorithms.moo.nsga2 import RankAndCrowdingSurvival, calc_crowding_di
 __all__ = ['SurrogateInfill', 'FunctionEstimateInfill', 'ConstrainedInfill', 'FunctionEstimateConstrainedInfill',
            'ExpectedImprovementInfill', 'MinVariancePFInfill', 'ConstraintStrategy', 'MeanConstraintPrediction',
            'ProbabilityOfFeasibility', 'ProbabilityOfImprovementInfill', 'LowerConfidenceBoundInfill',
-           'MinimumPoIInfill', 'EnsembleInfill', 'IgnoreConstraints', 'get_default_infill', 'HCInfill']
+           'MinimumPoIInfill', 'EnsembleInfill', 'IgnoreConstraints', 'get_default_infill', 'HCInfill',
+           'ConstraintAggregation']
 
 try:
     from smt.surrogate_models.surrogate_model import SurrogateModel
@@ -41,8 +43,8 @@ except ImportError:
     pass
 
 
-def get_default_infill(problem: ArchOptProblemBase, n_parallel: int = None, min_pof: float = None) \
-        -> Tuple['ConstrainedInfill', int, bool]:
+def get_default_infill(problem: ArchOptProblemBase, n_parallel: int = None, min_pof: float = None,
+                       g_aggregation: 'ConstraintAggregation' = None) -> Tuple['ConstrainedInfill', int]:
     """
     Get the default infill criterion according to the following logic:
     - If evaluations can be run in parallel:
@@ -55,7 +57,7 @@ def get_default_infill(problem: ArchOptProblemBase, n_parallel: int = None, min_
       - Multi-objective:  Ensemble of MPoI, MEPoI  with n_batch = 1
     - Set Probability of Feasibility as constraint handling technique if min_pof != .5, otherwise use g-mean prediction
 
-    Returns the infill, the recommended infill batch size, and whether constraints should be aggregated.
+    Returns the infill and recommended infill batch size.
     """
 
     # Determine number of evaluations that can be run in parallel
@@ -87,14 +89,12 @@ def get_default_infill(problem: ArchOptProblemBase, n_parallel: int = None, min_
     # Get infill and set constraint handling technique
     infill, n_batch = _get_infill()
 
-    aggregate_constraints = False
     if min_pof is not None and min_pof != .5:
-        aggregate_constraints = True
-        infill.constraint_strategy = ProbabilityOfFeasibility(min_pof=min_pof)
+        infill.constraint_strategy = ProbabilityOfFeasibility(min_pof=min_pof, aggregation=g_aggregation)
     else:
-        infill.constraint_strategy = MeanConstraintPrediction()
+        infill.constraint_strategy = MeanConstraintPrediction(aggregation=g_aggregation)
 
-    return infill, n_batch, aggregate_constraints
+    return infill, n_batch
 
 
 class SurrogateInfill:
@@ -128,6 +128,9 @@ class SurrogateInfill:
     @property
     def needs_variance(self):
         return False
+
+    def get_g_training_set(self, g: np.ndarray) -> np.ndarray:
+        return g
 
     def set_samples(self, x_train: np.ndarray, is_active_train: np.ndarray, y_train: np.ndarray):
         self.x_train = x_train
@@ -234,15 +237,54 @@ class FunctionEstimateInfill(SurrogateInfill):
         return f, g
 
 
-class ConstraintStrategy:
-    """Base class for a strategy for dealing with design constraints"""
+class ConstraintAggregation(Enum):
+    NONE = 0  # No aggregation
+    ELIMINATE = 1  # Automatically eliminate non-relevant
+    AGGREGATE = 2  # Aggregate all into 1
 
-    def __init__(self):
+
+class ConstraintStrategy:
+    """
+    Base class for a strategy for dealing with design constraints.
+    Optionally enables constraint aggregation (max) or elimination (only train models for constraints where for at least
+    one design point it is violated and all others are satisfied).
+    """
+
+    def __init__(self, aggregation: ConstraintAggregation = None):
         self.problem: Optional[Problem] = None
         self.n_trained_g = None
+        self.aggregation = ConstraintAggregation.NONE if aggregation is None else aggregation
 
     def initialize(self, problem: Problem):
         self.problem = problem
+
+    def get_g_training_set(self, g: np.ndarray) -> np.ndarray:
+        # Eliminate constraints that are only violated when at least one other constraint is also violated
+        if self.aggregation == ConstraintAggregation.ELIMINATE:
+            g_ref = g
+            while g_ref.shape[1] > 1:
+                for i_g in range(g_ref.shape[1]):
+                    is_violated = g_ref[:, i_g] > 0
+                    g_ref_other = np.delete(g_ref, i_g, axis=1)
+
+                    # No need to train GP if this constraint is never violated
+                    if not np.any(is_violated):
+                        break
+
+                    all_other_satisfied = np.all(g_ref_other <= 0, axis=1)
+                    i_g_only_active = is_violated & all_other_satisfied
+                    if not np.any(i_g_only_active):
+                        break
+                else:
+                    break
+
+                g_ref = g_ref_other
+            return g_ref
+
+        # Optionally aggregate constraints by taking the maximum value
+        if self.aggregation == ConstraintAggregation.AGGREGATE:
+            return np.array([np.max(g, axis=1)]).T
+        return g
 
     def set_samples(self, x_train: np.ndarray, y_train: np.ndarray):
         self.n_trained_g = n_trained_g = y_train.shape[1]-self.problem.n_obj
@@ -250,8 +292,8 @@ class ConstraintStrategy:
         n_constr = self.problem.n_ieq_constr
         if n_trained_g == 0 and n_constr != 0:
             raise RuntimeError(f'Expecting at least one trained constraint model ({n_constr}), received 0')
-        elif n_constr > 0 and n_trained_g not in {1, n_constr}:
-            raise RuntimeError(f'Expecting either 1 or {n_constr} constraint models, received {n_trained_g}')
+        elif n_constr > 0 and (n_trained_g == 0 or n_trained_g > n_constr):
+            raise RuntimeError(f'Expecting between 1 and {n_constr} constraint models, received {n_trained_g}')
 
         self._set_samples(x_train, y_train)
 
@@ -288,11 +330,11 @@ class ProbabilityOfFeasibility(ConstraintStrategy):
         10.1214/lnms/1215456182
     """
 
-    def __init__(self, min_pof: float = None):
+    def __init__(self, min_pof: float = None, aggregation: ConstraintAggregation = None):
         if min_pof is None:
             min_pof = .5
         self.min_pof = min_pof
-        super().__init__()
+        super().__init__(aggregation=aggregation)
 
     def evaluate(self, x: np.ndarray, g: np.ndarray, g_var: np.ndarray) -> np.ndarray:
         pof = self._pof(g, g_var)
@@ -322,6 +364,9 @@ class ConstrainedInfill(SurrogateInfill):
 
     def _initialize(self):
         self.constraint_strategy.initialize(self.problem)
+
+    def get_g_training_set(self, g: np.ndarray) -> np.ndarray:
+        return self.constraint_strategy.get_g_training_set(g)
 
     def set_samples(self, x_train: np.ndarray, is_active_train: np.ndarray, y_train: np.ndarray):
         super().set_samples(x_train, is_active_train, y_train)

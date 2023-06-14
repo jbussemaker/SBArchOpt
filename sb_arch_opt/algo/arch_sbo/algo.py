@@ -126,7 +126,7 @@ class SBOInfill(InfillCriterion):
 
     def __init__(self, surrogate_model: 'SurrogateModel', infill: SurrogateInfill, pop_size=None,
                  termination: Union[Termination, int] = None, normalization: Normalization = None, verbose=False,
-                 repair: Repair = None, eliminate_duplicates: DuplicateElimination = None, aggregate_g=False,
+                 repair: Repair = None, eliminate_duplicates: DuplicateElimination = None,
                  force_new_points: bool = True, hc_strategy: 'HiddenConstraintStrategy' = None, **kwargs):
 
         if eliminate_duplicates is None:
@@ -139,7 +139,6 @@ class SBOInfill(InfillCriterion):
         self._algorithm: Optional[Algorithm] = None
         self._normalization: Optional[Normalization] = normalization
         self._hc_strategy: Optional['HiddenConstraintStrategy'] = hc_strategy
-        self._aggregate_g = aggregate_g
 
         self._surrogate_model_base = surrogate_model
         self._surrogate_model = None
@@ -314,10 +313,8 @@ class SBOInfill(InfillCriterion):
         self.hc_strategy.prepare_infill_search(x_in, y_in)
 
     def _get_normalize_g(self, g: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        g_ref = g
-        if self._aggregate_g:
-            g_ref = np.array([np.max(g, axis=1)]).T
-        return self._normalize_y(g_ref, keep_centered=True)
+        g_train = self.infill.get_g_training_set(g)
+        return self._normalize_y(g_train, keep_centered=True)
 
     def _get_xy_train(self, x: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         return self.hc_strategy.mod_xy_train(x, y)

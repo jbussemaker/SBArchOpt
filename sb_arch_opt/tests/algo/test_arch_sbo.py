@@ -112,7 +112,7 @@ def test_arch_sbo_hc_md_gp():
 def test_arch_sbo_gp(problem: ArchOptProblemBase):
     assert HAS_ARCH_SBO
 
-    _, n_batch, _ = get_default_infill(problem)
+    _, n_batch = get_default_infill(problem)
     assert n_batch == 1
 
     sbo = get_arch_sbo_gp(problem, init_size=10)
@@ -132,7 +132,7 @@ def test_arch_sbo_gp_failing():
 
 @check_dependency()
 def test_arch_sbo_gp_batch(problem: ArchOptProblemBase):
-    _, n_batch, _ = get_default_infill(problem, n_parallel=5)
+    _, n_batch = get_default_infill(problem, n_parallel=5)
     assert n_batch == 5
 
     sbo = get_arch_sbo_gp(problem, init_size=10, n_parallel=5)
@@ -201,17 +201,23 @@ def test_partial_restart():
 
 @check_dependency()
 def test_constraint_handling():
-    problem = ArchCantileveredBeam()
-    assert problem.n_ieq_constr > 0
+    problem = ArchCarside()
+    assert problem.n_ieq_constr == 10
 
-    for strategy in [MeanConstraintPrediction(), ProbabilityOfFeasibility(), ProbabilityOfFeasibility(min_pof=.25)]:
+    for strategy, n_g_infill in [
+        (MeanConstraintPrediction(), {problem.n_ieq_constr}),
+        (MeanConstraintPrediction(aggregation=ConstraintAggregation.ELIMINATE), set(range(1, 5))),
+        (MeanConstraintPrediction(aggregation=ConstraintAggregation.AGGREGATE), {1}),
+        (ProbabilityOfFeasibility(), {problem.n_ieq_constr}),
+        (ProbabilityOfFeasibility(min_pof=.25), {problem.n_ieq_constr}),
+    ]:
         model = ModelFactory.get_kriging_model()
         infill = FunctionEstimateConstrainedInfill(constraint_strategy=strategy)
         sbo = get_sbo(model, infill, init_size=10)
 
         result = minimize(problem, sbo, termination=('n_eval', 12), copy_algorithm=False)
         assert infill.constraint_strategy.problem is problem
-        assert infill.get_n_infill_constraints() == problem.n_ieq_constr
+        assert infill.get_n_infill_constraints() in n_g_infill
         assert len(result.pop) == 12
 
 
