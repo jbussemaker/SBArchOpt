@@ -26,7 +26,7 @@ import os
 import sys
 sys.path.insert(0, os.path.dirname(__file__))
 from sb_arch_opt import __version__
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 def _get_readme():
@@ -88,7 +88,7 @@ if __name__ == '__main__':
             # ],
         },
         python_requires='>=3.7',
-        packages=['sb_arch_opt'],
+        packages=find_packages(include='sb_arch_opt*'),
         package_data={
             'sb_arch_opt.problems': ['turbofan_data/*'],
         },
