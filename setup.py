@@ -62,7 +62,8 @@ if __name__ == '__main__':
         ],
         extras_require={
             'arch_sbo': [
-                'smt~=2.0b3',
+                'smt~=2.0b5',
+                'numba',
                 'scikit-learn',
             ],
             # 'ota': [  # pip install -r requirements-ota.txt
