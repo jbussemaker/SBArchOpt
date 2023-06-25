@@ -199,7 +199,7 @@ class ArchDesignSpace:
         np.unique(np.abs(np.round(xs)).astype(int), return_counts=True) --> 34, 33, 33 (evenly distributed)
         """
         is_discrete_mask = self.is_discrete_mask
-        x_discrete = x[:, is_discrete_mask].astype(np.float64)
+        x_discrete = x[:, is_discrete_mask].astype(float)
         xl, xu = self.xl[is_discrete_mask], self.xu[is_discrete_mask]
         diff = xu-xl
 
@@ -249,7 +249,7 @@ class ArchDesignSpace:
         if len(n_opts_discrete) == 0:
             return 1
 
-        return int(np.prod(n_opts_discrete, dtype=np.float))
+        return int(np.prod(n_opts_discrete, dtype=float))
 
     @cached_property
     def imputation_ratio(self) -> float:
