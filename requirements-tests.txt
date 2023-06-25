@@ -1,0 +1,3 @@
+pytest
+testbook~=0.4.2
+matplotlib
