@@ -256,17 +256,16 @@ class ArchOptEvaluator(Evaluator):
         """Ensure that the matrices in a Population are two-dimensional"""
         pop_data = {}
         for key in (['X']+evaluate_values_of):
-            data = pop.get(key)
+            data = pop.get(key, to_numpy=False)
 
-            if len(data.shape) == 1:
-                partial_data = np.zeros((len(data), len(data[0])))*np.nan
-                for i, row in enumerate(data):
-                    if row is not None and len(row) > 0:
-                        if nan_as_inf:
-                            row = row.copy()
-                            row[np.isnan(row)] = np.inf
-                        partial_data[i, :] = row
-                data = partial_data
+            partial_data = np.zeros((len(data), len(data[0])))*np.nan
+            for i, row in enumerate(data):
+                if row is not None and len(row) > 0:
+                    if nan_as_inf:
+                        row = row.copy()
+                        row[np.isnan(row)] = np.inf
+                    partial_data[i, :] = row
+            data = partial_data
 
             pop_data[key] = data
 
