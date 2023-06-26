@@ -22,6 +22,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+import os
 import copy
 import numpy as np
 from typing import *
@@ -34,6 +35,7 @@ from sb_arch_opt.sampling import HierarchicalSampling
 from pymoo.util.normalization import Normalization, SimpleZeroToOneNormalization
 
 try:
+    os.environ['USE_NUMBA_JIT'] = '1'
     from smt.surrogate_models.rbf import RBF
     from smt.surrogate_models.surrogate_model import SurrogateModel
 
