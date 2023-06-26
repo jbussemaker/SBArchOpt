@@ -1,3 +1,4 @@
+import os
 import pytest
 import tempfile
 import numpy as np
@@ -199,6 +200,7 @@ def test_partial_restart():
                 pass
 
 
+@pytest.mark.skipif(int(os.getenv('RUN_SLOW_TESTS', 0)) != 1, reason='Set RUN_SLOW_TESTS=1 to run slow tests')
 @check_dependency()
 def test_constraint_handling():
     problem = ArchCarside()

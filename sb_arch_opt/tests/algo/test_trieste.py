@@ -1,3 +1,4 @@
+import os
 import pytest
 import tempfile
 from sb_arch_opt.problem import *
@@ -26,12 +27,14 @@ def test_simple(problem: ArchOptProblemBase):
     assert len(pop) == 11
 
 
+@pytest.mark.skipif(int(os.getenv('RUN_SLOW_TESTS', 0)) != 1, reason='Set RUN_SLOW_TESTS=1 to run slow tests')
 @check_dependency()
 def test_constrained():
     opt = get_trieste_optimizer(ArchCantileveredBeam(), n_init=10, n_infill=1)
     assert opt.run_optimization()
 
 
+@pytest.mark.skipif(int(os.getenv('RUN_SLOW_TESTS', 0)) != 1, reason='Set RUN_SLOW_TESTS=1 to run slow tests')
 @check_dependency()
 def test_store_results_restart(problem: ArchOptProblemBase):
     with tempfile.TemporaryDirectory() as tmp_folder:
@@ -44,6 +47,7 @@ def test_store_results_restart(problem: ArchOptProblemBase):
             assert len(pop) == 11+i
 
 
+@pytest.mark.skipif(int(os.getenv('RUN_SLOW_TESTS', 0)) != 1, reason='Set RUN_SLOW_TESTS=1 to run slow tests')
 @check_dependency()
 def test_simple_failing(failing_problem: ArchOptProblemBase):
     opt = get_trieste_optimizer(failing_problem, n_init=10, n_infill=1)

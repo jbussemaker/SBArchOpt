@@ -1,3 +1,4 @@
+import os
 import pytest
 import tempfile
 import numpy as np
@@ -47,7 +48,7 @@ def test_simple_problem():
     assert problem._load_evaluated()
 
 
-# @pytest.mark.skip('Takes about 1 minute')
+@pytest.mark.skipif(int(os.getenv('RUN_SLOW_TESTS', 0)) != 1, reason='Set RUN_SLOW_TESTS=1 to run slow tests')
 @check_dependency()
 def test_simple_problem_eval():
     with tempfile.TemporaryDirectory() as tmp_folder:

@@ -1,3 +1,5 @@
+import os
+import pytest
 from sb_arch_opt.problems.hidden_constraints import *
 from sb_arch_opt.tests.problems.test_discrete import run_test_no_hierarchy
 from sb_arch_opt.tests.problems.test_hierarchical import run_test_hierarchy
@@ -13,6 +15,7 @@ def test_mueller_02():
     run_test_hierarchy(HierMueller02(), 5.4)
 
 
+@pytest.mark.skipif(int(os.getenv('RUN_SLOW_TESTS', 0)) != 1, reason='Set RUN_SLOW_TESTS=1 to run slow tests')
 def test_mueller_08():
     run_test_no_hierarchy(Mueller08())
     run_test_no_hierarchy(MOMueller08())

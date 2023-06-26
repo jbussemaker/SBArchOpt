@@ -1,3 +1,4 @@
+import os
 import pytest
 import numpy as np
 from sb_arch_opt.sampling import *
@@ -83,6 +84,7 @@ def test_hier_cantilevered_beam():
     run_test_hierarchy(HierCantileveredBeam(), 5.4)
 
 
+@pytest.mark.skipif(int(os.getenv('RUN_SLOW_TESTS', 0)) != 1, reason='Set RUN_SLOW_TESTS=1 to run slow tests')
 def test_hier_carside():
     run_test_hierarchy(HierCarside(), 6.48)
 
