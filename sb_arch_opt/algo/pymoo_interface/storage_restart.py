@@ -252,7 +252,7 @@ class ArchOptEvaluator(Evaluator):
             pop.set(key, values)
 
     @staticmethod
-    def _normalize_pop(pop: Population, evaluate_values_of, nan_as_inf=True, evaluated_pop: Population = None) -> Population:
+    def _normalize_pop(pop: Population, evaluate_values_of, evaluated_pop: Population = None) -> Population:
         """Ensure that the matrices in a Population are two-dimensional"""
         pop_data = {}
         for key in (['X']+evaluate_values_of):
@@ -261,9 +261,6 @@ class ArchOptEvaluator(Evaluator):
             partial_data = np.zeros((len(data), len(data[0])))*np.nan
             for i, row in enumerate(data):
                 if row is not None and len(row) > 0:
-                    if nan_as_inf:
-                        row = row.copy()
-                        row[np.isnan(row)] = np.inf
                     partial_data[i, :] = row
             data = partial_data
 
