@@ -161,12 +161,12 @@ class ModelFactory:
             surrogate = MultiSurrogateModel(surrogate)
         return surrogate
 
-    def get_md_kriging_model(self, kpls_n_comp: int = None, multi=True, **kwargs) -> Tuple['SurrogateModel', Normalization]:
+    def get_md_kriging_model(self, kpls_n_comp: int = None, multi=True, **kwargs_) -> Tuple['SurrogateModel', Normalization]:
         check_dependencies()
         normalization = self.get_md_normalization()
         norm_ds_spec = self.create_smt_design_space_spec(self.problem.design_space, md_normalize=True)
 
-        kwargs.update(
+        kwargs = dict(
             print_global=False,
             design_space=norm_ds_spec.design_space,
             categorical_kernel=MixIntKernelType.EXP_HOMO_HSPHERE,
@@ -174,6 +174,7 @@ class ModelFactory:
         )
         if norm_ds_spec.is_mixed_discrete:
             kwargs['n_start'] = kwargs.get('n_start', 5)
+        kwargs.update(kwargs_)
 
         if kpls_n_comp is not None:
             surrogate = KPLS(n_comp=kpls_n_comp, **kwargs)
