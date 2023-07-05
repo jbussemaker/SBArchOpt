@@ -25,6 +25,7 @@ def test_mueller_08():
     run_test_hierarchy(MOHierMueller08(), 5.4)
 
 
+@pytest.mark.skipif(int(os.getenv('RUN_SLOW_TESTS', 0)) != 1, reason='Set RUN_SLOW_TESTS=1 to run slow tests')
 def test_alimo():
     run_test_no_hierarchy(Alimo())
     run_test_no_hierarchy(AlimoEdge())

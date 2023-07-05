@@ -73,6 +73,7 @@ def test_hier_branin():
     run_test_hierarchy(HierBranin(), 3.24, validate_exhaustive=True)
 
 
+@pytest.mark.skipif(int(os.getenv('RUN_SLOW_TESTS', 0)) != 1, reason='Set RUN_SLOW_TESTS=1 to run slow tests')
 def test_hier_zdt1():
     run_test_hierarchy(HierZDT1Small(), 1.8, validate_exhaustive=True)
     run_test_hierarchy(HierZDT1(), 4.86, validate_exhaustive=True)
@@ -80,6 +81,7 @@ def test_hier_zdt1():
     run_test_hierarchy(HierDiscreteZDT1(), 4.1)
 
 
+@pytest.mark.skipif(int(os.getenv('RUN_SLOW_TESTS', 0)) != 1, reason='Set RUN_SLOW_TESTS=1 to run slow tests')
 def test_hier_cantilevered_beam():
     run_test_hierarchy(HierCantileveredBeam(), 5.4)
 

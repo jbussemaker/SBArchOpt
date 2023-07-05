@@ -128,8 +128,8 @@ def test_arch_sbo_gp(problem: ArchOptProblemBase):
     assert n_batch == 1
 
     sbo = get_arch_sbo_gp(problem, init_size=10)
-    result = minimize(problem, sbo, termination=('n_eval', 12))
-    assert len(result.pop) == 12
+    result = minimize(problem, sbo, termination=('n_eval', 11))
+    assert len(result.pop) == 11
 
 
 @check_dependency()
