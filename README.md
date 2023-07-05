@@ -4,9 +4,10 @@
 [![PyPI](https://img.shields.io/pypi/v/sb-arch-opt.svg)](https://pypi.org/project/sb-arch-opt)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![status](https://joss.theoj.org/papers/0b2b765c04d31a4cead77140f82ecba0/status.svg)](https://joss.theoj.org/papers/0b2b765c04d31a4cead77140f82ecba0)
+[![Documentation Status](https://readthedocs.org/projects/sbarchopt/badge/?version=latest)](https://sbarchopt.readthedocs.io/en/latest/?badge=latest)
 
 [GitHub Repository](https://github.com/jbussemaker/SBArchOpt) |
-[Documentation](https://sb-arch-opt.readthedocs.io/)
+[Documentation](https://sbarchopt.readthedocs.io/)
 
 SBArchOpt (es-bee-ARK-opt) provides a set of classes and interfaces for applying Surrogate-Based Optimization (SBO)
 for system architecture optimization problems:
@@ -49,7 +50,7 @@ Refer to their documentation for dedicated installation instructions.
 
 ## Documentation
 
-Refer to the [documentation](https://sb-arch-opt.readthedocs.io/) for more background on SBArchOpt
+Refer to the [documentation](https://sbarchopt.readthedocs.io/) for more background on SBArchOpt
 and how to implement architecture optimization problems.
 
 ## Contributing
