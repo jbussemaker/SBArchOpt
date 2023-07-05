@@ -36,7 +36,7 @@ if not HAS_ARCH_SBO:
 __all__ = ['get_arch_sbo_rbf', 'get_arch_sbo_gp', 'HAS_ARCH_SBO', 'get_sbo_termination', 'get_sbo']
 
 
-def get_arch_sbo_rbf(init_size: int = 100, results_folder=None, **kwargs):
+def get_arch_sbo_rbf(init_size: int = 100, results_folder=None, **kwargs) -> InfillAlgorithm:
     """
     Get a architecture SBO algorithm using an RBF model as its surrogate model.
     """
@@ -47,7 +47,8 @@ def get_arch_sbo_rbf(init_size: int = 100, results_folder=None, **kwargs):
 
 
 def get_arch_sbo_gp(problem: ArchOptProblemBase, init_size: int = 100, n_parallel=None, min_pof: float = None,
-                    kpls_n_dim: int = 10, g_aggregation: ConstraintAggregation = None, results_folder=None, **kwargs):
+                    kpls_n_dim: int = 10, g_aggregation: ConstraintAggregation = None, results_folder=None, **kwargs) \
+        -> InfillAlgorithm:
     """
     Get an architecture SBO algorithm using a mixed-discrete Gaussian Process (Kriging) model as its surrogate model.
     Appropriate (multi-objective) infills and constraint handling techniques are automatically selected.
@@ -77,7 +78,7 @@ def get_arch_sbo_gp(problem: ArchOptProblemBase, init_size: int = 100, n_paralle
 
 def get_sbo(surrogate_model, infill: 'SurrogateInfill', infill_size: int = 1, init_size: int = 100,
             infill_pop_size: int = 100, infill_gens: int = 100, repair=None, normalization=None,
-            hc_strategy: 'HiddenConstraintStrategy' = None, results_folder=None, **kwargs):
+            hc_strategy: 'HiddenConstraintStrategy' = None, results_folder=None, **kwargs) -> InfillAlgorithm:
     """Create the SBO algorithm given some SMT surrogate model and an infill criterion"""
 
     sbo = SBOInfill(surrogate_model, infill, pop_size=infill_pop_size, termination=infill_gens, repair=repair,

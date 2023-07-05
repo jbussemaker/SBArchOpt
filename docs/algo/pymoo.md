@@ -1,6 +1,6 @@
 ![pymoo Logo](https://github.com/anyoptimization/pymoo-data/blob/main/logo.png?raw=true)
 
-# SBArchOpt Interface to pymoo
+# pymoo
 
 [pymoo](https://pymoo.org/) is a multi-objective optimization framework that supports mixed-discrete problem
 definitions. It includes many test problems and algorithms, mostly evolutionary algorithms such as a Genetic Algorithm
@@ -13,6 +13,8 @@ The architecture optimization problem base class is based on pymoo.
 No further actions required.
 
 ## Usage
+
+[API Reference](../api/pymoo.md)
 
 Since the problem definition is based on pymoo, pymoo algorithms work out-of-the-box. However, their effectiveness can
 be improved by provisioning them with architecture optimization repair operators and repaired sampling strategies.
@@ -52,7 +54,8 @@ be recovered.
 ```python
 from pymoo.optimize import minimize
 from pymoo.algorithms.soo.nonconvex.ga import GA
-from sb_arch_opt.algo.pymoo_interface import provision_pymoo, initialize_from_previous_results
+from sb_arch_opt.algo.pymoo_interface import provision_pymoo, \
+    initialize_from_previous_results
 
 problem = ...  # Subclass of ArchOptProblemBase
 
@@ -71,7 +74,8 @@ result = minimize(problem, ga_algorithm, termination=('n_gen', 10))
 For running large DOE's with intermediate results storage, you can use `get_doe_algo`:
 
 ```python
-from sb_arch_opt.algo.pymoo_interface import get_doe_algo, load_from_previous_results
+from sb_arch_opt.algo.pymoo_interface import get_doe_algo, \
+    load_from_previous_results
 
 problem = ...  # Subclass of ArchOptProblemBase
 results_folder_path = 'path/to/results/folder'

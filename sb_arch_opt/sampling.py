@@ -201,7 +201,11 @@ class HierarchicalSampling(FloatRandomSampling):
         x_sampled, _ = self.sample_get_x(problem, n_samples)
         return x_sampled
 
-    def sample_get_x(self, problem, n_samples):
+    def sample_get_x(self, problem: ArchOptProblemBase, n_samples: int) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Sample design points using the hierarchical sampling algorithm and return is_active information.
+        """
+
         # Get Cartesian product of all discrete design variables (only available if design space is not too large)
         x, is_active = self.get_hierarchical_cartesian_product(problem, self._repair)
 

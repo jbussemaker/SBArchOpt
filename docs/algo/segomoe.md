@@ -1,4 +1,4 @@
-# SBArchOpt Interface to SEGOMOE: Super Efficient Global Optimization with Mixture of Experts
+# SEGOMOE: Super Efficient Global Optimization with Mixture of Experts
 
 SEGOMOE is a Bayesian optimization toolbox developed by ONERA and ISAE-SUPAERO. For more information refer to:
 
@@ -19,6 +19,8 @@ SEGOMOE is not openly available.
 
 ## Usage
 
+[API Reference](../api/segomoe.md)
+
 SEGOMOE is interacted with through the `SEGOMOEInterface` class. This class has a state containing evaluated (and
 failed) points, and requires a directory for results storage. The `run_optimization` function can be used to
 run the DOE and infill search.
@@ -31,17 +33,19 @@ problem = ...  # Subclass of ArchOptProblemBase
 # Define folder to store results in
 results_folder = ...
 
-# Use Mixture of Experts: automatically identifies clusters in the design space with different best surrogates
-# ("experts"). Can be more accurate, however also greatly increases the cost of finding new infill points.
+# Use Mixture of Experts: automatically identifies clusters in the design space
+# with different best surrogates ("experts"). Can be more accurate, however
+# also greatly increases the cost of finding new infill points.
 use_moe = True
 
 # Options passed to the Sego class and to model generation, respectively
 sego_options = {}
 model_options = {}
 
-# Get the interface (automatically initialized if the results folder already contains results)
-interface = SEGOMOEInterface(problem, results_folder, n_init=100, n_infill=50, use_moe=use_moe,
-                             sego_options=sego_options, model_options=model_options)
+# Get the interface (will be initialized if the results folder has results)
+interface = SEGOMOEInterface(problem, results_folder, n_init=100, n_infill=50,
+                             use_moe=use_moe, sego_options=sego_options,
+                             model_options=model_options)
 
 # Initialize from other results if you want
 interface.initialize_from_previous('path/to/other/results_folder')
@@ -54,5 +58,5 @@ x_failed = interface.x_failed  # (n_failed, nx)
 f = interface.f  # (n, nf)
 g = interface.g  # (n, ng)
 pop = interface.pop  # Population containing all design points
-opt = interface.opt  # Population containing optimal points (Pareto front if multi-objective)
+opt = interface.opt  # Population containing optimal point(s)
 ```

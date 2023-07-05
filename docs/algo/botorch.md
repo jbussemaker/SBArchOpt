@@ -1,6 +1,6 @@
 ![BoTorch Logo](https://github.com/pytorch/botorch/raw/main/botorch_logo_lockup.png)
 
-# SBArchOpt Interface to BoTorch: Bayesian Optimization with PyTorch
+# BoTorch: Bayesian Optimization with PyTorch
 
 [BoTorch](https://botorch.org/) is a Bayesian optimization framework written on top of the [PyTorch](https://pytorch.org/)
 machine learning library. More information:
@@ -16,6 +16,8 @@ pip install sb-arch-opt[botorch]
 ```
 
 ## Usage
+
+[API Reference](../api/botorch.md)
 
 The `get_botorch_interface` function can be used to get an interface object that can be used to create an
 `OptimizationLoop` instance, with correctly configured search space, optimization configuration, and evaluation

@@ -36,6 +36,7 @@ class ArchDesignSpace:
     """
     Base class for a hierarchical architecture design space definition. The basic information optimization algorithms
     need from a design space is as follows:
+
     - Design variable definition: types, bounds, options
     - Some way to exhaustively sample all discrete design vectors (aka full factorial; grid)
     - Activeness information: for a given matrix of design vectors, a boolean matrix specifying which vars are active
@@ -44,6 +45,7 @@ class ArchDesignSpace:
     - Optionally calculate the design of the design space: number of valid discrete design vectors
 
     Design variable terminology:
+
     - Continuous: any value between some lower and upper bound (inclusive)
       --> for example [0, 1]: 0, 0.25, .667, 1
     - Discrete: integer or categorical

@@ -37,12 +37,14 @@ __all__ = ['ArchOptProblemBase', 'ArchOptRepair', 'ArchDesignSpace']
 class ArchOptProblemBase(Problem):
     """
     Base class for an architecture optimization problem, featuring:
+
     - Mixed-discrete design variable definitions
     - Function for imputing a design vector and requesting the activeness vector (specifying which variables were active
       for the imputed design vector)
     - Interface to get a repair operator to implement design vector imputation
 
     Design variable terminology:
+
     - Continuous: any value between some lower and upper bound (inclusive)
       --> for example [0, 1]: 0, 0.25, .667, 1
     - Discrete: integer or categorical
@@ -110,6 +112,7 @@ class ArchOptProblemBase(Problem):
 
     @property
     def is_conditionally_active(self):
+        """Boolean mask specifying for each design variable whether it is conditionally active or not"""
         return self.design_space.is_conditionally_active
 
     def get_categorical_values(self, x: np.ndarray, i_dv) -> np.ndarray:

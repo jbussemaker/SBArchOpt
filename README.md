@@ -6,7 +6,7 @@
 [![status](https://joss.theoj.org/papers/0b2b765c04d31a4cead77140f82ecba0/status.svg)](https://joss.theoj.org/papers/0b2b765c04d31a4cead77140f82ecba0)
 
 [GitHub Repository](https://github.com/jbussemaker/SBArchOpt) |
-[Documentation](https://github.com/jbussemaker/SBArchOpt/blob/main/docs/readme.md)
+[Documentation](https://sb-arch-opt.readthedocs.io/)
 
 SBArchOpt (es-bee-ARK-opt) provides a set of classes and interfaces for applying Surrogate-Based Optimization (SBO)
 for system architecture optimization problems:
@@ -47,29 +47,10 @@ pip install sb-arch-opt
 Note: there are optional dependencies for the connected optimization frameworks and test problems.
 Refer to their documentation for dedicated installation instructions.
 
-### Quick Start
-
-Have a look at the [tutorial notebook](https://github.com/jbussemaker/SBArchOpt/blob/main/docs/tutorial.ipynb) for a simple example.
-
 ## Documentation
 
-Refer to the [documentation](https://github.com/jbussemaker/SBArchOpt/blob/main/docs/readme.md) for more background on SBArchOpt
+Refer to the [documentation](https://sb-arch-opt.readthedocs.io/) for more background on SBArchOpt
 and how to implement architecture optimization problems.
-Test problem documentation can be found here: [test problems](https://github.com/jbussemaker/SBArchOpt/blob/main/docs/test_problems.md)
-
-Optimization framework documentation:
-- [pymoo](https://github.com/jbussemaker/SBArchOpt/blob/main/docs/algo_pymoo.md)
-- [ArchSBO](https://github.com/jbussemaker/SBArchOpt/blob/main/docs/algo_arch_sbo.md)
-- [BoTorch (Ax)](https://github.com/jbussemaker/SBArchOpt/blob/main/docs/algo_botorch.md)
-- [Trieste](https://github.com/jbussemaker/SBArchOpt/blob/main/docs/algo_trieste.md)
-- [HEBO](https://github.com/jbussemaker/SBArchOpt/blob/main/docs/algo_hebo.md)
-- [TPE](https://github.com/jbussemaker/SBArchOpt/blob/main/docs/algo_tpe.md)
-- [SEGOMOE](https://github.com/jbussemaker/SBArchOpt/blob/main/docs/algo_segomoe.md)
-- [SMARTy](https://github.com/jbussemaker/SBArchOpt/blob/main/docs/algo_smarty.md)
-
-See also the tutorials:
-- [SBArchOpt Tutorial](https://github.com/jbussemaker/SBArchOpt/blob/main/docs/tutorial.ipynb): optimization, implementing new problems
-- [Tunable Hierarchical Meta Problem Tutorial](https://github.com/jbussemaker/SBArchOpt/blob/main/docs/tutorial_tunable_meta_problem.ipynb)
 
 ## Contributing
 
@@ -86,3 +67,13 @@ Contributions are appreciated too:
 - Read and sign the [Contributor License Agreement (CLA)](https://github.com/jbussemaker/SBArchOpt/blob/main/SBArchOpt%20DLR%20Individual%20Contributor%20License%20Agreement.docx)
   , and send it to the project coordinator
 - Issue a pull request
+
+### Adding Documentation
+
+```
+pip install -r requirements-docs.txt
+mkdocs serve
+```
+
+Refer to [mkdocs](https://www.mkdocs.org/) and [mkdocstrings](https://mkdocstrings.github.io/) documentation
+for more information.

@@ -126,6 +126,7 @@ An overview of available test problems in `sb_arch_opt.problems` (* = recommende
 | `AssignmentGNC`                   | 27      |        | 2     |       | Y   |     | Y   | Y    |     | 79091323      | 367       | `assignment` |                                  |
 
 Nomenclature:
+
 - n_discr: number of discrete (integer or categorical) design variables
 - n_cont: number of continuous design variables
 - n_obj: number of objectives
@@ -152,6 +153,7 @@ be used to turn any non-hierarchical problem into a hierarchical problem with sp
 useful to drive further research into hierarchical optimization.
 
 Assuming a non-hierarchical underlying test problem, the following behavioral parameters can be selected:
+
 - *Discrete imputation ratio*: the ratio between number of declared and valid design vectors; a value of 1 indicates no
   hierarchy, higher values indicate more difficult hierarchical problems
 - *Max rate diversity*: difference between least and most occurring design variable value; higher values indicate

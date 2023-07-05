@@ -1,6 +1,6 @@
 ![BoTorch Logo](https://hebo.readthedocs.io/en/latest/_static/hebo.png)
 
-# SBArchOpt Interface to HEBO: Heteroscedastic Evolutionary Bayesian Optimization
+# HEBO: Heteroscedastic Evolutionary Bayesian Optimization
 
 [HEBO](https://hebo.readthedocs.io/en/) is a Bayesian optimization algorithm developed by Huawei Noah's Ark lab.
 It supports mixed-discrete parameter and several types of underlying probabilistic models.
@@ -16,6 +16,8 @@ pip install -r requirements-hebo.txt
 ```
 
 ## Usage
+
+[API Reference](../api/hebo.md)
 
 The `get_hebo_optimizer` function can be used to get an interface object for running the optimization.
 The `hebo` object also has an ask-tell interface if needed.

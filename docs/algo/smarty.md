@@ -1,16 +1,18 @@
-# SBArchOpt Interface to SMARTy: Surrogate Modeling for Aero-Data Toolbox
+# SMARTy: Surrogate Modeling for Aero-Data Toolbox
 
 SMARTy is a surrogate modeling toolbox with optimization capabilities developed by the DLR. For more information refer to:
 
 Bekemeyer, P., Bertram, A., Hines Chaves, D.A., Dias Ribeiro, M., Garbo, A., Kiener, A., Sabater, C., Stradtner, M.,
 Wassing, S., Widhalm, M. and Goertz, S., 2022. Data-Driven Aerodynamic Modeling Using the DLR SMARTy Toolbox.
-In AIAA Aviation 2022 Forum (p. 3899). https://arc.aiaa.org/doi/abs/10.2514/6.2022-3899
+In AIAA Aviation 2022 Forum (p. 3899). DOI: [10.2514/6.2022-3899](https://arc.aiaa.org/doi/abs/10.2514/6.2022-3899)
 
 ## Installation
 
 SMARTy is not openly available.
 
 ## Usage
+
+[API Reference](../api/smarty.md)
 
 The `get_smarty_optimizer` function can be used to get an interface object for running the optimization.
 

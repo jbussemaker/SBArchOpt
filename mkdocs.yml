@@ -1,0 +1,54 @@
+site_name: SBArchOpt
+site_url: https://sb-arch-opt.readthedocs.io/
+repo_url: https://github.com/jbussemaker/SBArchOpt
+docs_dir: docs
+theme:
+  name: material
+  features:
+    - navigation.tabs
+
+nav:
+  - 'Overview': index.md
+  - Optimization:
+    - 'pymoo': 'algo/pymoo.md'
+    - 'ArchSBO': 'algo/arch_sbo.md'
+    - 'BoTorch (Ax)': 'algo/botorch.md'
+    - 'Trieste': 'algo/trieste.md'
+    - 'HEBO': 'algo/hebo.md'
+    - 'SEGOMOE': 'algo/segomoe.md'
+    - 'SMARTy': 'algo/smarty.md'
+  - Tutorials:
+      - SBArchOpt: tutorial.ipynb
+      - 'Tunable Hierarchical Meta Problem': tutorial_tunable_meta_problem.ipynb
+  - 'Test Problems': 'test_problems.md'
+  - API Reference:
+    - Problem Definition: 'api/problem.md'
+    - pymoo: 'api/pymoo.md'
+    - ArchSBO: 'api/arch_sbo.md'
+    - 'BoTorch (Ax)': 'api/botorch.md'
+    - 'Trieste': 'api/trieste.md'
+    - 'HEBO': 'api/hebo.md'
+    - 'SEGOMOE': 'api/segomoe.md'
+    - 'SMARTy': 'api/smarty.md'
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+
+plugins:
+  - mkdocs-jupyter
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            allow_inspection: true
+            show_root_heading: true
+            show_source: false
+            show_bases: false
+            show_signature_annotations: true
+            merge_init_into_class: true
