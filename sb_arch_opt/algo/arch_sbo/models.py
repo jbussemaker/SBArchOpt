@@ -35,6 +35,7 @@ from sb_arch_opt.sampling import HierarchicalSampling
 from pymoo.util.normalization import Normalization, SimpleZeroToOneNormalization
 
 try:
+    # TODO
     os.environ['USE_NUMBA_JIT'] = '1'
     from smt.surrogate_models.rbf import RBF
     from smt.surrogate_models.surrogate_model import SurrogateModel
@@ -121,10 +122,10 @@ class ModelFactory:
         return self.create_smt_design_space_spec(self.problem.design_space)
 
     @staticmethod
-    def create_smt_design_space_spec(arch_design_space: ArchDesignSpace, md_normalize=False):
+    def create_smt_design_space_spec(arch_design_space: ArchDesignSpace, md_normalize=False, cont_relax=False):
         check_dependencies()
 
-        design_space = SBArchOptDesignSpace(arch_design_space, md_normalize=md_normalize)
+        design_space = SBArchOptDesignSpace(arch_design_space, md_normalize=md_normalize, cont_relax=cont_relax)
         is_mixed_discrete = not np.all(arch_design_space.is_cont_mask)
 
         var_defs = [{'name': f'x{i}', 'lb': bounds[0], 'ub': bounds[1]}
@@ -177,9 +178,10 @@ class ModelFactory:
         kwargs.update(kwargs_)
 
         if kpls_n_comp is not None:
+            cr_ds_spec = self.create_smt_design_space_spec(
+                self.problem.design_space, md_normalize=True, cont_relax=True)
+            kwargs['design_space'] = cr_ds_spec.design_space
             surrogate = KPLS(n_comp=kpls_n_comp, **kwargs)
-            if norm_ds_spec.is_mixed_discrete:
-                surrogate = MixedIntegerKrigingModel(surrogate)
         else:
             surrogate = KRG(**kwargs)
 
@@ -192,9 +194,12 @@ class ModelFactory:
 class SBArchOptDesignSpace(BaseDesignSpace):
     """SMT design space implementation using SBArchOpt's design space logic"""
 
-    def __init__(self, arch_design_space: ArchDesignSpace, md_normalize=False):
+    _global_disable_hierarchical_cat_fix = False
+
+    def __init__(self, arch_design_space: ArchDesignSpace, md_normalize=False, cont_relax=False):
         self._ds = arch_design_space
         self.normalize = MixedDiscreteNormalization(arch_design_space) if md_normalize else None
+        self._cont_relax = cont_relax
         super().__init__()
 
     @property
@@ -206,6 +211,7 @@ class SBArchOptDesignSpace(BaseDesignSpace):
         smt_des_vars = []
         is_conditional = self._ds.is_conditionally_active
         normalize = self.normalize is not None
+        cont_relax = self._cont_relax
         for i, dv in enumerate(self._ds.des_vars):
             if isinstance(dv, var.Real):
                 bounds = (0, 1) if normalize else dv.bounds
@@ -213,17 +219,26 @@ class SBArchOptDesignSpace(BaseDesignSpace):
 
             elif isinstance(dv, var.Integer):
                 bounds = (0, dv.bounds[1]-dv.bounds[0]) if normalize else dv.bounds
-                smt_des_vars.append(ds.IntegerVariable(bounds[0], bounds[1]))
+                if cont_relax:
+                    smt_des_vars.append(ds.FloatVariable(bounds[0], bounds[1]))
+                else:
+                    smt_des_vars.append(ds.IntegerVariable(bounds[0], bounds[1]))
 
             elif isinstance(dv, var.Binary):
-                smt_des_vars.append(ds.OrdinalVariable(values=[0, 1]))
+                if cont_relax:
+                    smt_des_vars.append(ds.FloatVariable(0, 1))
+                else:
+                    smt_des_vars.append(ds.OrdinalVariable(values=[0, 1]))
 
             elif isinstance(dv, var.Choice):
-                # Conditional categorical variables are currently not supported
-                if is_conditional[i]:
-                    smt_des_vars.append(ds.IntegerVariable(0, len(dv.options)-1))
+                if cont_relax:
+                    smt_des_vars.append(ds.FloatVariable(0, len(dv.options)-1))
                 else:
-                    smt_des_vars.append(ds.CategoricalVariable(values=dv.options))
+                    # Conditional categorical variables are currently not supported
+                    if is_conditional[i] and not self._global_disable_hierarchical_cat_fix:
+                        smt_des_vars.append(ds.IntegerVariable(0, len(dv.options)-1))
+                    else:
+                        smt_des_vars.append(ds.CategoricalVariable(values=dv.options))
 
             else:
                 raise ValueError(f'Unexpected variable type: {dv!r}')

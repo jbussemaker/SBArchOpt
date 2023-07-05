@@ -2,12 +2,16 @@ import os
 import pytest
 import tempfile
 import numpy as np
+import contextlib
 from typing import Tuple
 from sb_arch_opt.problem import *
 from sb_arch_opt.sampling import *
 from pymoo.core.variable import Real, Integer, Choice
 from sb_arch_opt.problems.md_mo import *
+from sb_arch_opt.problems.discrete import *
+from sb_arch_opt.problems.continuous import *
 from sb_arch_opt.problems.constrained import *
+from sb_arch_opt.problems.hierarchical import *
 from sb_arch_opt.problems.hidden_constraints import *
 from sb_arch_opt.tests.algo.test_pymoo import CrashingProblem
 from sb_arch_opt.algo.pymoo_interface import load_from_previous_results
@@ -19,6 +23,13 @@ from sb_arch_opt.algo.arch_sbo.algo import *
 from sb_arch_opt.algo.arch_sbo.infill import *
 from sb_arch_opt.algo.arch_sbo.models import *
 from sb_arch_opt.algo.arch_sbo.hc_strategy import *
+
+try:
+    from smt.surrogate_models.krg import KRG
+    from smt.surrogate_models.kpls import KPLS
+    from smt.surrogate_models.krg_based import MixIntKernelType, MixHrcKernelType
+except ImportError:
+    pass
 
 check_dependency = lambda: pytest.mark.skipif(not HAS_ARCH_SBO, reason='ArchSBO dependencies not installed')
 
@@ -117,6 +128,16 @@ def test_arch_sbo_gp(problem: ArchOptProblemBase):
     assert n_batch == 1
 
     sbo = get_arch_sbo_gp(problem, init_size=10)
+    result = minimize(problem, sbo, termination=('n_eval', 12))
+    assert len(result.pop) == 12
+
+
+@check_dependency()
+def test_arch_sbo_gp_pls():
+    assert HAS_ARCH_SBO
+
+    problem = HierarchicalGoldstein()
+    sbo = get_arch_sbo_gp(problem, init_size=10, kpls_n_dim=3)
     result = minimize(problem, sbo, termination=('n_eval', 12))
     assert len(result.pop) == 12
 
@@ -279,3 +300,88 @@ def test_md_normalization():
 
     x_abs = md_norm.backward(x_norm)
     assert np.all(x == x_abs)
+
+
+@contextlib.contextmanager
+def disable_int_fix():
+    SBArchOptDesignSpace._global_disable_hierarchical_cat_fix = True
+    yield
+    SBArchOptDesignSpace._global_disable_hierarchical_cat_fix = False
+
+
+@check_dependency()
+def test_smt_krg_features():
+    n_pls = 2
+    kwargs = dict(
+        categorical_kernel=MixIntKernelType.EXP_HOMO_HSPHERE,
+        hierarchical_kernel=MixHrcKernelType.ALG_KERNEL,
+    )
+
+    def _try_model(problem: ArchOptProblemBase, pls: bool = False, cont_relax: bool = False, throws_error=False):
+        model_factory = ModelFactory(problem)
+        normalization = model_factory.get_md_normalization()
+        ds = model_factory.problem.design_space
+        norm_ds_spec = model_factory.create_smt_design_space_spec(ds, md_normalize=True)
+
+        if cont_relax and norm_ds_spec.is_mixed_discrete:
+            cr_ds_spec = model_factory.create_smt_design_space_spec(ds, md_normalize=True, cont_relax=True)
+            assert cr_ds_spec.design_space.is_all_cont
+            if pls:
+                model = KPLS(n_comp=n_pls, design_space=cr_ds_spec.design_space, **kwargs)
+            else:
+                model = KRG(design_space=cr_ds_spec.design_space, **kwargs)
+        else:
+            if pls:
+                model = KPLS(n_comp=n_pls, design_space=norm_ds_spec.design_space, **kwargs)
+            else:
+                model = KRG(design_space=norm_ds_spec.design_space, **kwargs)
+
+        model = MultiSurrogateModel(model)
+
+        x_train = HierarchicalSampling().do(problem, 50).get('X')
+        y_train = problem.evaluate(x_train, return_as_dictionary=True)['F']
+        x_test = HierarchicalSampling().do(problem, 200).get('X')
+        try:
+            model.set_training_values(normalization.forward(x_train), y_train)
+            model.train()
+            model.predict_values(normalization.forward(x_test))
+            assert not throws_error
+        except (TypeError, ValueError):
+            assert throws_error
+
+    with disable_int_fix():
+        # Continuous
+        _try_model(Rosenbrock(), cont_relax=True)
+        _try_model(Rosenbrock())
+        _try_model(Rosenbrock(), pls=True, cont_relax=True)
+        _try_model(Rosenbrock(), pls=True)
+
+        # Mixed-discrete (integer)
+        _try_model(MDMORosenbrock(), cont_relax=True)
+        _try_model(MDMORosenbrock())
+        _try_model(MDMORosenbrock(), pls=True, cont_relax=True)
+        _try_model(MDMORosenbrock(), pls=True)
+
+        # Mixed-discrete (categorical)
+        _try_model(Halstrup04(), cont_relax=True)
+        _try_model(Halstrup04())
+        _try_model(Halstrup04(), pls=True, cont_relax=True)
+        _try_model(Halstrup04(), pls=True)
+
+        # Hierarchical (continuous conditional vars)
+        _try_model(ZaeffererHierarchical(), cont_relax=True)
+        _try_model(ZaeffererHierarchical())
+        _try_model(ZaeffererHierarchical(), pls=True, cont_relax=True)
+        _try_model(ZaeffererHierarchical(), pls=True)
+
+        # Hierarchical (integer conditional vars)
+        _try_model(NeuralNetwork(), cont_relax=True)
+        _try_model(NeuralNetwork())
+        _try_model(NeuralNetwork(), pls=True, cont_relax=True)
+        _try_model(NeuralNetwork(), pls=True)
+
+        # Hierarchical (categorical conditional vars)
+        _try_model(Jenatton(), cont_relax=True)
+        _try_model(Jenatton(), throws_error=True)
+        _try_model(Jenatton(), pls=True, cont_relax=True)
+        _try_model(Jenatton(), pls=True, throws_error=True)
