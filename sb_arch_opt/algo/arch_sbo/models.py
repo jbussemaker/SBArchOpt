@@ -35,7 +35,6 @@ from sb_arch_opt.sampling import HierarchicalSampling
 from pymoo.util.normalization import Normalization, SimpleZeroToOneNormalization
 
 try:
-    # TODO
     os.environ['USE_NUMBA_JIT'] = '1'
     from smt.surrogate_models.rbf import RBF
     from smt.surrogate_models.surrogate_model import SurrogateModel
@@ -44,7 +43,6 @@ try:
     from smt.surrogate_models.kpls import KPLS
     from smt.surrogate_models.krg_based import MixIntKernelType, MixHrcKernelType
 
-    from smt.applications.mixed_integer import MixedIntegerKrigingModel
     from smt.utils.design_space import BaseDesignSpace
     import smt.utils.design_space as ds
 
