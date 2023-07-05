@@ -50,7 +50,7 @@ An overview of available test problems in `sb_arch_opt.problems` (* = recommende
 | `HierarchicalGoldstein`           | 6       | 5      | 1     | 1     |     | Y   |     | Y    |     | 288           | 2.25      |              |                                  |
 | `MOHierarchicalGoldstein`         | 6       | 5      | 2     | 1     |     | Y   | Y   | Y    |     | 288           | 2.25      |              |                                  |
 | `HierBranin`*                     | 8       | 2      | 1     |       |     | Y   |     | Y    |     | 200           | 3.2       |              |                                  |
-| `HierZDT1Small`*                  | 2       | 2      | 2     |       |     | Y   | Y   | Y    |     | 10            | 1.8       |              |                                  |
+| `HierZDT1Small`*                  | 3       | 3      | 2     |       |     | Y   | Y   | Y    |     | 10            | 1.8       |              |                                  |
 | `HierZDT1`*                       | 8       | 4      | 2     |       |     | Y   | Y   | Y    |     | 200           | 4.9       |              |                                  |
 | `HierZDT1Large`*                  | 9       | 9      | 2     |       |     | Y   | Y   | Y    |     | 2000          | 8.2       |              |                                  |
 | `HierDiscreteZDT1`*               | 8       |        | 2     |       | Y   |     | Y   | Y    |     | 2000          | 4.1       |              |                                  |

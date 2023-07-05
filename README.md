@@ -47,6 +47,10 @@ pip install sb-arch-opt
 Note: there are optional dependencies for the connected optimization frameworks and test problems.
 Refer to their documentation for dedicated installation instructions.
 
+### Quick Start
+
+Have a look at the [tutorial notebook](https://github.com/jbussemaker/SBArchOpt/blob/main/docs/tutorial.ipynb) for a simple example.
+
 ## Documentation
 
 Refer to the [documentation](https://github.com/jbussemaker/SBArchOpt/blob/main/docs/readme.md) for more background on SBArchOpt
