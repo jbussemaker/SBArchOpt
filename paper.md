@@ -85,8 +85,6 @@ The purpose of SBArchOpt is to provide a one-stop solution for solving architect
 
 *SBArchOpt* implements experience with solving architecture optimization problems
 (e.g. [@Bussemaker2021], [@Bussemaker2023]) in an open-source Python library.
-An accompanying publication will be prepared in the near future detailing more about the implemented optimization
-features.
 Target users are systems engineers and researchers in the field of (architecture) optimization.
 
 *SBArchOpt* will be used as the go-to library for solving architecture optimization problems modeled
