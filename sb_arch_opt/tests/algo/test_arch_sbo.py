@@ -187,6 +187,7 @@ def test_store_results_restart(problem: ArchOptProblemBase):
             assert len(result.pop) == 10+(i+1)
 
 
+@check_dependency()
 def test_partial_restart():
     with tempfile.TemporaryDirectory() as tmp_folder:
         for i in range(100):
