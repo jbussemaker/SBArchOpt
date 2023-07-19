@@ -50,11 +50,12 @@ from pymoo.termination.max_gen import MaximumGenerationTermination
 from pymoo.termination.default import DefaultMultiObjectiveTermination, DefaultSingleObjectiveTermination
 from pymoo.optimize import minimize
 
+from sb_arch_opt.algo.arch_sbo.infill import *
+from sb_arch_opt.algo.arch_sbo.models import *
+from sb_arch_opt.algo.arch_sbo.hc_strategy import *
+
 try:
     from smt.surrogate_models.surrogate_model import SurrogateModel
-    from sb_arch_opt.algo.arch_sbo.infill import *
-    from sb_arch_opt.algo.arch_sbo.models import *
-    from sb_arch_opt.algo.arch_sbo.hc_strategy import *
 except ImportError:
     pass
 
