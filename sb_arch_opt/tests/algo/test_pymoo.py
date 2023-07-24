@@ -36,6 +36,16 @@ def test_termination(problem: ArchOptProblemBase):
     assert minimize(problem, nsga2, get_default_termination(problem, tol=1e-4), verbose=True, progress=True)
 
 
+def test_seed(problem: ArchOptProblemBase):
+    nsga2 = get_nsga2(pop_size=100)
+    result1 = minimize(problem, nsga2, termination=('n_gen', 20), seed=42)
+
+    nsga2 = get_nsga2(pop_size=100)
+    result2 = minimize(problem, nsga2, termination=('n_gen', 20), seed=42)
+
+    assert np.all(result1.pop.get('X') == result2.pop.get('X'))
+
+
 def test_failing_evaluations(failing_problem: ArchOptProblemBase):
     nsga2 = get_nsga2(pop_size=100)
     assert minimize(failing_problem, nsga2, termination=('n_gen', 10), verbose=True, progress=True)
@@ -153,6 +163,18 @@ def test_doe_algo(problem: ArchOptProblemBase):
         pop_loaded = load_from_previous_results(problem, tmp_folder)
         assert pop_loaded.get('X').shape == pop.get('X').shape
         assert pop_loaded.get('F').shape == pop.get('F').shape
+
+
+def test_doe_algo_seed(problem: ArchOptProblemBase):
+    x_doe = []
+    for seed in [42, None, 42]:
+        doe_algo = get_doe_algo(doe_size=100)
+        doe_algo.setup(problem, seed=seed)
+        doe_algo.run()
+        x_doe.append(doe_algo.pop.get('X'))
+
+    assert np.any(x_doe[0] != x_doe[1])
+    assert np.all(x_doe[0] == x_doe[2])
 
 
 class CrashingProblem(DummyResultSavingProblem):

@@ -56,12 +56,16 @@ class HEBOArchOptInterface:
     Interface class to HEBO algorithm.
     """
 
-    def __init__(self, problem: ArchOptProblemBase, n_init: int):
+    def __init__(self, problem: ArchOptProblemBase, n_init: int, seed: int = None):
         check_dependencies()
         self._problem = problem
         self._n_init = n_init
         self._optimizer = None
         self._design_space = None
+
+        self._seed = seed
+        if seed is not None:
+            np.random.seed(seed)
 
     @property
     def problem(self):
@@ -101,7 +105,8 @@ class HEBOArchOptInterface:
     def optimizer(self) -> 'AbstractOptimizer':
         if self._optimizer is None:
             if self._problem.n_obj == 1 and self._problem.n_ieq_constr == 0:
-                self._optimizer = HEBO(self.design_space, model_name='gpy', rand_sample=self._n_init)
+                self._optimizer = HEBO(self.design_space, model_name='gpy', rand_sample=self._n_init,
+                                       scramble_seed=self._seed)
             else:
                 self._optimizer = GeneralBO(self.design_space, num_obj=self._problem.n_obj,
                                             num_constr=self._problem.n_ieq_constr, rand_sample=self._n_init,

@@ -288,6 +288,15 @@ def test_sobol_sampling():
     with pytest.raises(ValueError):
         HierarchicalSampling._sobol_choice(10, 5, replace=False)
 
+    np.random.seed(42)
+    i1 = HierarchicalSampling._sobol_choice(5, 100)
+    i2 = HierarchicalSampling._sobol_choice(5, 100)
+    assert np.any(i1 != i2)
+
+    np.random.seed(42)
+    i3 = HierarchicalSampling._sobol_choice(5, 100)
+    assert np.all(i1 == i3)
+
 
 def test_hierarchical_random_sampling(problem: ArchOptProblemBase):
 
@@ -305,6 +314,18 @@ def test_hierarchical_random_sampling(problem: ArchOptProblemBase):
 
         x_imp, _ = problem.correct_x(x)
         assert np.all(x_imp == x)
+
+        np.random.seed(42)
+        x1 = sampling.do(problem, 1000).get('X')
+        x2 = sampling.do(problem, 1000).get('X')
+        assert np.any(x1 != x2)
+
+        np.random.seed(42)
+        x3 = sampling.do(problem, 1000).get('X')
+        assert np.all(x1 == x3)
+
+        x4 = HierarchicalSampling(sobol=sobol, seed=42).do(problem, 1000).get('X')
+        assert np.all(x1 == x4)
 
 
 def test_hierarchical_random_sampling_discrete_hierarchical(discrete_problem: ArchOptProblemBase):
@@ -344,6 +365,15 @@ def test_hierarchical_random_sampling_non_exhaustive(problem: ArchOptProblemBase
 
         x_imp, _ = problem.correct_x(x)
         assert np.all(x_imp == x)
+
+        np.random.seed(42)
+        x1 = sampling.do(problem, 1000).get('X')
+        x2 = sampling.do(problem, 1000).get('X')
+        assert np.any(x1 != x2)
+
+        np.random.seed(42)
+        x3 = sampling.do(problem, 1000).get('X')
+        assert np.all(x1 == x3)
 
     HierarchicalSampling._n_comb_gen_all_max = limit
 

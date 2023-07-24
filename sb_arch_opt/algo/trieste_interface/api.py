@@ -29,9 +29,9 @@ from sb_arch_opt.algo.trieste_interface.algo import *
 __all__ = ['get_trieste_optimizer', 'HAS_TRIESTE']
 
 
-def get_trieste_optimizer(problem: ArchOptProblemBase, n_init: int, n_infill: int, pof: float = .5):
+def get_trieste_optimizer(problem: ArchOptProblemBase, n_init: int, n_infill: int, pof: float = .5, seed: int = None):
     """
     Gets the main interface to Trieste. Use the `run_optimization` method to run the DOE and infill loops.
     """
     check_dependencies()
-    return ArchOptBayesianOptimizer(problem, n_init, n_infill, pof=pof)
+    return ArchOptBayesianOptimizer(problem, n_init, n_infill, pof=pof, seed=seed)

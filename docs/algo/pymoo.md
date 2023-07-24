@@ -28,7 +28,7 @@ problem = ...  # Subclass of ArchOptProblemBase
 
 ga_algorithm = GA(pop_size=100)
 provision_pymoo(ga_algorithm)  # See intermediate results storage below
-result = minimize(problem, ga_algorithm, termination=('n_gen', 10))
+result = minimize(problem, ga_algorithm, termination=('n_gen', 10), seed=42)  # Remove seed when using in production!
 ```
 
 Or to simply get a ready-to-use NSGA2:
@@ -82,7 +82,7 @@ results_folder_path = 'path/to/results/folder'
 
 # Get DOE algorithm and run
 doe_algo = get_doe_algo(doe_size=100, results_folder=results_folder_path)
-doe_algo.setup(problem)
+doe_algo.setup(problem, seed=42)  # Remove seed argument when using in production!
 doe_algo.run()
 
 # Evaluate the sampled points

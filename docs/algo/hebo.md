@@ -28,7 +28,7 @@ from sb_arch_opt.algo.hebo_interface import get_hebo_optimizer
 problem = ...  # Subclass of ArchOptProblemBase
 
 # Get the interface and optimization loop
-hebo = get_hebo_optimizer(problem, n_init=100)
+hebo = get_hebo_optimizer(problem, n_init=100, seed=42)
 
 # Run the optimization loop
 hebo.optimize(n_infill=50)

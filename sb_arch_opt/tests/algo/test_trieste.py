@@ -19,7 +19,7 @@ def test_search_space(problem: ArchOptProblemBase):
 def test_simple(problem: ArchOptProblemBase):
     assert HAS_TRIESTE
 
-    opt = get_trieste_optimizer(problem, n_init=10, n_infill=1)
+    opt = get_trieste_optimizer(problem, n_init=10, n_infill=1, seed=42)
     assert repr(opt)
     result = opt.run_optimization()
 

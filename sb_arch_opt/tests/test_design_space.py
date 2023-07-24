@@ -133,6 +133,7 @@ def test_x_generation(problem: ArchOptProblemBase, discrete_problem: ArchOptProb
         assert np.all(x_discrete_trial == x_discrete)
         assert np.all(is_active_discrete == is_act_trail)
 
+        np.random.seed(None)
         for _ in range(10):
             x_sampled, is_act_sampled = ds.quick_sample_discrete_x(20)
             assert x_sampled.shape == (20, ds.n_var)
@@ -141,3 +142,12 @@ def test_x_generation(problem: ArchOptProblemBase, discrete_problem: ArchOptProb
             x_sampled_, is_act_sampled_ = ds.correct_x(x_sampled)
             assert np.all(x_sampled_ == x_sampled)
             assert np.all(is_act_sampled_ == is_act_sampled)
+
+        np.random.seed(42)
+        x1, _ = ds.quick_sample_discrete_x(20)
+        x2, _ = ds.quick_sample_discrete_x(20)
+        assert np.any(x1 != x2)
+
+        np.random.seed(42)
+        x3, _ = ds.quick_sample_discrete_x(20)
+        assert np.all(x1 == x3)

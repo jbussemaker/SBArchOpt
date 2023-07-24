@@ -122,6 +122,15 @@ def test_discrete_x():
     assert is_active.shape == x.shape
     assert np.all(is_active)
 
+    np.random.seed(42)
+    x1, _ = ds.quick_sample_discrete_x(20)
+    x2, _ = ds.quick_sample_discrete_x(20)
+    assert np.any(x1 != x2)
+
+    np.random.seed(42)
+    x3, _ = ds.quick_sample_discrete_x(20)
+    assert np.all(x1 == x3)
+
 
 def test_hierarchy():
     ds = ExplicitArchDesignSpace([

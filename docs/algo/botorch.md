@@ -33,7 +33,7 @@ problem = ...  # Subclass of ArchOptProblemBase
 
 # Get the interface and optimization loop
 interface = get_botorch_interface(problem)
-opt_loop = interface.get_optimization_loop(n_init=100, n_infill=50)
+opt_loop = interface.get_optimization_loop(n_init=100, n_infill=50, seed=42)
 
 # Run the optimization loop until completion
 opt_loop.full_run()

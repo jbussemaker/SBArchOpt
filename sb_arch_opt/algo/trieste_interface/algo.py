@@ -93,7 +93,7 @@ class ArchOptBayesianOptimizer(BayesianOptimizer):
     """
 
     def __init__(self, problem: ArchOptProblemBase, n_init: int, n_infill: int, pof=.5,
-                 rule: 'AcquisitionRule' = None):
+                 rule: 'AcquisitionRule' = None, seed: int = None):
         check_dependencies()
         self._problem = problem
         self.pof = pof
@@ -110,6 +110,10 @@ class ArchOptBayesianOptimizer(BayesianOptimizer):
         self._datasets = None
         self._models = None
         self._state = None
+
+        if seed is not None:
+            np.random.seed(seed)
+            tf.random.set_seed(seed)
 
     @property
     def search_space(self):

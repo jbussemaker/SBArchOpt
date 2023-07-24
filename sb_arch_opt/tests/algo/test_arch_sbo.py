@@ -44,6 +44,16 @@ def test_arch_sbo_rbf(problem: ArchOptProblemBase):
 
 
 @check_dependency()
+def test_arch_sbo_rbf_seed(problem: ArchOptProblemBase):
+    result = minimize(problem, get_arch_sbo_rbf(init_size=10), termination=('n_eval', 12), seed=42)
+    x1 = result.pop.get('X')
+
+    result = minimize(problem, get_arch_sbo_rbf(init_size=10), termination=('n_eval', 12), seed=42)
+    x2 = result.pop.get('X')
+    assert np.all(x1 == x2)
+
+
+@check_dependency()
 def test_arch_sbo_rbf_termination(problem: ArchOptProblemBase):
     assert HAS_ARCH_SBO
 
@@ -130,6 +140,16 @@ def test_arch_sbo_gp(problem: ArchOptProblemBase):
     sbo = get_arch_sbo_gp(problem, init_size=10)
     result = minimize(problem, sbo, termination=('n_eval', 11))
     assert len(result.pop) == 11
+
+
+@check_dependency()
+def test_arch_sbo_gp_seed(problem: ArchOptProblemBase):
+    result = minimize(problem, get_arch_sbo_gp(problem, init_size=10), termination=('n_eval', 11), seed=42)
+    x1 = result.pop.get('X')
+
+    result = minimize(problem, get_arch_sbo_gp(problem, init_size=10), termination=('n_eval', 11), seed=42)
+    x2 = result.pop.get('X')
+    assert np.all(x1 == x2)
 
 
 @check_dependency()

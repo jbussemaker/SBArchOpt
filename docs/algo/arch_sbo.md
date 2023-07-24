@@ -45,5 +45,5 @@ gp_arch_sbo_algo.initialize_from_previous_results(problem, results_folder_path)
 
 n_infill = 10
 result = minimize(problem, gp_arch_sbo_algo,
-                  termination=('n_eval', n_init + n_infill))
+                  termination=('n_eval', n_init + n_infill), seed=42)  # Remove seed in production
 ```

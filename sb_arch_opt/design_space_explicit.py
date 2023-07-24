@@ -25,6 +25,7 @@ SOFTWARE.
 import numpy as np
 from typing import *
 from sb_arch_opt.design_space import ArchDesignSpace
+from sb_arch_opt.util import get_np_random_singleton
 from pymoo.core.variable import Variable, Real, Integer, Choice
 
 from ConfigSpace.util import generate_grid, get_random_neighbor
@@ -432,6 +433,12 @@ class ExplicitArchDesignSpace(ArchDesignSpace):
 
 class NoDefaultConfigurationSpace(ConfigurationSpace):
     """ConfigurationSpace that supports no default configuration"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if kwargs.get('seed') is None:
+            self.random = get_np_random_singleton()
 
     def get_default_configuration(self, *args, **kwargs):
         raise NotImplementedError

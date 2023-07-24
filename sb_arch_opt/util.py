@@ -38,3 +38,8 @@ def capture_log(level='INFO'):
             },
         },
     })
+
+
+def get_np_random_singleton():
+    from scipy._lib._util import check_random_state
+    return check_random_state(seed=None)

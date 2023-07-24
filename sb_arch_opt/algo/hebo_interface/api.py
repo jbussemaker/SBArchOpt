@@ -29,9 +29,9 @@ from sb_arch_opt.algo.hebo_interface.algo import *
 __all__ = ['get_hebo_optimizer', 'HAS_HEBO']
 
 
-def get_hebo_optimizer(problem: ArchOptProblemBase, n_init: int):
+def get_hebo_optimizer(problem: ArchOptProblemBase, n_init: int, seed: int = None):
     """
     Gets the main interface to HEBO. Use the `optimize` method to run the DOE and infill loops.
     """
     check_dependencies()
-    return HEBOArchOptInterface(problem, n_init)
+    return HEBOArchOptInterface(problem, n_init, seed=seed)

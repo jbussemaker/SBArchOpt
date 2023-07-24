@@ -14,7 +14,7 @@ check_dependency = lambda: pytest.mark.skipif(not HAS_BOTORCH, reason='BoTorch/A
 @check_dependency()
 def test_simple(problem: ArchOptProblemBase):
     interface = get_botorch_interface(problem)
-    opt = interface.get_optimization_loop(n_init=10, n_infill=1)
+    opt = interface.get_optimization_loop(n_init=10, n_infill=1, seed=42)
     opt.full_run()
 
     pop = interface.get_population(opt)

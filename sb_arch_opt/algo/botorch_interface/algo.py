@@ -62,7 +62,7 @@ class AxInterface:
         check_dependencies()
         self._problem = problem
 
-    def get_optimization_loop(self, n_init: int, n_infill: int) -> 'OptimizationLoop':
+    def get_optimization_loop(self, n_init: int, n_infill: int, seed: int = None) -> 'OptimizationLoop':
         experiment = self.get_experiment()
         n_eval_total = n_init+n_infill
         generation_strategy = choose_generation_strategy(
@@ -78,6 +78,7 @@ class AxInterface:
             evaluation_function=self.evaluate,
             total_trials=n_eval_total,
             generation_strategy=generation_strategy,
+            random_seed=seed,
         )
 
     def get_search_space(self) -> 'SearchSpace':

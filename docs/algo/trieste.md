@@ -33,7 +33,7 @@ from sb_arch_opt.algo.trieste_interface import get_trieste_optimizer
 problem = ...  # Subclass of ArchOptProblemBase
 
 # Get the interface and optimization loop
-optimizer = get_trieste_optimizer(problem, n_init=100, n_infill=50)
+optimizer = get_trieste_optimizer(problem, n_init=100, n_infill=50, seed=42)
 
 # Start from previous results (skipped if no previous results are available)
 results_folder_path = 'path/to/results/folder'

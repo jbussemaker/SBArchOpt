@@ -39,6 +39,7 @@ from pymoo.core.duplicate import DefaultDuplicateElimination
 from pymoo.operators.sampling.lhs import sampling_lhs_unit
 
 from sb_arch_opt.problem import ArchOptProblemBase, ArchOptRepair
+from sb_arch_opt.util import get_np_random_singleton
 
 __all__ = ['HierarchicalExhaustiveSampling', 'HierarchicalSampling',
            'get_init_sampler', 'LargeDuplicateElimination', 'TrailRepairWarning']
@@ -189,13 +190,17 @@ class HierarchicalSampling(FloatRandomSampling):
 
     _n_comb_gen_all_max = 100e3
 
-    def __init__(self, repair: Repair = None, sobol=True):
+    def __init__(self, repair: Repair = None, sobol=True, seed=None):
         if repair is None:
             repair = ArchOptRepair()
         self._repair = repair
         self.sobol = sobol
         self.n_iter = 10
         super().__init__()
+
+        # Simply set the seed on the global numpy instance
+        if seed is not None:
+            np.random.seed(seed)
 
     def _do(self, problem, n_samples, **kwargs):
         x_sampled, _ = self.sample_get_x(problem, n_samples)
@@ -423,7 +428,8 @@ class HierarchicalSampling(FloatRandomSampling):
         pow2 = int(np.ceil(np.log2(n_samples)))
 
         # Sample points and only return the amount needed
-        x = Sobol(d=n_dims or 1).random_base2(m=pow2)
+        global_rng = get_np_random_singleton()
+        x = Sobol(d=n_dims or 1, seed=global_rng).random_base2(m=pow2)
         x = x[:n_samples, :]
         return x[:, 0] if n_dims is None else x
 
