@@ -1,5 +1,5 @@
 site_name: SBArchOpt
-site_url: https://sb-arch-opt.readthedocs.io/
+site_url: https://sbarchopt.readthedocs.io/
 repo_url: https://github.com/jbussemaker/SBArchOpt
 docs_dir: docs
 theme:
