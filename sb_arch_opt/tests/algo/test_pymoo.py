@@ -113,9 +113,9 @@ def test_store_results_restart():
             assert initialize_from_previous_results(nsga2, problem, tmp_folder) == (i > 0)
             if i > 0:
                 assert isinstance(nsga2.initialization.sampling, Population)
-                assert len(nsga2.initialization.sampling) - (100+2*100*i) < 20
+                assert len(nsga2.initialization.sampling) == 100+2*100*i
 
-            minimize(problem, nsga2, termination=('n_gen', 3), copy_algorithm=False)
+            minimize(problem, nsga2, termination=('n_gen', 3), copy_algorithm=False, seed=42)
             assert os.path.exists(os.path.join(tmp_folder, 'pymoo_results.pkl'))
             assert os.path.exists(os.path.join(tmp_folder, 'pymoo_population.pkl'))
             assert os.path.exists(os.path.join(tmp_folder, 'pymoo_population.csv'))
@@ -126,7 +126,7 @@ def test_store_results_restart():
             assert problem.n_stored == 6+5*i
 
             n_cumulative = load_from_previous_results(problem, tmp_folder)
-            assert abs(len(n_cumulative) - (100+2*100*(i+1))) < 20
+            assert len(n_cumulative) == 100+2*100*(i+1)
 
 
 def test_batch_storage_evaluator(problem: ArchOptProblemBase):
