@@ -120,10 +120,12 @@ class ModelFactory:
         return self.create_smt_design_space_spec(self.problem.design_space)
 
     @staticmethod
-    def create_smt_design_space_spec(arch_design_space: ArchDesignSpace, md_normalize=False, cont_relax=False):
+    def create_smt_design_space_spec(arch_design_space: ArchDesignSpace, md_normalize=False, cont_relax=False,
+                                     ignore_hierarchy=False):
         check_dependencies()
 
-        design_space = SBArchOptDesignSpace(arch_design_space, md_normalize=md_normalize, cont_relax=cont_relax)
+        design_space = SBArchOptDesignSpace(arch_design_space, md_normalize=md_normalize, cont_relax=cont_relax,
+                                            ignore_hierarchy=ignore_hierarchy)
         is_mixed_discrete = not np.all(arch_design_space.is_cont_mask)
 
         var_defs = [{'name': f'x{i}', 'lb': bounds[0], 'ub': bounds[1]}
@@ -176,9 +178,12 @@ class ModelFactory:
         kwargs.update(kwargs_)
 
         if kpls_n_comp is not None:
-            cr_ds_spec = self.create_smt_design_space_spec(
-                self.problem.design_space, md_normalize=True, cont_relax=True)
-            kwargs['design_space'] = cr_ds_spec.design_space
+            kwargs['categorical_kernel'] = MixIntKernelType.CONT_RELAX
+
+            non_hier_ds_spec = self.create_smt_design_space_spec(
+                self.problem.design_space, md_normalize=True, ignore_hierarchy=True)
+            kwargs['design_space'] = non_hier_ds_spec.design_space
+
             surrogate = KPLS(n_comp=kpls_n_comp, **kwargs)
         else:
             surrogate = KRG(**kwargs)
@@ -194,10 +199,12 @@ class SBArchOptDesignSpace(BaseDesignSpace):
 
     _global_disable_hierarchical_cat_fix = False
 
-    def __init__(self, arch_design_space: ArchDesignSpace, md_normalize=False, cont_relax=False):
+    def __init__(self, arch_design_space: ArchDesignSpace, md_normalize=False, cont_relax=False,
+                 ignore_hierarchy=False):
         self._ds = arch_design_space
         self.normalize = MixedDiscreteNormalization(arch_design_space) if md_normalize else None
         self._cont_relax = cont_relax
+        self._ignore_hierarchy = ignore_hierarchy
         super().__init__()
 
     @property
@@ -243,6 +250,9 @@ class SBArchOptDesignSpace(BaseDesignSpace):
         return smt_des_vars
 
     def _is_conditionally_acting(self) -> np.ndarray:
+        if self._ignore_hierarchy:
+            return np.zeros((len(self._ds.is_conditionally_active),), dtype=bool)
+
         return self._ds.is_conditionally_active
 
     def _correct_get_acting(self, x: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
@@ -253,6 +263,9 @@ class SBArchOptDesignSpace(BaseDesignSpace):
 
         if self.normalize is not None:
             x = self.normalize.forward(x)
+
+        if self._ignore_hierarchy:
+            is_active = np.ones(is_active.shape, dtype=bool)
         return x, is_active
 
     def _sample_valid_x(self, n: int) -> Tuple[np.ndarray, np.ndarray]:
@@ -262,6 +275,9 @@ class SBArchOptDesignSpace(BaseDesignSpace):
 
         if self.normalize is not None:
             x = self.normalize.forward(x)
+
+        if self._ignore_hierarchy:
+            is_active = np.ones(is_active.shape, dtype=bool)
         return x, is_active
 
     def __str__(self):

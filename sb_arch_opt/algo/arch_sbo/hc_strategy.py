@@ -347,8 +347,9 @@ class SMTPredictor(PredictorInterface):
 class MDGPRegressor(SMTPredictor):
     """Uses SMT's mixed-discrete Kriging regressor"""
 
-    def __init__(self):
+    def __init__(self, kpls_n_dim: Optional[int] = None):
         self._problem = None
+        self._kpls_n_dim = kpls_n_dim
         super().__init__()
 
     def _get_normalization(self, problem: ArchOptProblemBase) -> Normalization:
@@ -358,7 +359,12 @@ class MDGPRegressor(SMTPredictor):
         self._problem = problem
 
     def _do_train(self, x_norm: np.ndarray, y_is_valid: np.ndarray):
-        model, _ = ModelFactory(self._problem).get_md_kriging_model(corr='abs_exp', theta0=[1e-2], n_start=5)
+        kwargs = {}
+        if self._kpls_n_dim is not None and x_norm.shape[1] > self._kpls_n_dim:
+            kwargs['kpls_n_comp'] = self._kpls_n_dim
+
+        model, _ = ModelFactory(self._problem).get_md_kriging_model(
+            corr='abs_exp', theta0=[1e-2], n_start=5, **kwargs)
         self._model = model
         model.set_training_values(x_norm, y_is_valid)
         model.train()
