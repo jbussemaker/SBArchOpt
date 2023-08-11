@@ -306,19 +306,24 @@ class SKLearnClassifier(PredictorInterface):
 
 class RandomForestClassifier(SKLearnClassifier):
 
-    def __init__(self, n: int = 100):
-        if not HAS_SKLEARN:
-            raise ImportError(f'ArchSBO dependencies not installed: pip install sb-arch-opt[arch_sbo]')
-
+    def __init__(self, n: int = 100, n_dim: float = None):
         self.n = n
+        self.n_dim = n_dim
         super().__init__()
 
     def _do_train(self, x_norm: np.ndarray, y_is_valid: np.ndarray):
-        self._predictor = clf = RFC(n_estimators=self.n)
+        from sklearn.ensemble import RandomForestClassifier
+
+        n_estimators = self.n
+        if self.n_dim is not None:
+            n_estimators = max(int(self.n_dim*x_norm.shape[1]), n_estimators)
+
+        self._predictor = clf = RandomForestClassifier(n_estimators=n_estimators)
         clf.fit(x_norm, y_is_valid)
 
     def __str__(self):
-        return f'Random Forest Classifier ({self.n})'
+        n_dim_str = f' | x{self.n_dim}' if self.n_dim is not None else ''
+        return f'RFC ({self.n}{n_dim_str})'
 
     def __repr__(self):
         return f'{self.__class__.__name__}(n={self.n})'
