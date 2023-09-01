@@ -325,9 +325,10 @@ def test_md_normalization():
 
 @contextlib.contextmanager
 def disable_int_fix():
+    global_disable = SBArchOptDesignSpace._global_disable_hierarchical_cat_fix
     SBArchOptDesignSpace._global_disable_hierarchical_cat_fix = True
     yield
-    SBArchOptDesignSpace._global_disable_hierarchical_cat_fix = False
+    SBArchOptDesignSpace._global_disable_hierarchical_cat_fix = global_disable
 
 
 @check_dependency()
@@ -415,7 +416,7 @@ def test_smt_krg_features():
 
         # Hierarchical (categorical conditional vars)
         _try_model(Jenatton(), cont_relax=True)
-        _try_model(Jenatton(), throws_error=True)
+        _try_model(Jenatton(), throws_error=not IS_SMT_21)
         _try_model(Jenatton(), pls=True, cont_relax=True)
         _try_model(Jenatton(), pls=True, ignore_hierarchy=True)
-        _try_model(Jenatton(), pls=True, throws_error=True)
+        _try_model(Jenatton(), pls=True, throws_error=not IS_SMT_21)

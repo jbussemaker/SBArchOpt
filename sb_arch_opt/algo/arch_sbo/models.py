@@ -46,9 +46,13 @@ try:
     from smt.utils.design_space import BaseDesignSpace
     import smt.utils.design_space as ds
 
+    from smt import __version__
+    IS_SMT_21 = not __version__.startswith('2.0')
+
     HAS_ARCH_SBO = True
 except ImportError:
     HAS_ARCH_SBO = False
+    IS_SMT_21 = False
 
     class BaseDesignSpace:
         pass
@@ -57,7 +61,7 @@ except ImportError:
         pass
 
 __all__ = ['check_dependencies', 'HAS_ARCH_SBO', 'ModelFactory', 'MixedDiscreteNormalization', 'SBArchOptDesignSpace',
-           'MultiSurrogateModel']
+           'MultiSurrogateModel', 'IS_SMT_21']
 
 
 def check_dependencies():
@@ -197,7 +201,7 @@ class ModelFactory:
 class SBArchOptDesignSpace(BaseDesignSpace):
     """SMT design space implementation using SBArchOpt's design space logic"""
 
-    _global_disable_hierarchical_cat_fix = False
+    _global_disable_hierarchical_cat_fix = IS_SMT_21
 
     def __init__(self, arch_design_space: ArchDesignSpace, md_normalize=False, cont_relax=False,
                  ignore_hierarchy=False):
