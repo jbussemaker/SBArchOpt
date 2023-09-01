@@ -104,8 +104,12 @@ class DOEAlgorithm(ArchOptNSGA2):
 
         self._init_sampling = self.initialization.sampling
 
-    def set_doe_size(self, problem, doe_size: int, **kwargs):
-        """Set the DOE size, also if the algo is already initialized with a prior population"""
+    def set_doe_size(self, problem, doe_size: int, **kwargs) -> bool:
+        """
+        Set the DOE size, also if the algo is already initialized with a prior population.
+        Returns whether the DOE size was increased.
+        """
+        was_increased = False
         self.pop_size = doe_size
         self._set_termination()
 
@@ -126,8 +130,11 @@ class DOEAlgorithm(ArchOptNSGA2):
                 add_pop = self.repair(problem, add_pop)
 
                 self.initialization.sampling = Population.merge(init_pop, add_pop)
+                was_increased = True
 
             log.info(f'New DOE size: {len(self.initialization.sampling)}')
+
+        return was_increased
 
     def _set_termination(self):
         self.termination = MaximumFunctionCallTermination(n_max_evals=self.pop_size)

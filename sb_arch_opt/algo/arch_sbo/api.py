@@ -33,7 +33,8 @@ if not HAS_ARCH_SBO:
     get_sbo_termination = lambda *_, **__: None
 
 
-__all__ = ['get_arch_sbo_rbf', 'get_arch_sbo_gp', 'HAS_ARCH_SBO', 'get_sbo_termination', 'get_sbo']
+__all__ = ['get_arch_sbo_rbf', 'get_arch_sbo_gp', 'HAS_ARCH_SBO', 'get_sbo_termination', 'get_sbo',
+           'ConstraintAggregation']
 
 
 def get_arch_sbo_rbf(init_size: int = 100, results_folder=None, **kwargs) -> InfillAlgorithm:

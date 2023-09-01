@@ -41,7 +41,7 @@ from sb_arch_opt.problem import ArchOptProblemBase
 from sb_arch_opt.sampling import LargeDuplicateElimination
 
 __all__ = ['load_from_previous_results', 'initialize_from_previous_results', 'ResultsStorageCallback',
-           'ArchOptEvaluator']
+           'ArchOptEvaluator', 'set_initial_population']
 
 log = logging.getLogger('sb_arch_opt.pymoo')
 
@@ -76,16 +76,7 @@ def load_from_previous_results(problem: ArchOptProblemBase, result_folder: str, 
         return
 
     # Set evaluated flags
-    def _set_eval(ind: Individual):
-        nonlocal n_evaluated
-        # Assume evaluated but failed points have Inf as output values
-        is_eval = ~np.all(np.isnan(ind.get('F')))
-        if is_eval:
-            ind.evaluated.update({'X', 'F', 'G', 'H'})
-            n_evaluated += 1
-
-    n_evaluated = 0
-    population.apply(_set_eval)
+    n_evaluated = ArchOptEvaluator.pop_set_eval_flags(population)
     log.info(f'Evaluation status: {n_evaluated} of {len(population)} ({(n_evaluated/len(population))*100:.1f}%) '
              f'are already evaluated')
 
@@ -312,7 +303,10 @@ class ArchOptEvaluator(Evaluator):
 
         self._apply_extreme_barrier(batch_pop, evaluate_values_of=evaluate_values_of)
         intermediate_pop = self._normalize_pop(pop, evaluate_values_of, evaluated_pop=self._evaluated_pop)
-        self._store_intermediate(problem, intermediate_pop)
+
+        if self.results_folder is not None:
+            self._store_intermediate(problem, intermediate_pop)
+        return intermediate_pop
 
     def _apply_extreme_barrier(self, pop: Population, evaluate_values_of: list = None):
         if evaluate_values_of is None:
@@ -378,8 +372,10 @@ class ArchOptEvaluator(Evaluator):
             csv_path = os.path.join(self.results_folder, f'pymoo_population{cumulative_str}.csv')
             self.get_pop_as_df(pop).to_csv(csv_path)
 
-    @staticmethod
-    def get_pop_as_df(pop: Population) -> pd.DataFrame:
+    @classmethod
+    def get_pop_as_df(cls, pop: Population) -> pd.DataFrame:
+        pop = cls._normalize_pop(pop, ['F', 'G', 'H'])
+
         cols = []
         all_data = []
         for symbol in ['x', 'f', 'g', 'h']:
@@ -389,8 +385,8 @@ class ArchOptEvaluator(Evaluator):
 
         return pd.DataFrame(columns=cols, data=np.column_stack(all_data))
 
-    @staticmethod
-    def get_pop_from_df(df: pd.DataFrame):
+    @classmethod
+    def get_pop_from_df(cls, df: pd.DataFrame):
         symbols = list(set(col[0] for col in df.columns))
 
         def _get_symbol_data(symbol):
@@ -402,7 +398,24 @@ class ArchOptEvaluator(Evaluator):
             return symbol_data
 
         data = {sym.upper(): _get_symbol_data(sym) for sym in symbols}
-        return Population.new(**data)
+        pop = Population.new(**data)
+        cls.pop_set_eval_flags(pop)
+        return pop
+
+    @staticmethod
+    def pop_set_eval_flags(pop: Population):
+        # Set evaluated flags
+        def _set_eval(ind: Individual):
+            nonlocal n_evaluated
+            # Assume evaluated but failed points have Inf as output values
+            is_eval = ~np.all(np.isnan(ind.get('F')))
+            if is_eval:
+                ind.evaluated.update({'X', 'F', 'G', 'H'})
+                n_evaluated += 1
+
+        n_evaluated = 0
+        pop.apply(_set_eval)
+        return n_evaluated
 
     def _store_intermediate_problem(self, problem):
         if isinstance(problem, ArchOptProblemBase):

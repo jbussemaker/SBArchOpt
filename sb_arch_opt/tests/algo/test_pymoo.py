@@ -168,7 +168,7 @@ def test_doe_algo(problem: ArchOptProblemBase):
 
         doe_algo2 = get_doe_algo(doe_size=100, results_folder=tmp_folder)
         initialize_from_previous_results(doe_algo2, problem, tmp_folder)
-        doe_algo2.set_doe_size(problem, doe_size=200)
+        assert doe_algo2.set_doe_size(problem, doe_size=200)
         doe_algo2.setup(problem)
         doe_algo2.run()
         assert doe_algo2.evaluator.n_eval == 200
@@ -176,7 +176,7 @@ def test_doe_algo(problem: ArchOptProblemBase):
 
         doe_algo3 = get_doe_algo(doe_size=200, results_folder=tmp_folder)
         initialize_from_previous_results(doe_algo3, problem, tmp_folder)
-        doe_algo3.set_doe_size(problem, doe_size=150)
+        assert not doe_algo3.set_doe_size(problem, doe_size=150)
         doe_algo3.setup(problem)
         doe_algo3.run()
         assert doe_algo3.evaluator.n_eval == 200
@@ -370,7 +370,8 @@ def test_partial_doe_restart_ask_tell():
 
                 evaluator = doe_algo.evaluator
                 assert isinstance(evaluator, ArchOptEvaluator)
-                pop_to_eval = evaluator.eval_pre(pop)
+                for _ in range(5):
+                    pop_to_eval = evaluator.eval_pre(pop)
 
                 for batch_pop in evaluator.iter_pop_batch(problem, pop_to_eval):
                     out = problem.evaluate(batch_pop.get('X'), return_as_dictionary=True)
