@@ -1,7 +1,9 @@
 import os
+import json
 import pickle
 import tempfile
 import numpy as np
+import pandas as pd
 from typing import Optional
 from sb_arch_opt.problem import *
 from sb_arch_opt.sampling import *
@@ -255,6 +257,51 @@ def test_partial_restart():
                 pass
 
 
+def test_df_storage(failing_problem: ArchOptProblemBase):
+    problem = failing_problem
+
+    doe_algo = get_doe_algo(doe_size=100)
+    doe_algo.setup(problem)
+    doe_algo.run()
+
+    pop = doe_algo.pop
+    assert np.any(np.isinf(pop.get('F')))  # Failed points
+    assert not np.any(np.isnan(pop.get('F')))  # Unevaluated points
+
+    df = ArchOptEvaluator.get_pop_as_df(pop)
+    assert len(df) == len(pop)
+    assert np.all(np.any(np.isinf(df), axis=1) == np.any(np.isinf(pop.get('F')), axis=1))
+
+    pop2 = ArchOptEvaluator.get_pop_from_df(df)
+    assert len(pop2) == len(pop)
+    assert np.all(pop.get('X') == pop2.get('X'))
+    assert np.all(pop.get('F') == pop2.get('F'))
+
+    pop3 = ArchOptEvaluator.get_pop_from_df(pd.DataFrame.from_dict(json.loads(json.dumps(df.to_dict()))))
+    assert len(pop3) == len(pop)
+    assert np.all(pop.get('X') == pop3.get('X'))
+    assert np.all(pop.get('F') == pop3.get('F'))
+
+    with tempfile.TemporaryDirectory() as tmp_folder:
+        problem = CrashingProblem()
+        doe_algo = get_doe_algo(doe_size=30, results_folder=tmp_folder)
+        doe_algo.setup(problem)
+        try:
+            doe_algo.run()
+        except RuntimeError:
+            pass
+
+        pop = ArchOptEvaluator.load_pop(tmp_folder, cumulative=False)
+        assert np.any(np.isinf(pop.get('F')))  # Failed points
+        assert np.any(np.isnan(pop.get('F')))  # Unevaluated points
+
+        pop2 = ArchOptEvaluator.get_pop_from_df(
+            pd.DataFrame.from_dict(json.loads(json.dumps(ArchOptEvaluator.get_pop_as_df(pop).to_dict()))))
+        assert len(pop2) == len(pop)
+        assert np.all(pop.get('X') == pop2.get('X'))
+        assert np.array_equal(pop.get('F'), pop2.get('F'), equal_nan=True)
+
+
 def test_partial_doe_restart():
     with tempfile.TemporaryDirectory() as tmp_folder:
         for i in range(100):
@@ -284,6 +331,67 @@ def test_partial_doe_restart():
 
             except RuntimeError:
                 pass
+
+        assert doe_algo.evaluator.n_eval == 30
+
+        pop = load_from_previous_results(problem, tmp_folder)
+        assert len(pop) == 30
+        n_empty = np.sum(np.any(np.isnan(pop.get('F')), axis=1))
+        assert n_empty == 0
+
+
+def test_partial_doe_restart_ask_tell():
+    with tempfile.TemporaryDirectory() as tmp_folder:
+        for i in range(100):
+            try:
+                problem = CrashingProblem()
+                pop = load_from_previous_results(problem, tmp_folder)
+                n_empty = 30
+                if i == 0:
+                    assert pop is None
+                else:
+                    assert isinstance(pop, Population)
+                    x = pop.get('X')
+                    assert np.all(np.isfinite(x))
+                    assert x.shape == (30, problem.n_var)
+
+                    f = pop.get('F')
+                    assert f.shape == (30, problem.n_obj)
+                    n_empty = np.sum(np.any(np.isnan(f), axis=1))
+                    assert n_empty == 30-i*10
+
+                doe_algo = get_doe_algo(doe_size=30, results_folder=tmp_folder)
+                initialize_from_previous_results(doe_algo, problem, tmp_folder)
+                assert doe_algo.evaluator.n_eval == 30-n_empty
+                doe_algo.setup(problem)
+
+                pop = doe_algo.ask()
+                assert len(pop) == 30
+
+                evaluator = doe_algo.evaluator
+                assert isinstance(evaluator, ArchOptEvaluator)
+                pop_to_eval = evaluator.eval_pre(pop)
+
+                for batch_pop in evaluator.iter_pop_batch(problem, pop_to_eval):
+                    out = problem.evaluate(batch_pop.get('X'), return_as_dictionary=True)
+                    evaluator.eval_apply_to_pop(batch_pop, out)
+                    evaluator.eval_batch_post(problem, pop_to_eval, batch_pop)
+
+                evaluator.eval_post(problem, pop)
+                doe_algo.tell(pop)
+                assert not doe_algo.has_next()
+
+                break
+
+            except RuntimeError:
+                pass
+
+        assert doe_algo.evaluator.n_eval == 30
+
+        pop = load_from_previous_results(problem, tmp_folder)
+        assert len(pop) == 30
+        n_empty = np.sum(np.any(np.isnan(pop.get('F')), axis=1))
+        assert n_empty == 0
 
 
 def test_random_search(problem: ArchOptProblemBase):
