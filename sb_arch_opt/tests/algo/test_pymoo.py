@@ -164,6 +164,22 @@ def test_doe_algo(problem: ArchOptProblemBase):
         assert pop_loaded.get('X').shape == pop.get('X').shape
         assert pop_loaded.get('F').shape == pop.get('F').shape
 
+        doe_algo2 = get_doe_algo(doe_size=100, results_folder=tmp_folder)
+        initialize_from_previous_results(doe_algo2, problem, tmp_folder)
+        doe_algo2.set_doe_size(problem, doe_size=200)
+        doe_algo2.setup(problem)
+        doe_algo2.run()
+        assert doe_algo2.evaluator.n_eval == 200
+        assert len(doe_algo2.pop) == 200
+
+        doe_algo3 = get_doe_algo(doe_size=200, results_folder=tmp_folder)
+        initialize_from_previous_results(doe_algo3, problem, tmp_folder)
+        doe_algo3.set_doe_size(problem, doe_size=150)
+        doe_algo3.setup(problem)
+        doe_algo3.run()
+        assert doe_algo3.evaluator.n_eval == 200
+        assert len(doe_algo3.pop) == 150
+
 
 def test_doe_algo_seed(problem: ArchOptProblemBase):
     x_doe = []

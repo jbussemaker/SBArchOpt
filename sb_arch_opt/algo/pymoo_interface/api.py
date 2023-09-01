@@ -24,6 +24,7 @@ SOFTWARE.
 """
 import logging
 from pymoo.core.algorithm import Algorithm
+from pymoo.core.population import Population
 from pymoo.algorithms.moo.nsga2 import NSGA2, RankAndCrowdingSurvival
 from pymoo.termination.max_eval import MaximumFunctionCallTermination
 
@@ -97,6 +98,40 @@ def get_nsga2(pop_size: int, results_folder=None, **kwargs):
 class DOEAlgorithm(ArchOptNSGA2):
     """Algorithm that stops after initialization"""
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._set_termination()
+
+        self._init_sampling = self.initialization.sampling
+
+    def set_doe_size(self, problem, doe_size: int, **kwargs):
+        """Set the DOE size, also if the algo is already initialized with a prior population"""
+        self.pop_size = doe_size
+        self._set_termination()
+
+        # Modify an existing initial population if set
+        if isinstance(self.initialization.sampling, Population):
+            init_pop = self.initialization.sampling
+
+            if doe_size < len(init_pop):
+                log.info(f'Reducing initialized population size from {len(init_pop)} to {doe_size}; '
+                         f'discarding {len(init_pop)-doe_size} points!')
+                self.initialization.sampling = init_pop[:doe_size]
+
+            elif doe_size > len(init_pop):
+                n_add = doe_size-len(init_pop)
+
+                log.info(f'Adding {n_add} samples to increase DOE size from {len(init_pop)} to {doe_size}')
+                add_pop = self._init_sampling(problem, n_add, **kwargs)
+                add_pop = self.repair(problem, add_pop)
+
+                self.initialization.sampling = Population.merge(init_pop, add_pop)
+
+            log.info(f'New DOE size: {len(self.initialization.sampling)}')
+
+    def _set_termination(self):
+        self.termination = MaximumFunctionCallTermination(n_max_evals=self.pop_size)
+
     def has_next(self):
         return not self.is_initialized
 
@@ -108,6 +143,4 @@ def get_doe_algo(doe_size: int, results_folder=None, **kwargs):
     """Returns an algorithm preconfigured for architecture optimization that will only run a DOE. Useful when
     evaluations is expensive and more inspection is needed before continuing with optimization"""
     capture_log()
-    algo = DOEAlgorithm(pop_size=doe_size, results_folder=results_folder, **kwargs)
-    algo.termination = MaximumFunctionCallTermination(n_max_evals=doe_size)
-    return algo
+    return DOEAlgorithm(pop_size=doe_size, results_folder=results_folder, **kwargs)

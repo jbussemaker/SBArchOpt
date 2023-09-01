@@ -91,3 +91,24 @@ pop = doe_algo.pop
 # Load intermediate results in case of crash
 pop = load_from_previous_results(problem, results_folder_path)
 ```
+
+You can increase DOE algo's DOE size after a stored run:
+```python
+from sb_arch_opt.algo.pymoo_interface import get_doe_algo, \
+    initialize_from_previous_results
+
+problem = ...  # Subclass of ArchOptProblemBase
+results_folder_path = 'path/to/results/folder'
+
+doe_algo = get_doe_algo(doe_size=200, results_folder=results_folder_path)
+
+# Initializing from previous results ignores the previously-set DOE size
+initialize_from_previous_results(doe_algo, problem, results_folder_path)
+doe_algo.set_doe_size(problem, doe_size=200)
+
+doe_algo.setup(problem, seed=42)  # Remove seed argument when using in production!
+doe_algo.run()
+
+# Evaluate the sampled points
+pop = doe_algo.pop
+```
