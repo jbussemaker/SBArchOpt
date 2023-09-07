@@ -24,6 +24,13 @@ The library provides:
   - Connectors to various external SBO libraries
 - Analytical and realistic test problems that exhibit one or more of the architecture optimization challenges
 
+## Citing
+
+If you use SBArchOpt in your work, please cite it:
+
+Bussemaker, J.H., (2023). SBArchOpt: Surrogate-Based Architecture Optimization. Journal of Open Source Software, 8(89),
+5564, DOI: [10.21105/joss.05564](https://doi.org/10.21105/joss.05564)
+
 ## Usage
 
 See also the tutorials:

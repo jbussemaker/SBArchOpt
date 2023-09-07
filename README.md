@@ -3,7 +3,7 @@
 [![Tests](https://github.com/jbussemaker/SBArchOpt/workflows/Tests/badge.svg)](https://github.com/jbussemaker/SBArchOpt/actions/workflows/tests.yml?query=workflow%3ATests)
 [![PyPI](https://img.shields.io/pypi/v/sb-arch-opt.svg)](https://pypi.org/project/sb-arch-opt)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![status](https://joss.theoj.org/papers/0b2b765c04d31a4cead77140f82ecba0/status.svg)](https://joss.theoj.org/papers/0b2b765c04d31a4cead77140f82ecba0)
+[![JOSS](https://joss.theoj.org/papers/0b2b765c04d31a4cead77140f82ecba0/status.svg)](https://joss.theoj.org/papers/0b2b765c04d31a4cead77140f82ecba0)
 [![Documentation Status](https://readthedocs.org/projects/sbarchopt/badge/?version=latest)](https://sbarchopt.readthedocs.io/en/latest/?badge=latest)
 
 [GitHub Repository](https://github.com/jbussemaker/SBArchOpt) |
@@ -52,6 +52,13 @@ Refer to their documentation for dedicated installation instructions.
 
 Refer to the [documentation](https://sbarchopt.readthedocs.io/) for more background on SBArchOpt
 and how to implement architecture optimization problems.
+
+## Citing
+
+If you use SBArchOpt in your work, please cite it:
+
+Bussemaker, J.H., (2023). SBArchOpt: Surrogate-Based Architecture Optimization. Journal of Open Source Software, 8(89),
+5564, DOI: [10.21105/joss.05564](https://doi.org/10.21105/joss.05564)
 
 ## Contributing
 
