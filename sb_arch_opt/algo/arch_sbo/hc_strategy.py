@@ -45,19 +45,19 @@ __all__ = ['get_hc_strategy', 'HiddenConstraintStrategy', 'PredictionHCStrategy'
            'RejectionHCStrategy', 'ReplacementHCStrategyBase', 'GlobalWorstReplacement']
 
 
-def get_hc_strategy():
+def get_hc_strategy(kpls_n_dim: Optional[int] = 10, min_pov: float = .5):
     """
     Get a hidden constraints strategy that works well for most problems.
     """
 
     # Get the predictor: RF works best but requires scikit-learn
     try:
-        predictor = RandomForestClassifier()
+        predictor = RandomForestClassifier(n=100, n_dim=10)
     except ImportError:
-        predictor = MDGPRegressor()
+        predictor = MDGPRegressor(kpls_n_dim=kpls_n_dim)
 
     # Create the strategy: use as additional constraint at Probability of Validity >= 50%
-    return PredictionHCStrategy(predictor, constraint=True, min_pov=.5)
+    return PredictionHCStrategy(predictor, constraint=True, min_pov=min_pov)
 
 
 class HiddenConstraintStrategy:
@@ -352,7 +352,7 @@ class SMTPredictor(PredictorInterface):
 class MDGPRegressor(SMTPredictor):
     """Uses SMT's mixed-discrete Kriging regressor"""
 
-    def __init__(self, kpls_n_dim: Optional[int] = None):
+    def __init__(self, kpls_n_dim: Optional[int] = 10):
         self._problem = None
         self._kpls_n_dim = kpls_n_dim
         super().__init__()

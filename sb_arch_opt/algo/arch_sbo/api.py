@@ -71,7 +71,7 @@ def get_arch_sbo_gp(problem: ArchOptProblemBase, init_size: int = 100, n_paralle
         problem, n_parallel=n_parallel, min_pof=min_pof, g_aggregation=g_aggregation)
 
     # Get default hidden constraint strategy
-    hc_strategy = get_hc_strategy()
+    hc_strategy = get_hc_strategy(kpls_n_dim=kpls_n_dim)
 
     return get_sbo(model, infill, infill_size=infill_batch, init_size=init_size, normalization=normalization,
                    results_folder=results_folder, hc_strategy=hc_strategy, **kwargs)
