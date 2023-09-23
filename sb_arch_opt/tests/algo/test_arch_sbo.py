@@ -344,7 +344,7 @@ def test_smt_krg_features():
     )
 
     def _try_model(problem: ArchOptProblemBase, pls: bool = False, cont_relax: bool = False, ignore_hierarchy=False,
-                   throws_error=False):
+                   throws_error=False, pls_cont=True):
         model_factory = ModelFactory(problem)
         normalization = model_factory.get_md_normalization()
         ds = model_factory.problem.design_space
@@ -361,7 +361,11 @@ def test_smt_krg_features():
             model_ds = norm_ds_spec.design_space
 
         if pls:
-            model = KPLS(n_comp=n_pls, design_space=model_ds, **pls_kwargs)
+            pls_kwargs_ = pls_kwargs
+            if not pls_cont:
+                pls_kwargs_ = pls_kwargs.copy()
+                pls_kwargs_.update(categorical_kernel=MixIntKernelType.EXP_HOMO_HSPHERE)
+            model = KPLS(n_comp=n_pls, design_space=model_ds, **pls_kwargs_)
         else:
             model = KRG(design_space=model_ds, **kwargs)
 
@@ -399,6 +403,7 @@ def test_smt_krg_features():
         _try_model(Halstrup04(), pls=True, cont_relax=True)
         _try_model(Halstrup04(), pls=True, ignore_hierarchy=True)
         _try_model(Halstrup04(), pls=True)
+        _try_model(Halstrup04(), pls=True, pls_cont=False)
 
         # Hierarchical (continuous conditional vars)
         _try_model(ZaeffererHierarchical(), cont_relax=True)
@@ -413,6 +418,7 @@ def test_smt_krg_features():
         _try_model(NeuralNetwork(), pls=True, cont_relax=True)
         _try_model(NeuralNetwork(), pls=True, ignore_hierarchy=True)
         _try_model(NeuralNetwork(), pls=True)
+        _try_model(NeuralNetwork(), pls=True, pls_cont=False)
 
         # Hierarchical (categorical conditional vars)
         _try_model(Jenatton(), cont_relax=True)
@@ -420,3 +426,5 @@ def test_smt_krg_features():
         _try_model(Jenatton(), pls=True, cont_relax=True)
         _try_model(Jenatton(), pls=True, ignore_hierarchy=True)
         _try_model(Jenatton(), pls=True, throws_error=not IS_SMT_21)
+        _try_model(Jenatton(), pls=True, ignore_hierarchy=True, pls_cont=False)
+        _try_model(Jenatton(), pls=True, pls_cont=False, throws_error=not IS_SMT_21)

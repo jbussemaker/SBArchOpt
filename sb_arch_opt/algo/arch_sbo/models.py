@@ -182,7 +182,8 @@ class ModelFactory:
         kwargs.update(kwargs_)
 
         if kpls_n_comp is not None:
-            kwargs['categorical_kernel'] = MixIntKernelType.CONT_RELAX
+            if not IS_SMT_21:
+                kwargs['categorical_kernel'] = MixIntKernelType.CONT_RELAX
 
             non_hier_ds_spec = self.create_smt_design_space_spec(
                 self.problem.design_space, md_normalize=True, ignore_hierarchy=True)
