@@ -369,17 +369,18 @@ def test_smt_krg_features():
         else:
             model = KRG(design_space=model_ds, **kwargs)
 
-        n_theta = ModelFactory.get_n_theta(problem, model)
-        assert n_theta > 0
-
-        model = MultiSurrogateModel(model)
-        n_theta_multi = ModelFactory.get_n_theta(problem, model)
-        assert n_theta_multi == n_theta*(problem.n_obj+problem.n_ieq_constr)
-
-        x_train = HierarchicalSampling().do(problem, 50).get('X')
-        y_train = problem.evaluate(x_train, return_as_dictionary=True)['F']
-        x_test = HierarchicalSampling().do(problem, 200).get('X')
         try:
+            n_theta = ModelFactory.get_n_theta(problem, model)
+            assert n_theta > 0
+
+            model = MultiSurrogateModel(model)
+            n_theta_multi = ModelFactory.get_n_theta(problem, model)
+            assert n_theta_multi == n_theta*(problem.n_obj+problem.n_ieq_constr)
+
+            x_train = HierarchicalSampling().do(problem, 50).get('X')
+            y_train = problem.evaluate(x_train, return_as_dictionary=True)['F']
+            x_test = HierarchicalSampling().do(problem, 200).get('X')
+
             model.set_training_values(normalization.forward(x_train), y_train)
             model.train()
             model.predict_values(normalization.forward(x_test))
