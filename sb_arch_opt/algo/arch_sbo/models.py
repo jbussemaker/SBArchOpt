@@ -169,17 +169,27 @@ class ModelFactory:
     def get_md_kriging_model(self, kpls_n_comp: int = None, multi=True, **kwargs_) -> Tuple['SurrogateModel', Normalization]:
         check_dependencies()
         normalization = self.get_md_normalization()
-        norm_ds_spec = self.create_smt_design_space_spec(self.problem.design_space, md_normalize=True)
+        design_space = self.problem.design_space
+        norm_ds_spec = self.create_smt_design_space_spec(design_space, md_normalize=True)
 
         kwargs = dict(
             print_global=False,
             design_space=norm_ds_spec.design_space,
-            categorical_kernel=MixIntKernelType.EXP_HOMO_HSPHERE,
+            categorical_kernel=MixIntKernelType.GOWER,
             hierarchical_kernel=MixHrcKernelType.ALG_KERNEL,
         )
-        if norm_ds_spec.is_mixed_discrete:
-            kwargs['n_start'] = kwargs.get('n_start', 5)
         kwargs.update(kwargs_)
+
+        # Disable KPLS if the nr of requested components is too high
+        if kpls_n_comp is not None:
+            n_dim_apply_pls = design_space.n_var
+
+            # PLS is not applied to categorical variables for EHH/HH kernels (see KrgBased._matrix_data_corr)
+            if IS_SMT_21 and kwargs['categorical_kernel'] not in [MixIntKernelType.CONT_RELAX, MixIntKernelType.GOWER]:
+                n_dim_apply_pls = design_space.n_var - np.sum(design_space.is_cat_mask)
+
+            if kpls_n_comp > n_dim_apply_pls:
+                kpls_n_comp = None
 
         if kpls_n_comp is not None:
             if not IS_SMT_21:
@@ -197,6 +207,48 @@ class ModelFactory:
             surrogate = MultiSurrogateModel(surrogate)
 
         return surrogate, normalization
+
+    @staticmethod
+    def get_n_theta(problem: ArchOptProblemBase, surrogate: 'SurrogateModel') -> int:
+
+        def _get_n_theta(model: 'SurrogateModel') -> int:
+            if isinstance(model, KrgBased):
+                if hasattr(model, 'optimal_theta') and len(model.optimal_theta):
+                    return len(model.optimal_theta)
+
+                n_train = 2
+                if isinstance(model, KPLS):
+                    n_train = model.options['n_comp']+1
+                n_theta = 0
+
+                def _override(theta):
+                    nonlocal n_theta
+                    # No need to actually train the model: we only want to know how many hyperparams we have
+                    n_theta = len(theta)
+                    raise RuntimeError
+
+                model = copy.deepcopy(model)
+                model.options['n_start'] = 1
+                model.set_training_values(np.zeros((n_train, problem.n_var)), np.zeros((n_train, 1)))
+                model._reduced_likelihood_function = _override
+                try:
+                    model.train()
+                except RuntimeError:
+                    pass
+                return n_theta
+
+            raise RuntimeError(f'Not a Kriging model: {surrogate!r}')
+
+        if isinstance(surrogate, MultiSurrogateModel):
+            if len(surrogate._models) == 0:
+                n_single = _get_n_theta(surrogate._surrogate)
+            else:
+                n_single = _get_n_theta(surrogate._models[0])
+
+            ny = problem.n_obj + problem.n_ieq_constr
+            return n_single * ny
+
+        return _get_n_theta(surrogate)
 
 
 class SBArchOptDesignSpace(BaseDesignSpace):

@@ -26,7 +26,7 @@ import itertools
 import numpy as np
 from typing import Optional, Tuple
 from pymoo.core.problem import Problem
-from pymoo.core.variable import Real, Integer
+from pymoo.core.variable import Real, Integer, Choice
 from sb_arch_opt.problem import ArchOptProblemBase
 from sb_arch_opt.pareto_front import CachedParetoFrontMixin
 from sb_arch_opt.sampling import HierarchicalExhaustiveSampling
@@ -148,7 +148,7 @@ class MixedDiscretizerProblemBase(NoHierarchyProblemBase):
     """Problem class that turns an existing test problem into a mixed-discrete problem by mapping the first n (if not
     given: all) variables to integers with a given number of options."""
 
-    def __init__(self, problem: Problem, n_opts=10, n_vars_int: int = None):
+    def __init__(self, problem: Problem, n_opts=10, n_vars_int: int = None, cat=False):
         self.problem = problem
         self.n_opts = n_opts
         if n_vars_int is None:
@@ -160,7 +160,10 @@ class MixedDiscretizerProblemBase(NoHierarchyProblemBase):
         self._xl_orig = problem.xl
         self._xu_orig = problem.xu
 
-        des_vars = [Integer(bounds=(0, n_opts-1)) if i < n_vars_int else Real(bounds=(problem.xl[i], problem.xu[i]))
+        def _get_var():
+            return Choice(options=list(range(n_opts))) if cat else Integer(bounds=(0, n_opts-1))
+
+        des_vars = [_get_var() if i < n_vars_int else Real(bounds=(problem.xl[i], problem.xu[i]))
                     for i in range(problem.n_var)]
         super().__init__(des_vars, n_obj=problem.n_obj, n_ieq_constr=problem.n_ieq_constr)
         self.callback = problem.callback

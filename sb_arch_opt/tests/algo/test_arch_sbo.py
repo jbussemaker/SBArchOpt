@@ -339,7 +339,7 @@ def test_smt_krg_features():
         hierarchical_kernel=MixHrcKernelType.ALG_KERNEL,
     )
     pls_kwargs = dict(
-        categorical_kernel=MixIntKernelType.CONT_RELAX,
+        categorical_kernel=MixIntKernelType.GOWER,
         hierarchical_kernel=MixHrcKernelType.ALG_KERNEL,
     )
 
@@ -369,7 +369,12 @@ def test_smt_krg_features():
         else:
             model = KRG(design_space=model_ds, **kwargs)
 
+        n_theta = ModelFactory.get_n_theta(problem, model)
+        assert n_theta > 0
+
         model = MultiSurrogateModel(model)
+        n_theta_multi = ModelFactory.get_n_theta(problem, model)
+        assert n_theta_multi == n_theta*(problem.n_obj+problem.n_ieq_constr)
 
         x_train = HierarchicalSampling().do(problem, 50).get('X')
         y_train = problem.evaluate(x_train, return_as_dictionary=True)['F']
@@ -381,6 +386,9 @@ def test_smt_krg_features():
             assert not throws_error
         except (TypeError, ValueError):
             assert throws_error
+            return
+
+        assert ModelFactory.get_n_theta(problem, model) == n_theta_multi
 
     with disable_int_fix():
         # Continuous
