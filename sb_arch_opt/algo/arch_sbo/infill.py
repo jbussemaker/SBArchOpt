@@ -55,14 +55,9 @@ def get_default_infill(problem: ArchOptProblemBase, n_parallel: int = None, min_
                        g_aggregation: 'ConstraintAggregation' = None) -> Tuple['ConstrainedInfill', int]:
     """
     Get the default infill criterion according to the following logic:
-    - If evaluations can be run in parallel:
-      - Single-objective: Ensemble of EI, LCB, PoI with n_batch = n_parallel
-      - Multi-objective:  Ensemble of MPoI, MEPoI  with n_batch = n_parallel
-    - If no parallelization possible:
-      - Single-objective
-        - Continuous: Mean function estimate
-        - Mixed-discrete: Ensemble of EI, LCB, PoI with n_batch = 1
-      - Multi-objective:  Ensemble of MPoI, MEPoI  with n_batch = 1
+    - Single-objective: Ensemble of EI, LCB, PoI with n_batch = n_parallel
+    - Multi-objective:  Ensemble of MPoI, MEPoI  with n_batch = n_parallel
+    - n_parallel = 1 if parallelization is not possible
     - Set Probability of Feasibility as constraint handling technique if min_pof != .5, otherwise use g-mean prediction
 
     Returns the infill and recommended infill batch size.
@@ -78,21 +73,12 @@ def get_default_infill(problem: ArchOptProblemBase, n_parallel: int = None, min_
     mo_ensemble = [MinimumPoIInfill(), MinimumPoIInfill(euclidean=True)]
 
     def _get_infill():
-        # Use the ensemble infill if parallel
-        if n_parallel > 1:
-            return EnsembleInfill(so_ensemble if problem.n_obj == 1 else mo_ensemble), n_parallel
+        # Single-objective ensemble infill
+        if problem.n_obj == 1:
+            return EnsembleInfill(so_ensemble), n_parallel
 
-        # Ensemble infill with 1 per iteration if multi-objective
-        if problem.n_obj > 1:
-            return EnsembleInfill(mo_ensemble), 1
-
-        # Mean function estimate if continuous single-objective
-        is_continuous = np.all(problem.is_cont_mask)
-        if is_continuous:
-            return FunctionEstimateConstrainedInfill(), 1
-
-        # Single-objective ensemble if mixed-discrete
-        return EnsembleInfill(so_ensemble), 1
+        # Multi-objective ensemble infill
+        return EnsembleInfill(mo_ensemble), n_parallel
 
     # Get infill and set constraint handling technique
     infill, n_batch = _get_infill()
