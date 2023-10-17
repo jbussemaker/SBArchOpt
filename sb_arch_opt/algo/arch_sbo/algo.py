@@ -407,7 +407,7 @@ class SBOInfill(InfillCriterion):
         self.opt_results.append(result)
 
         # Select infill points and denormalize the design vectors
-        selected_pop = self.infill.select_infill_solutions(result.pop, problem, n_infill)
+        selected_pop = self.infill.select_infill(result.pop, problem, n_infill)
         result.opt = selected_pop
 
         x = selected_pop.get('X')
@@ -474,9 +474,9 @@ class SBOInfill(InfillCriterion):
     def _get_termination(self, n_obj):
         termination = self.termination
         if termination is None or not isinstance(termination, Termination):
-            # return MaximumGenerationTermination(n_max_gen=termination or 100)
+            # return MaximumGenerationTermination(n_max_gen=termination or 50)
             robust_period = 5
-            n_max_gen = termination or 100
+            n_max_gen = termination or 50
             n_max_eval = n_max_gen*self.pop_size
             if n_obj > 1:
                 termination = DefaultMultiObjectiveTermination(

@@ -28,6 +28,7 @@ from typing import *
 from enum import Enum
 from scipy.stats import norm
 from scipy.special import ndtr
+from scipy.optimize import minimize
 from sb_arch_opt.problem import ArchOptProblemBase
 from sb_arch_opt.algo.arch_sbo.hc_strategy import HiddenConstraintStrategy
 
@@ -112,6 +113,7 @@ class SurrogateInfill:
         self.g_infill_log = []
         self.n_eval_infill = 0
         self.time_eval_infill = 0.
+        self.select_improve_infills = True
 
     def __getstate__(self):
         state = self.__dict__.copy()
@@ -176,6 +178,90 @@ class SurrogateInfill:
 
         survival = RankAndCrowdingSurvival()
         return survival.do(infill_problem, population, n_survive=n_infill)
+
+    def select_infill(self, population: Population, infill_problem: Problem, n_infill) -> Population:
+        """Select infill points and improve the precision using a gradient-based algorithm."""
+
+        sel_pop = self.select_infill_solutions(population, infill_problem, n_infill)
+        if not self.select_improve_infills:
+            return sel_pop
+
+        # Get f-range and improve precision
+        f_all = population.get('F')
+        f_min, f_max = np.min(f_all, axis=0), np.max(f_all, axis=0)
+        return self._increase_precision(sel_pop, f_min, f_max)
+
+    def _increase_precision(self, pop: Population, f_min: np.ndarray, f_max: np.ndarray) -> Population:
+        """Increase the precision of the continuous variables by running a local gradient-based optimization
+        on the selected points in the population"""
+
+        # Get continuous design variables
+        problem = self.problem
+        if not isinstance(problem, ArchOptProblemBase):
+            return pop
+        is_cont_mask = problem.is_cont_mask
+        if not np.any(is_cont_mask):
+            return pop
+
+        # Normalize objectives to turn the optimization into a single-objective optimization
+        f_factors = np.ones((self.get_n_infill_objectives(),))
+        if len(f_factors) > 1:
+            f_factors = f_max-f_min
+            f_factors[f_factors < 1e-6] = 1e-6
+
+        def get_y_precision_funcs(x_ref: np.ndarray, is_act_ref: np.ndarray, i_opt):
+            last_g: Optional[np.ndarray] = None
+
+            def y_precision(x_):
+                nonlocal last_g
+                x_eval = x_ref.copy()
+                x_eval[0, i_opt] = x_
+
+                f, g = self.evaluate(x_eval, is_active=is_act_ref)
+                f_so = np.sum((f-f_min)/f_factors)
+                last_g = g[0, :] if g is not None else None
+                return f_so
+
+            def get_i_con_fun(i_g):
+                def _g(_):
+                    if last_g is None:
+                        return 0
+                    return last_g[i_g]
+                return _g
+
+            constraints = [{
+                'type': 'ineq',
+                'fun': get_i_con_fun(i_g)
+            } for i_g in range(self.get_n_infill_constraints())]
+
+            return y_precision, constraints
+
+        # Improve selected points
+        xl, xu = problem.xl, problem.xu
+        x, is_active = problem.correct_x(pop.get('X'))
+        x_optimized = []
+        for i in range(len(pop)):
+            # Only optimize active continuous variables
+            is_act_i = is_active[i, :]
+            i_optimize, = np.where(is_cont_mask & is_act_i)
+            x_ref_i = x[i, :]
+            if len(i_optimize) == 0:
+                x_optimized.append(x_ref_i)
+                continue
+
+            # Run optimization
+            f_opt, con = get_y_precision_funcs(x[[i], :], is_active[[i], :], i_optimize)
+            bounds = [(xl[ix], xu[ix]) for ix in i_optimize]
+            res = minimize(f_opt, x_ref_i[i_optimize], method='slsqp', bounds=bounds,
+                           constraints=con, options={'max_iter': 100})
+            if res.success:
+                x_opt = x_ref_i.copy()
+                x_opt[i_optimize] = res.x
+                x_optimized.append(x_opt)
+            else:
+                x_optimized.append(x_ref_i)
+
+        return Population.new(X=np.row_stack(x_optimized))
 
     @staticmethod
     def get_pareto_front(f: np.ndarray) -> np.ndarray:
