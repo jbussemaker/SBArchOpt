@@ -186,12 +186,10 @@ class SurrogateInfill:
         if not self.select_improve_infills:
             return sel_pop
 
-        # Get f-range and improve precision
-        f_all = population.get('F')
-        f_min, f_max = np.min(f_all, axis=0), np.max(f_all, axis=0)
-        return self._increase_precision(sel_pop, f_min, f_max)
+        # Improve selected points by local optimization
+        return self._increase_precision(sel_pop)
 
-    def _increase_precision(self, pop: Population, f_min: np.ndarray, f_max: np.ndarray) -> Population:
+    def _increase_precision(self, pop: Population) -> Population:
         """Increase the precision of the continuous variables by running a local gradient-based optimization
         on the selected points in the population"""
 
@@ -203,12 +201,6 @@ class SurrogateInfill:
         if not np.any(is_cont_mask):
             return pop
 
-        # Normalize objectives to turn the optimization into a single-objective optimization
-        f_factors = np.ones((self.get_n_infill_objectives(),))
-        if len(f_factors) > 1:
-            f_factors = f_max-f_min
-            f_factors[f_factors < 1e-6] = 1e-6
-
         def get_y_precision_funcs(x_ref: np.ndarray, is_act_ref: np.ndarray, i_opt):
             last_g: Optional[np.ndarray] = None
 
@@ -218,7 +210,12 @@ class SurrogateInfill:
                 x_eval[0, i_opt] = x_
 
                 f, g = self.evaluate(x_eval, is_active=is_act_ref)
-                f_so = np.sum((f-f_min)/f_factors)
+
+                # Infill objectives are normalized so we can just add them to get a correctly-weighted single objective:
+                # - For function-based infills (prediction mean), the surrogates are trained on normalized y values
+                # - Expected Improvement and other probability-based infills are also normalized
+                f_so = np.sum(f)
+
                 last_g = g[0, :] if g is not None else None
                 return f_so
 

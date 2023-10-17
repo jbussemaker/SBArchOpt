@@ -384,7 +384,7 @@ class SBOInfill(InfillCriterion):
             return self._get_random_infill_points(n_infill)
 
         # Create infill problem and algorithm
-        problem = self._get_infill_problem()
+        problem, hc_infill = self._get_infill_problem()
         algorithm = self._get_infill_algorithm()
         termination = self._get_termination(n_obj=problem.n_obj)
 
@@ -407,7 +407,7 @@ class SBOInfill(InfillCriterion):
         self.opt_results.append(result)
 
         # Select infill points and denormalize the design vectors
-        selected_pop = self.infill.select_infill(result.pop, problem, n_infill)
+        selected_pop = hc_infill.select_infill(result.pop, problem, n_infill)
         result.opt = selected_pop
 
         x = selected_pop.get('X')
@@ -446,13 +446,13 @@ class SBOInfill(InfillCriterion):
         infill.initialize(self.problem, self.surrogate_model, self.normalization)
         infill.set_samples(self.x_train, self.is_active_train, self.y_train)
 
-        problem = self._get_infill_problem(infill, force_new_points=False)
+        problem, hc_infill = self._get_infill_problem(infill, force_new_points=False)
         algorithm = self._get_infill_algorithm()
         termination = self._get_termination(n_obj=problem.n_obj)
 
         result = minimize(problem, algorithm, termination=termination, copy_termination=False)
 
-        selected_pop = infill.select_infill_solutions(result.pop, problem, 100)
+        selected_pop = hc_infill.select_infill_solutions(result.pop, problem, 100)
 
         y_min, y_max = self.y_train_min, self.y_train_max
         f_min, f_max = y_min[:self.problem.n_obj], y_max[:self.problem.n_obj]
@@ -469,7 +469,9 @@ class SBOInfill(InfillCriterion):
         hc_infill = HCInfill(infill, self.hc_strategy)
 
         x_exist = self.total_pop.get('X') if force_new_points else None
-        return SurrogateInfillOptimizationProblem(hc_infill, self.problem, x_exist=x_exist)
+        infill_problem = SurrogateInfillOptimizationProblem(hc_infill, self.problem, x_exist=x_exist)
+
+        return infill_problem, hc_infill
 
     def _get_termination(self, n_obj):
         termination = self.termination
