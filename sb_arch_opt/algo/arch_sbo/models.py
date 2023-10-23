@@ -36,7 +36,6 @@ from pymoo.util.normalization import Normalization, SimpleZeroToOneNormalization
 
 try:
     os.environ['USE_NUMBA_JIT'] = '1'
-    from smt.surrogate_models.rbf import RBF
     from smt.surrogate_models.surrogate_model import SurrogateModel
 
     from smt.surrogate_models.krg import KRG, KrgBased
@@ -151,6 +150,7 @@ class ModelFactory:
     @staticmethod
     def get_rbf_model():
         check_dependencies()
+        from smt.surrogate_models.rbf import RBF
         return RBF(print_global=False, d0=1., poly_degree=-1, reg=1e-10)
 
     @staticmethod
