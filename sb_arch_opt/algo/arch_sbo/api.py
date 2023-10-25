@@ -78,7 +78,7 @@ def get_arch_sbo_gp(problem: ArchOptProblemBase, init_size: int = 100, n_paralle
 
 
 def get_sbo(surrogate_model, infill: 'SurrogateInfill', infill_size: int = 1, init_size: int = 100,
-            infill_pop_size: int = 100, infill_gens: int = 100, repair=None, normalization=None,
+            infill_pop_size: int = 100, infill_gens: int = None, repair=None, normalization=None,
             hc_strategy: 'HiddenConstraintStrategy' = None, results_folder=None, **kwargs) -> InfillAlgorithm:
     """Create the SBO algorithm given some SMT surrogate model and an infill criterion"""
 
