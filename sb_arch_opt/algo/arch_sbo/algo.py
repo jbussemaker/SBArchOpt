@@ -331,6 +331,8 @@ class SBOInfill(InfillCriterion):
 
     def _train_model(self):
         s = timeit.default_timer()
+        log.debug(f'Training {self.y_train.shape[1]} {self.surrogate_model.name} models; '
+                  f'x size: {self.x_train.shape}')
 
         kwargs = {'is_acting': self.is_active_train} if self._model_is_hierarchical else {}
         self.surrogate_model.set_training_values(
@@ -345,6 +347,7 @@ class SBOInfill(InfillCriterion):
             self.was_trained = False
         self.n_train += 1
         self.time_train = timeit.default_timer()-s
+        log.debug(f'Training complete in {self.time_train:.2f} seconds')
 
     def _normalize(self, x: np.ndarray) -> np.ndarray:
         return self.normalization.forward(x)
@@ -396,6 +399,7 @@ class SBOInfill(InfillCriterion):
             n_callback = int(termination.max_gen.n_max_gen/5)
 
         # Run infill problem
+        log.debug(f'Starting search for {n_infill} infill point(s)')
         n_eval_outer = self._algorithm.evaluator.n_eval if self._algorithm is not None else -1
         result = minimize(
             problem, algorithm,
@@ -410,7 +414,9 @@ class SBOInfill(InfillCriterion):
         self.opt_results.append(result)
 
         # Select infill points and denormalize the design vectors
+        log.debug(f'Selecting {n_infill} infill point(s) from a population of {len(result.pop)}')
         selected_pop = hc_infill.select_infill(result.pop, problem, n_infill)
+        log.debug(f'Selected {len(selected_pop)} infill point(s)')
         result.opt = selected_pop
 
         x = selected_pop.get('X')
