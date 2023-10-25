@@ -203,13 +203,16 @@ class SurrogateInfill:
 
         def get_y_precision_funcs(x_ref: np.ndarray, is_act_ref: np.ndarray, i_opt):
             last_g: Optional[np.ndarray] = None
+            x_norm_opt = x_norm[i_opt]
+            xl_opt = xl[i_opt]
 
-            def y_precision(x_):
+            def y_precision(x_norm_):
                 nonlocal last_g
                 x_eval = x_ref.copy()
-                x_eval[0, i_opt] = x_
+                x_eval[0, i_opt] = x_norm_*x_norm_opt + xl_opt
 
                 f, g = self.evaluate(x_eval, is_active=is_act_ref)
+                # print(f'EVAL {x_norm_}: {f}, {g}')
 
                 # Infill objectives are normalized so we can just add them to get a correctly-weighted single objective:
                 # - For function-based infills (prediction mean), the surrogates are trained on normalized y values
@@ -223,7 +226,7 @@ class SurrogateInfill:
                 def _g(_):
                     if last_g is None:
                         return 0
-                    return last_g[i_g]
+                    return -last_g[i_g]  # Scipy's minimize formulates ineq constraints as: g(x) >= 0
                 return _g
 
             constraints = [{
@@ -231,10 +234,13 @@ class SurrogateInfill:
                 'fun': get_i_con_fun(i_g)
             } for i_g in range(self.get_n_infill_constraints())]
 
-            return y_precision, constraints
+            return y_precision, constraints, x_norm_opt, xl_opt
 
         # Improve selected points
         xl, xu = problem.xl, problem.xu
+        x_norm = xu-xl
+        x_norm[x_norm < 1e-6] = 1e-6
+
         x, is_active = problem.correct_x(pop.get('X'))
         x_optimized = []
         for i in range(len(pop)):
@@ -247,13 +253,14 @@ class SurrogateInfill:
                 continue
 
             # Run optimization
-            f_opt, con = get_y_precision_funcs(x[[i], :], is_active[[i], :], i_optimize)
-            bounds = [(xl[ix], xu[ix]) for ix in i_optimize]
-            res = minimize(f_opt, x_ref_i[i_optimize], method='slsqp', bounds=bounds,
-                           constraints=con, options={'max_iter': 100})
+            f_opt, con, xn_, xl_ = get_y_precision_funcs(x[[i], :], is_active[[i], :], i_optimize)
+            bounds = [(0., 1.) for _ in i_optimize]
+            x_start_norm = (x_ref_i[i_optimize]-xl_)/xn_
+            res = minimize(f_opt, x_start_norm, method='slsqp', bounds=bounds,
+                           constraints=con, options={'maxiter': 20, 'eps': 1e-4, 'ftol': 1e-3})
             if res.success:
                 x_opt = x_ref_i.copy()
-                x_opt[i_optimize] = res.x
+                x_opt[i_optimize] = res.x*xn_ + xl_
                 x_optimized.append(x_opt)
             else:
                 x_optimized.append(x_ref_i)
@@ -842,18 +849,27 @@ class HCInfill(SurrogateInfill):
         self._hc_strategy = hc_strategy
         super().__init__()
 
+        self._initialize_from_underlying(infill)
+
     @property
     def needs_variance(self):
         return self._infill.needs_variance
 
+    def _initialize(self):
+        self._infill.initialize(self.problem, self.surrogate_model, self.normalization)
+
     def set_samples(self, x_train: np.ndarray, is_active_train: np.ndarray, y_train: np.ndarray):
         self._infill.set_samples(x_train, is_active_train, y_train)
 
+    def _initialize_from_underlying(self, infill: SurrogateInfill):
+        if infill.problem is not None:
+            self.initialize(infill.problem, infill.surrogate_model, infill.normalization)
+
+            if infill.x_train is not None:
+                self.set_samples(infill.x_train, infill.is_active_train, infill.y_train)
+
     def predict(self, x: np.ndarray, is_active: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         return self._infill.predict(x, is_active)
-
-    def _initialize(self):
-        self._infill.initialize(self.problem, self.surrogate_model, self.normalization)
 
     def select_infill_solutions(self, population, infill_problem, n_infill):
         return self._infill.select_infill_solutions(population, infill_problem, n_infill)
