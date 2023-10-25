@@ -385,6 +385,7 @@ class MultiSurrogateModel(SurrogateModel):
         model_copy = copy.deepcopy(model)
 
         if has_ds:
+            model.options['design_space'] = design_space
             model_copy.options['design_space'] = design_space
         return model_copy
 
