@@ -47,7 +47,8 @@ from pymoo.util.normalization import Normalization
 from pymoo.core.initialization import Initialization
 from pymoo.core.duplicate import DuplicateElimination
 from pymoo.termination.max_gen import MaximumGenerationTermination
-from pymoo.termination.default import DefaultMultiObjectiveTermination, DefaultSingleObjectiveTermination
+from pymoo.termination.default import DefaultMultiObjectiveTermination, DefaultSingleObjectiveTermination, \
+    DefaultTermination
 from pymoo.optimize import minimize
 
 from sb_arch_opt.algo.arch_sbo.infill import *
@@ -391,6 +392,8 @@ class SBOInfill(InfillCriterion):
         n_callback = 20
         if isinstance(termination, MaximumGenerationTermination):
             n_callback = int(termination.n_max_gen/5)
+        elif isinstance(termination, DefaultTermination):
+            n_callback = int(termination.max_gen.n_max_gen/5)
 
         # Run infill problem
         n_eval_outer = self._algorithm.evaluator.n_eval if self._algorithm is not None else -1
@@ -480,13 +483,21 @@ class SBOInfill(InfillCriterion):
             robust_period = 5
             n_max_gen = termination or 50
             n_max_eval = n_max_gen*self.pop_size
+
+            # We can be less accurate if we improve the accuracy later
+            if self.infill.select_improve_infills:
+                x_tol, f_tol, g_tol = 1e-2, 1e-2, 5e-2
+            else:
+                x_tol, f_tol, g_tol = 1e-3, 1e-3, 1e-4
+
             if n_obj > 1:
                 termination = DefaultMultiObjectiveTermination(
-                    xtol=5e-4, cvtol=1e-8, ftol=5e-3, n_skip=5, period=robust_period, n_max_gen=n_max_gen,
+                    xtol=x_tol, cvtol=g_tol, ftol=f_tol, n_skip=5, period=robust_period, n_max_gen=n_max_gen,
                     n_max_evals=n_max_eval)
             else:
                 termination = DefaultSingleObjectiveTermination(
-                    xtol=1e-8, cvtol=1e-8, ftol=1e-6, period=robust_period, n_max_gen=n_max_gen, n_max_evals=n_max_eval)
+                    xtol=x_tol, cvtol=g_tol, ftol=f_tol, period=robust_period, n_max_gen=n_max_gen,
+                    n_max_evals=n_max_eval)
 
         return termination
 
