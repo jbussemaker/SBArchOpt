@@ -313,3 +313,4 @@ Following Python SBO frameworks are not implemented, however deserve an acknowle
 - [MOBOpt](https://github.com/ppgaluzio/MOBOpt)
 - [Bayesian Optimization](https://github.com/fmfn/BayesianOptimization): only single-objective
 - [OpenBox](https://open-box.readthedocs.io/en/latest/)
+- [POT (Powerful Optimization Toolbox)](https://arc.aiaa.org/doi/10.2514/1.J056486): DLR-internal continuous, multi-objective, multi-fidelity SBO library that also supports hidden constraints
