@@ -22,6 +22,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+import timeit
+import logging
 import numpy as np
 from typing import *
 from sb_arch_opt.problem import *
@@ -43,6 +45,8 @@ except ImportError:
 __all__ = ['get_hc_strategy', 'HiddenConstraintStrategy', 'PredictionHCStrategy', 'PredictorInterface',
            'SKLearnClassifier', 'RandomForestClassifier', 'SMTPredictor', 'MDGPRegressor', 'HAS_SKLEARN',
            'RejectionHCStrategy', 'ReplacementHCStrategyBase', 'GlobalWorstReplacement']
+
+log = logging.getLogger('sb_arch_opt.sbo_hc')
 
 
 def get_hc_strategy(kpls_n_dim: Optional[int] = 10, min_pov: float = .5):
@@ -208,7 +212,13 @@ class PredictorInterface:
         self._trained_single_class = single_class = y_is_valid[0] if len(set(y_is_valid)) == 1 else None
 
         if single_class is None:
+            log.debug(f'Training hidden constraints predictor {self!s}; x size: {x.shape}')
+            s = timeit.default_timer()
+
             self._train(x, y_is_valid)
+
+            train_time = timeit.default_timer()-s
+            log.debug(f'Trained hidden constraints predictor in {train_time:.2f} seconds')
 
     def evaluate_probability_of_validity(self, x: np.ndarray) -> np.ndarray:
         if self._trained_single_class is not None:

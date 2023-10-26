@@ -47,7 +47,8 @@ from pymoo.util.normalization import Normalization
 from pymoo.core.initialization import Initialization
 from pymoo.core.duplicate import DuplicateElimination
 from pymoo.termination.max_gen import MaximumGenerationTermination
-from pymoo.termination.default import DefaultMultiObjectiveTermination, DefaultSingleObjectiveTermination
+from pymoo.termination.default import DefaultMultiObjectiveTermination, DefaultSingleObjectiveTermination, \
+    DefaultTermination
 from pymoo.optimize import minimize
 
 from sb_arch_opt.algo.arch_sbo.infill import *
@@ -330,6 +331,8 @@ class SBOInfill(InfillCriterion):
 
     def _train_model(self):
         s = timeit.default_timer()
+        log.debug(f'Training {self.y_train.shape[1]} {self.surrogate_model.name} models; '
+                  f'x size: {self.x_train.shape}')
 
         kwargs = {'is_acting': self.is_active_train} if self._model_is_hierarchical else {}
         self.surrogate_model.set_training_values(
@@ -344,6 +347,7 @@ class SBOInfill(InfillCriterion):
             self.was_trained = False
         self.n_train += 1
         self.time_train = timeit.default_timer()-s
+        log.debug(f'Training complete in {self.time_train:.2f} seconds')
 
     def _normalize(self, x: np.ndarray) -> np.ndarray:
         return self.normalization.forward(x)
@@ -384,15 +388,18 @@ class SBOInfill(InfillCriterion):
             return self._get_random_infill_points(n_infill)
 
         # Create infill problem and algorithm
-        problem = self._get_infill_problem()
+        problem, hc_infill = self._get_infill_problem()
         algorithm = self._get_infill_algorithm()
         termination = self._get_termination(n_obj=problem.n_obj)
 
         n_callback = 20
         if isinstance(termination, MaximumGenerationTermination):
             n_callback = int(termination.n_max_gen/5)
+        elif isinstance(termination, DefaultTermination):
+            n_callback = int(termination.max_gen.n_max_gen/5)
 
         # Run infill problem
+        log.debug(f'Starting search for {n_infill} infill point(s)')
         n_eval_outer = self._algorithm.evaluator.n_eval if self._algorithm is not None else -1
         result = minimize(
             problem, algorithm,
@@ -407,7 +414,9 @@ class SBOInfill(InfillCriterion):
         self.opt_results.append(result)
 
         # Select infill points and denormalize the design vectors
-        selected_pop = self.infill.select_infill_solutions(result.pop, problem, n_infill)
+        log.debug(f'Selecting {n_infill} infill point(s) from a population of {len(result.pop)}')
+        selected_pop = hc_infill.select_infill(result.pop, problem, n_infill)
+        log.debug(f'Selected {len(selected_pop)} infill point(s)')
         result.opt = selected_pop
 
         x = selected_pop.get('X')
@@ -446,13 +455,13 @@ class SBOInfill(InfillCriterion):
         infill.initialize(self.problem, self.surrogate_model, self.normalization)
         infill.set_samples(self.x_train, self.is_active_train, self.y_train)
 
-        problem = self._get_infill_problem(infill, force_new_points=False)
+        problem, hc_infill = self._get_infill_problem(infill, force_new_points=False)
         algorithm = self._get_infill_algorithm()
         termination = self._get_termination(n_obj=problem.n_obj)
 
         result = minimize(problem, algorithm, termination=termination, copy_termination=False)
 
-        selected_pop = infill.select_infill_solutions(result.pop, problem, 100)
+        selected_pop = hc_infill.select_infill_solutions(result.pop, problem, 100)
 
         y_min, y_max = self.y_train_min, self.y_train_max
         f_min, f_max = y_min[:self.problem.n_obj], y_max[:self.problem.n_obj]
@@ -469,22 +478,32 @@ class SBOInfill(InfillCriterion):
         hc_infill = HCInfill(infill, self.hc_strategy)
 
         x_exist = self.total_pop.get('X') if force_new_points else None
-        return SurrogateInfillOptimizationProblem(hc_infill, self.problem, x_exist=x_exist)
+        infill_problem = SurrogateInfillOptimizationProblem(hc_infill, self.problem, x_exist=x_exist)
+
+        return infill_problem, hc_infill
 
     def _get_termination(self, n_obj):
         termination = self.termination
         if termination is None or not isinstance(termination, Termination):
-            # return MaximumGenerationTermination(n_max_gen=termination or 100)
+            # return MaximumGenerationTermination(n_max_gen=termination or 50)
             robust_period = 5
-            n_max_gen = termination or 100
+            n_max_gen = termination or 50
             n_max_eval = n_max_gen*self.pop_size
+
+            # We can be less accurate if we improve the accuracy later
+            if self.infill.select_improve_infills:
+                x_tol, f_tol, g_tol = 1e-2, 1e-2, 5e-2
+            else:
+                x_tol, f_tol, g_tol = 1e-3, 1e-3, 1e-4
+
             if n_obj > 1:
                 termination = DefaultMultiObjectiveTermination(
-                    xtol=5e-4, cvtol=1e-8, ftol=5e-3, n_skip=5, period=robust_period, n_max_gen=n_max_gen,
+                    xtol=x_tol, cvtol=g_tol, ftol=f_tol, n_skip=5, period=robust_period, n_max_gen=n_max_gen,
                     n_max_evals=n_max_eval)
             else:
                 termination = DefaultSingleObjectiveTermination(
-                    xtol=1e-8, cvtol=1e-8, ftol=1e-6, period=robust_period, n_max_gen=n_max_gen, n_max_evals=n_max_eval)
+                    xtol=x_tol, cvtol=g_tol, ftol=f_tol, period=robust_period, n_max_gen=n_max_gen,
+                    n_max_evals=n_max_eval)
 
         return termination
 

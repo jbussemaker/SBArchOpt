@@ -36,7 +36,6 @@ from pymoo.util.normalization import Normalization, SimpleZeroToOneNormalization
 
 try:
     os.environ['USE_NUMBA_JIT'] = '1'
-    from smt.surrogate_models.rbf import RBF
     from smt.surrogate_models.surrogate_model import SurrogateModel
 
     from smt.surrogate_models.krg import KRG, KrgBased
@@ -151,6 +150,7 @@ class ModelFactory:
     @staticmethod
     def get_rbf_model():
         check_dependencies()
+        from smt.surrogate_models.rbf import RBF
         return RBF(print_global=False, d0=1., poly_degree=-1, reg=1e-10)
 
     @staticmethod
@@ -366,12 +366,28 @@ class MultiSurrogateModel(SurrogateModel):
     def set_training_values(self, xt: np.ndarray, yt: np.ndarray, name=None, is_acting=None) -> None:
         self._models = models = []
         for iy in range(yt.shape[1]):
-            model: Union['KrgBased', 'SurrogateModel'] = copy.deepcopy(self._surrogate)
+            model: Union['KrgBased', 'SurrogateModel'] = self._copy_underlying()
             if self._is_krg:
                 model.set_training_values(xt, yt[:, [iy]], is_acting=is_acting)
             else:
                 model.set_training_values(xt, yt[:, [iy]])
             models.append(model)
+
+    def _copy_underlying(self) -> 'SurrogateModel':
+        model = self._surrogate
+
+        design_space = None
+        has_ds = 'design_space' in model.options
+        if has_ds:
+            design_space = model.options['design_space']
+            model.options['design_space'] = []
+
+        model_copy = copy.deepcopy(model)
+
+        if has_ds:
+            model.options['design_space'] = design_space
+            model_copy.options['design_space'] = design_space
+        return model_copy
 
     def train(self) -> None:
         theta0 = None

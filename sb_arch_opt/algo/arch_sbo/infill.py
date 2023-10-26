@@ -28,6 +28,7 @@ from typing import *
 from enum import Enum
 from scipy.stats import norm
 from scipy.special import ndtr
+from scipy.optimize import minimize
 from sb_arch_opt.problem import ArchOptProblemBase
 from sb_arch_opt.algo.arch_sbo.hc_strategy import HiddenConstraintStrategy
 
@@ -112,6 +113,7 @@ class SurrogateInfill:
         self.g_infill_log = []
         self.n_eval_infill = 0
         self.time_eval_infill = 0.
+        self.select_improve_infills = True
 
     def __getstate__(self):
         state = self.__dict__.copy()
@@ -176,6 +178,94 @@ class SurrogateInfill:
 
         survival = RankAndCrowdingSurvival()
         return survival.do(infill_problem, population, n_survive=n_infill)
+
+    def select_infill(self, population: Population, infill_problem: Problem, n_infill) -> Population:
+        """Select infill points and improve the precision using a gradient-based algorithm."""
+
+        sel_pop = self.select_infill_solutions(population, infill_problem, n_infill)
+        if not self.select_improve_infills:
+            return sel_pop
+
+        # Improve selected points by local optimization
+        return self._increase_precision(sel_pop)
+
+    def _increase_precision(self, pop: Population) -> Population:
+        """Increase the precision of the continuous variables by running a local gradient-based optimization
+        on the selected points in the population"""
+
+        # Get continuous design variables
+        problem = self.problem
+        if not isinstance(problem, ArchOptProblemBase):
+            return pop
+        is_cont_mask = problem.is_cont_mask
+        if not np.any(is_cont_mask):
+            return pop
+
+        def get_y_precision_funcs(x_ref: np.ndarray, is_act_ref: np.ndarray, i_opt):
+            last_g: Optional[np.ndarray] = None
+            x_norm_opt = x_norm[i_opt]
+            xl_opt = xl[i_opt]
+
+            def y_precision(x_norm_):
+                nonlocal last_g
+                x_eval = x_ref.copy()
+                x_eval[0, i_opt] = x_norm_*x_norm_opt + xl_opt
+
+                f, g = self.evaluate(x_eval, is_active=is_act_ref)
+                # print(f'EVAL {x_norm_}: {f}, {g}')
+
+                # Infill objectives are normalized so we can just add them to get a correctly-weighted single objective:
+                # - For function-based infills (prediction mean), the surrogates are trained on normalized y values
+                # - Expected Improvement and other probability-based infills are also normalized
+                f_so = np.sum(f)
+
+                last_g = g[0, :] if g is not None else None
+                return f_so
+
+            def get_i_con_fun(i_g):
+                def _g(_):
+                    if last_g is None:
+                        return 0
+                    return -last_g[i_g]  # Scipy's minimize formulates ineq constraints as: g(x) >= 0
+                return _g
+
+            constraints = [{
+                'type': 'ineq',
+                'fun': get_i_con_fun(i_g)
+            } for i_g in range(self.get_n_infill_constraints())]
+
+            return y_precision, constraints, x_norm_opt, xl_opt
+
+        # Improve selected points
+        xl, xu = problem.xl, problem.xu
+        x_norm = xu-xl
+        x_norm[x_norm < 1e-6] = 1e-6
+
+        x, is_active = problem.correct_x(pop.get('X'))
+        x_optimized = []
+        for i in range(len(pop)):
+            # Only optimize active continuous variables
+            is_act_i = is_active[i, :]
+            i_optimize, = np.where(is_cont_mask & is_act_i)
+            x_ref_i = x[i, :]
+            if len(i_optimize) == 0:
+                x_optimized.append(x_ref_i)
+                continue
+
+            # Run optimization
+            f_opt, con, xn_, xl_ = get_y_precision_funcs(x[[i], :], is_active[[i], :], i_optimize)
+            bounds = [(0., 1.) for _ in i_optimize]
+            x_start_norm = (x_ref_i[i_optimize]-xl_)/xn_
+            res = minimize(f_opt, x_start_norm, method='slsqp', bounds=bounds,
+                           constraints=con, options={'maxiter': 20, 'eps': 1e-4, 'ftol': 1e-3})
+            if res.success:
+                x_opt = x_ref_i.copy()
+                x_opt[i_optimize] = res.x*xn_ + xl_
+                x_optimized.append(x_opt)
+            else:
+                x_optimized.append(x_ref_i)
+
+        return Population.new(X=np.row_stack(x_optimized))
 
     @staticmethod
     def get_pareto_front(f: np.ndarray) -> np.ndarray:
@@ -759,18 +849,27 @@ class HCInfill(SurrogateInfill):
         self._hc_strategy = hc_strategy
         super().__init__()
 
+        self._initialize_from_underlying(infill)
+
     @property
     def needs_variance(self):
         return self._infill.needs_variance
 
+    def _initialize(self):
+        self._infill.initialize(self.problem, self.surrogate_model, self.normalization)
+
     def set_samples(self, x_train: np.ndarray, is_active_train: np.ndarray, y_train: np.ndarray):
         self._infill.set_samples(x_train, is_active_train, y_train)
 
+    def _initialize_from_underlying(self, infill: SurrogateInfill):
+        if infill.problem is not None:
+            self.initialize(infill.problem, infill.surrogate_model, infill.normalization)
+
+            if infill.x_train is not None:
+                self.set_samples(infill.x_train, infill.is_active_train, infill.y_train)
+
     def predict(self, x: np.ndarray, is_active: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         return self._infill.predict(x, is_active)
-
-    def _initialize(self):
-        self._infill.initialize(self.problem, self.surrogate_model, self.normalization)
 
     def select_infill_solutions(self, population, infill_problem, n_infill):
         return self._infill.select_infill_solutions(population, infill_problem, n_infill)
