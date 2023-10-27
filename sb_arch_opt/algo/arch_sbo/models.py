@@ -380,11 +380,12 @@ class MultiSurrogateModel(SurrogateModel):
         has_ds = 'design_space' in model.options
         if has_ds:
             design_space = model.options['design_space']
-            model.options['design_space'] = []
+            if design_space is not None:
+                model.options['design_space'] = []
 
         model_copy = copy.deepcopy(model)
 
-        if has_ds:
+        if has_ds and design_space is not None:
             model.options['design_space'] = design_space
             model_copy.options['design_space'] = design_space
         return model_copy
