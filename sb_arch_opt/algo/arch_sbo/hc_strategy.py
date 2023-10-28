@@ -300,6 +300,9 @@ class SKLearnClassifier(PredictorInterface):
         super().__init__()
 
     def _evaluate_probability_of_validity(self, x: np.ndarray) -> np.ndarray:
+        if self._predictor is None:
+            return np.ones((x.shape[0],))
+
         x_norm = self._normalization.forward(x)
         pov = self._predictor.predict_proba(x_norm)[:, 1]  # Probability of belonging to class 1 (valid points)
         return pov[:, 0] if len(pov.shape) == 2 else pov
