@@ -473,6 +473,7 @@ class ArchDesignSpace:
     def _quick_random_sample_discrete_x(self, n: int) -> Tuple[np.ndarray, np.ndarray]:
         opt_values = self.get_exhaustive_sample_values(n_cont=1)
         x = np.empty((n, self.n_var))
+        x[:, self.is_cont_mask] = self.x_mid[self.is_cont_mask]
         is_discrete_mask = self.is_discrete_mask
         for i_dv in range(self.n_var):
             if is_discrete_mask[i_dv]:
