@@ -201,7 +201,7 @@ class SurrogateInfill:
         if not np.any(is_cont_mask):
             return pop
 
-        def get_y_precision_funcs(x_ref: np.ndarray, is_act_ref: np.ndarray, i_opt):
+        def get_y_precision_funcs(x_ref: np.ndarray, is_act_ref: np.ndarray, f_ref: np.ndarray, i_opt):
             last_g: Optional[np.ndarray] = None
             x_norm_opt = x_norm[i_opt]
             xl_opt = xl[i_opt]
@@ -212,13 +212,16 @@ class SurrogateInfill:
                 x_eval[0, i_opt] = x_norm_*x_norm_opt + xl_opt
 
                 f, g = self.evaluate(x_eval, is_active=is_act_ref)
-                # print(f'EVAL {x_norm_}: {f}, {g}')
 
-                # Infill objectives are normalized so we can just add them to get a correctly-weighted single objective:
-                # - For function-based infills (prediction mean), the surrogates are trained on normalized y values
-                # - Expected Improvement and other probability-based infills are also normalized
-                f_so = np.sum(f)
+                # Objective is the improvement in the direction of the negative unit vector
+                f_diff = f-f_ref
+                f_abs_diff = np.sum(f_diff)
 
+                # Penalize deviation from unit vector to ensure that the design point stays in the same area of the PF
+                f_deviation = np.ptp(f_diff)
+                f_so = f_abs_diff + f_deviation**2
+
+                # print(f'EVAL {x_norm_}: {f} --> {f_so}, {g}')
                 last_g = g[0, :] if g is not None else None
                 return f_so
 
@@ -242,6 +245,7 @@ class SurrogateInfill:
         x_norm[x_norm < 1e-6] = 1e-6
 
         x, is_active = problem.correct_x(pop.get('X'))
+        f_pop = pop.get('F')
         x_optimized = []
         for i in range(len(pop)):
             # Only optimize active continuous variables
@@ -253,11 +257,11 @@ class SurrogateInfill:
                 continue
 
             # Run optimization
-            f_opt, con, xn_, xl_ = get_y_precision_funcs(x[[i], :], is_active[[i], :], i_optimize)
+            f_opt, con, xn_, xl_ = get_y_precision_funcs(x[[i], :], is_active[[i], :], f_pop[[i], :], i_optimize)
             bounds = [(0., 1.) for _ in i_optimize]
             x_start_norm = (x_ref_i[i_optimize]-xl_)/xn_
             res = minimize(f_opt, x_start_norm, method='slsqp', bounds=bounds,
-                           constraints=con, options={'maxiter': 20, 'eps': 1e-4, 'ftol': 1e-3})
+                           constraints=con, options={'maxiter': 20, 'eps': 1e-5, 'ftol': 1e-4})
             if res.success:
                 x_opt = x_ref_i.copy()
                 x_opt[i_optimize] = res.x*xn_ + xl_
