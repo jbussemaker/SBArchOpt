@@ -334,9 +334,9 @@ class SBOInfill(InfillCriterion):
         log.debug(f'Training {self.y_train.shape[1]} {self.surrogate_model.name} models; '
                   f'x size: {self.x_train.shape}')
 
-        kwargs = {'is_acting': self.is_active_train} if self._model_is_hierarchical else {}
+        # kwargs = {'is_acting': self.is_active_train} if self._model_is_hierarchical else {}
         self.surrogate_model.set_training_values(
-            self.normalization.forward(self.x_train), self.y_train, **kwargs)
+            self.normalization.forward(self.x_train), self.y_train)
 
         self.infill.set_samples(self.x_train, self.is_active_train, self.y_train)
 

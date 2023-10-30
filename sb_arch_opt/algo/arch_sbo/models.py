@@ -166,11 +166,13 @@ class ModelFactory:
             surrogate = MultiSurrogateModel(surrogate)
         return surrogate
 
-    def get_md_kriging_model(self, kpls_n_comp: int = None, multi=True, **kwargs_) -> Tuple['SurrogateModel', Normalization]:
+    def get_md_kriging_model(self, kpls_n_comp: int = None, multi=True, ignore_hierarchy=False,
+                             **kwargs_) -> Tuple['SurrogateModel', Normalization]:
         check_dependencies()
         normalization = self.get_md_normalization()
         design_space = self.problem.design_space
-        norm_ds_spec = self.create_smt_design_space_spec(design_space, md_normalize=True)
+        norm_ds_spec = self.create_smt_design_space_spec(
+            design_space, md_normalize=True, ignore_hierarchy=ignore_hierarchy)
 
         kwargs = dict(
             print_global=False,
