@@ -188,6 +188,13 @@ class SurrogateInfill:
 
         # Improve selected points by local optimization
         return self._increase_precision(sel_pop)
+        # print(f'SEL POP x    = {sel_pop.get("X")}')  # TODO
+        # print(f'SEL POP f_in = {sel_pop.get("F")}')  # TODO
+        # improved_sel_pop = self._increase_precision(sel_pop)
+        # print(f'IMP POP x    = {improved_sel_pop.get("X")}')  # TODO
+        # x, is_active = self.problem.correct_x(improved_sel_pop.get("X"))
+        # print(f'IMP POP f_in = {self.evaluate(x, is_active)[0]}')  # TODO
+        # return improved_sel_pop
 
     def _increase_precision(self, pop: Population) -> Population:
         """Increase the precision of the continuous variables by running a local gradient-based optimization
@@ -219,9 +226,9 @@ class SurrogateInfill:
 
                 # Penalize deviation from unit vector to ensure that the design point stays in the same area of the PF
                 f_deviation = np.ptp(f_diff)
-                f_so = f_abs_diff + f_deviation**2
+                f_so = f_abs_diff + 100*f_deviation**2
 
-                # print(f'EVAL {x_norm_}: {f} --> {f_so}, {g}')
+                # print(f'EVAL {x_norm_}: {f} --> {f_so}, {g}')  # TODO
                 last_g = g[0, :] if g is not None else None
                 return f_so
 
