@@ -188,12 +188,12 @@ class SurrogateInfill:
 
         # Improve selected points by local optimization
         return self._increase_precision(sel_pop)
-        # print(f'SEL POP x    = {sel_pop.get("X")}')  # TODO
-        # print(f'SEL POP f_in = {sel_pop.get("F")}')  # TODO
+        # print(f'SEL POP x    = {sel_pop.get("X")}')
+        # print(f'SEL POP f_in = {sel_pop.get("F")}')
         # improved_sel_pop = self._increase_precision(sel_pop)
-        # print(f'IMP POP x    = {improved_sel_pop.get("X")}')  # TODO
+        # print(f'IMP POP x    = {improved_sel_pop.get("X")}')
         # x, is_active = self.problem.correct_x(improved_sel_pop.get("X"))
-        # print(f'IMP POP f_in = {self.evaluate(x, is_active)[0]}')  # TODO
+        # print(f'IMP POP f_in = {self.evaluate(x, is_active)[0]}')
         # return improved_sel_pop
 
     def _increase_precision(self, pop: Population) -> Population:
@@ -228,7 +228,7 @@ class SurrogateInfill:
                 f_deviation = np.ptp(f_diff)
                 f_so = f_abs_diff + 100*f_deviation**2
 
-                # print(f'EVAL {x_norm_}: {f} --> {f_so}, {g}')  # TODO
+                # print(f'EVAL {x_norm_}: {f} --> {f_so}, {g}')
                 last_g = g[0, :] if g is not None else None
                 return f_so
 
