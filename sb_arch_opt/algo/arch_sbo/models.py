@@ -197,6 +197,7 @@ class ModelFactory:
             if not IS_SMT_21:
                 kwargs['categorical_kernel'] = MixIntKernelType.CONT_RELAX
 
+            # Ignore hierarchy in the design space as KPLS does not support this
             non_hier_ds_spec = self.create_smt_design_space_spec(
                 self.problem.design_space, md_normalize=True, ignore_hierarchy=True)
             kwargs['design_space'] = non_hier_ds_spec.design_space
@@ -204,6 +205,9 @@ class ModelFactory:
             surrogate = KPLS(n_comp=kpls_n_comp, **kwargs)
         else:
             surrogate = KRG(**kwargs)
+
+        if ignore_hierarchy or kpls_n_comp is not None:
+            surrogate.supports['x_hierarchy'] = False
 
         if multi:
             surrogate = MultiSurrogateModel(surrogate)
@@ -358,6 +362,9 @@ class MultiSurrogateModel(SurrogateModel):
         self.supports = self._surrogate.supports
         self.options["print_global"] = False
 
+        self.xt = None
+        self.yt = None
+
     @property
     def name(self):
         return f'Multi{self._surrogate.name}'
@@ -366,6 +373,9 @@ class MultiSurrogateModel(SurrogateModel):
         self.supports["derivatives"] = False
 
     def set_training_values(self, xt: np.ndarray, yt: np.ndarray, name=None, is_acting=None) -> None:
+        self.xt = xt
+        self.yt = yt
+
         self._models = models = []
         for iy in range(yt.shape[1]):
             model: Union['KrgBased', 'SurrogateModel'] = self._copy_underlying()
@@ -399,6 +409,9 @@ class MultiSurrogateModel(SurrogateModel):
                 model.options['theta0'] = theta0
 
             model.train()
+
+            # rmse = np.linalg.norm(self.yt[:, i] - model.predict_values(self.xt)[:, 0], 2)
+            # print(f'TRAINED {i}: {rmse:.3g}')
 
             if i == 0 and isinstance(model, KrgBased):
                 try:
