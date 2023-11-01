@@ -166,7 +166,7 @@ class ModelFactory:
             surrogate = MultiSurrogateModel(surrogate)
         return surrogate
 
-    def get_md_kriging_model(self, kpls_n_comp: int = None, multi=True, ignore_hierarchy=False,
+    def get_md_kriging_model(self, kpls_n_comp: int = None, multi=True, ignore_hierarchy=True,
                              **kwargs_) -> Tuple['SurrogateModel', Normalization]:
         check_dependencies()
         normalization = self.get_md_normalization()
