@@ -917,7 +917,7 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
         super().__init__(des_vars, n_obj=problem.n_obj, n_ieq_constr=problem.n_ieq_constr,
                          n_eq_constr=problem.n_eq_constr)
 
-        self.__correct_output = {}
+        self._correct_output = {}
 
     def _get_n_valid_discrete(self) -> int:
         n_discrete_underlying = self._problem.get_n_valid_discrete()
@@ -953,7 +953,7 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
                        h_out: np.ndarray, *args, **kwargs):
         # Correct and impute
         self._correct_x_impute(x, is_active_out)
-        i_sub_selected = self.__correct_output['i_sub_sel']
+        i_sub_selected = self._correct_output['i_sub_sel']
         n_sub = self._x_sub.shape[1]
 
         # Evaluate underlying problem
@@ -1007,7 +1007,7 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
         x[:, n_sub:] = x_problem[:, :n_cont]
         is_active[:, n_sub:] = is_act_problem[:, :n_cont]
 
-        self.__correct_output = {'i_sub_sel': i_sub_selected}
+        self._correct_output = {'i_sub_sel': i_sub_selected}
 
     def _get_x_underlying(self, x_underlying):
         if self._n_cont == 0:
@@ -1020,7 +1020,7 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
             x = self.pareto_set()
         x, _ = self.correct_x(x)
         f = self.evaluate(x, return_as_dictionary=True)['F']
-        i_sub_selected = self.__correct_output['i_sub_sel']
+        i_sub_selected = self._correct_output['i_sub_sel']
 
         plt.figure()
         f0 = f[:, 0]
