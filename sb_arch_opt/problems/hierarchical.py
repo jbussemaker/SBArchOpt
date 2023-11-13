@@ -986,20 +986,13 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
         return f_norm*(pf_max-pf_min) + pf_min
 
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
-        # Match sub-problem selection design variables
+        # Match/correct sub-problem selection design variables
+        i_sub_selected = self._get_corrected_sub_sel_idx(x)
+
         x_sub, is_act_sub = self._x_sub, self._is_act_sub
         n_sub = x_sub.shape[1]
-        x_dist = distance.cdist(x[:, :n_sub], x_sub, metric='cityblock')
-        i_sub_selected = np.zeros((x.shape[0],), dtype=int)
-        for i in range(x.shape[0]):
-            # Get minimum distance
-            i_min_dist = np.argmin(x_dist[i, :])
-            i_sub_selected[i] = i_min_dist
-
-            # Impute if the design vector didn't match exactly
-            if x_dist[i, i_min_dist] > 0:
-                x[i, :n_sub] = x_sub[i_min_dist, :]
-                is_active[i, :n_sub] = is_act_sub[i_min_dist, :]
+        x[:, :n_sub] = x_sub[i_sub_selected, :].copy()
+        is_active[:, :n_sub] = is_act_sub[i_sub_selected, :].copy()
 
         # Correct design vectors of underlying problem
         n_cont = self._n_cont
@@ -1009,6 +1002,38 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
         is_active[:, n_sub:] = is_act_problem[:, :n_cont]
 
         self._correct_output = {'i_sub_sel': i_sub_selected}
+
+    def _get_corrected_sub_sel_idx(self, x: np.ndarray):
+        x_sub, is_active_sub = self._x_sub, self._is_act_sub
+
+        corrected_sub_sel_idx = np.zeros((x.shape[0],), dtype=int)
+        for j, xi in enumerate(x):
+            matched_dv_idx = np.arange(x_sub.shape[0])
+            x_valid_matched, is_active_valid_matched = x_sub, is_active_sub
+            for i, is_discrete in enumerate(self.is_discrete_mask):
+                # Ignore continuous vars
+                if not is_discrete:
+                    continue
+
+                # Match active valid x to value or inactive valid x
+                is_active_valid_i = is_active_valid_matched[:, i]
+                matched = (is_active_valid_i & (x_valid_matched[:, i] == xi[i])) | (~is_active_valid_i)
+
+                # If there are no matches, match the closest value
+                if not np.any(matched):
+                    x_val_dist = np.abs(x_valid_matched[:, i] - xi[i])
+                    matched = x_val_dist == np.min(x_val_dist)
+
+                # Select vectors and check if there are any vectors left to choose from
+                matched_dv_idx = matched_dv_idx[matched]
+                x_valid_matched = x_valid_matched[matched, :]
+                is_active_valid_matched = is_active_valid_matched[matched, :]
+
+                # If there is only one matched vector left, there is no need to continue checking
+                if len(matched_dv_idx) == 1:
+                    break
+            corrected_sub_sel_idx[j] = matched_dv_idx[0]
+        return corrected_sub_sel_idx
 
     def _get_x_underlying(self, x_underlying):
         if self._n_cont == 0:
