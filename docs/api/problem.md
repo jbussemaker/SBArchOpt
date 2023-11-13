@@ -37,6 +37,7 @@
         members:
             - all_discrete_x
             - correct_x
+            - corrector
             - quick_sample_discrete_x
             - des_vars
             - imputation_ratio

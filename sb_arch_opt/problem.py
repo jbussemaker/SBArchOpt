@@ -336,9 +336,14 @@ class ArchOptProblemBase(Problem):
         raise NotImplementedError
 
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
-        """Only if no explicit design space model is given. Fill the activeness matrix and (if needed) impute any
-        design variables that are partially inactive. Imputation of inactive design variables is always applied after
-        this function."""
+        """
+        Fill the activeness matrix and (if needed) correct any design variables that are partially inactive.
+        Imputation of inactive design variables is always applied after this function.
+
+        Only needed if no explicit design space model is given.
+        Only used if not all discrete design vectors `all_discrete_x` is available OR
+        `self.design_space.use_auto_corrector = False`.
+        """
 
     def __repr__(self):
         """repr() of the class, should be unique for unique Pareto fronts"""

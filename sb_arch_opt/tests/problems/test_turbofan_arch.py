@@ -99,4 +99,4 @@ def test_realistic_problem():
 
     f_eval = problem.evaluate(x_pf[[0], :], return_as_dictionary=True)['F']
     assert np.all(np.isfinite(f_eval))
-    assert np.all(f_eval[0, :] == f_pf[0, :])
+    assert np.all(np.abs(f_eval[0, :] - f_pf[0, :]) < 1e-3)

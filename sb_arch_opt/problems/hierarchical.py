@@ -917,6 +917,7 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
         super().__init__(des_vars, n_obj=problem.n_obj, n_ieq_constr=problem.n_ieq_constr,
                          n_eq_constr=problem.n_eq_constr)
 
+        self.design_space.use_auto_corrector = False
         self._correct_output = {}
 
     def _get_n_valid_discrete(self) -> int:

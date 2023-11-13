@@ -23,6 +23,8 @@ def run_test_hierarchy(problem, imp_ratio, check_n_valid=True, validate_exhausti
 
         pop = HierarchicalExhaustiveSampling(n_cont=1).do(problem, 0)
         assert len(pop) == problem.get_n_valid_discrete()
+
+    x_discrete, is_act_discrete = problem.all_discrete_x
     assert HierarchicalExhaustiveSampling.has_cheap_all_x_discrete(problem) == (x_discrete is not None)
 
     assert problem.get_discrete_imputation_ratio() == pytest.approx(imp_ratio, rel=.02)
