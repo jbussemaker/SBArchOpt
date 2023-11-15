@@ -28,7 +28,7 @@ from typing import *
 from sb_arch_opt.problems.hierarchical import HierarchyProblemBase
 
 try:
-    from assign_pymoo.problem import AssignmentProblemBase, AssignmentProblem
+    from assign_pymoo.problem import AssignmentProblemBase, AssignmentProblem, MultiAssignmentProblem
     from assign_experiments.problems.gnc import *
     from assign_experiments.problems.analytical import *
     HAS_ASSIGN_ENC = True
@@ -101,6 +101,14 @@ class AssignmentProblemWrapper(HierarchyProblemBase):
             dist_corr = self._problem.assignment_manager.encoder.get_distance_correlation()
             if dist_corr is not None:
                 print(f'dist_corr    : {dist_corr*100:.0f}%')
+
+        elif isinstance(self._problem, MultiAssignmentProblem):
+            for i, assignment_manager in enumerate(self._problem.assignment_managers):
+                dist_corr = assignment_manager.encoder.get_distance_correlation()
+                if dist_corr is not None:
+                    imp_ratio = assignment_manager.encoder.get_imputation_ratio()
+                    print(f'dist_corr {i: 2d} : {dist_corr*100:.0f}%; '
+                          f'imp_ratio : {imp_ratio:.2f}; {assignment_manager.encoder!s}')
 
         super()._print_extra_stats()
 
