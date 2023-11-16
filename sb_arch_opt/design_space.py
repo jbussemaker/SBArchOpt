@@ -466,7 +466,9 @@ class ArchDesignSpace:
         - Impute design vectors
         - Remove duplicates
         """
+        return self._get_all_discrete_x_by_trial_and_imputation()
 
+    def _get_all_discrete_x_by_trial_and_imputation(self):
         # First sample only discrete dimensions
         opt_values = self.get_exhaustive_sample_values(n_cont=1)
         x_cart_product_gen = itertools.product(*opt_values)

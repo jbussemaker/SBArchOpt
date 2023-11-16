@@ -155,7 +155,7 @@ class GNCProblemBase(HierarchyProblemBase):
         # Here we assign each possible connection edge to one categorical design variable (yes/no), representing whether
         # the connection is established or not; the constraint that each object should have at least one connection is
         # enforced by repair/imputation
-        for _ in range(n_obj_types):
+        for _ in range(n_obj_types-1):
             des_vars += [Choice(options=[False, True]) for _ in range(self.n_max*self.n_max)]
 
         return des_vars
@@ -181,7 +181,7 @@ class GNCProblemBase(HierarchyProblemBase):
                         is_cond_act[i_dv] = False
                         i_dv += 1
 
-        for _ in range(n_obj_types):
+        for _ in range(n_obj_types-1):
             for i in range(self.n_max):
                 for j in range(self.n_max):
                     # Connections between the first object instances are always active
@@ -195,6 +195,7 @@ class GNCProblemBase(HierarchyProblemBase):
         n_obj_types = 3 if self.actuators else 2
         n_x_conn = self.n_max*self.n_max
         for i, x_i in enumerate(x):
+            is_active_i = is_active[i, :]
             j = 0
 
             # Get the number of instantiated objects
@@ -210,7 +211,7 @@ class GNCProblemBase(HierarchyProblemBase):
                     x_obj_type = x_i[j:j+self.n_max]
 
                     # Set type selections for non-instantiated objects to inactive
-                    is_active[j+n_obj:j+self.n_max] = False
+                    is_active_i[j+n_obj:j+self.n_max] = False
 
                     # Correct types for instantiated objects to only select unordered combinations: subsequent variables
                     # cannot have a lower value than prior ones
@@ -226,7 +227,7 @@ class GNCProblemBase(HierarchyProblemBase):
             # Correct the connections
             for i_conn in range(n_obj_types-1):
                 x_conn = x_i[j:j+n_x_conn].reshape((self.n_max, self.n_max))
-                is_active_conn = x_i[j:j+n_x_conn].reshape((self.n_max, self.n_max))
+                is_active_conn = is_active_i[j:j+n_x_conn].reshape((self.n_max, self.n_max))
 
                 # Deactivate connections for non-instantiated objects
                 n_src, n_tgt = n_inst[i_conn], n_inst[i_conn+1]
