@@ -1,5 +1,7 @@
 import os
+import copy
 import pytest
+import pickle
 import tempfile
 import numpy as np
 import contextlib
@@ -188,6 +190,20 @@ def test_arch_sbo_gp_high_dim():
 
     problem = MOZDT1()
     sbo = get_arch_sbo_gp(problem, init_size=10, kpls_n_dim=5)
+    result = minimize(problem, sbo, termination=('n_eval', 12))
+    assert len(result.pop) == 12
+
+
+@check_dependency()
+def test_arch_sbo_gp_copy():
+    assert HAS_ARCH_SBO
+
+    problem = Branin()
+    sbo = get_arch_sbo_gp(problem, init_size=10)
+
+    problem, sbo = pickle.loads(pickle.dumps((problem, sbo)))
+    sbo = copy.deepcopy(sbo)
+
     result = minimize(problem, sbo, termination=('n_eval', 12))
     assert len(result.pop) == 12
 

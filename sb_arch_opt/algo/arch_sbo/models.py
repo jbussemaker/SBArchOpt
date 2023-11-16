@@ -277,7 +277,7 @@ class SBArchOptDesignSpace(BaseDesignSpace):
     def _get_design_variables(self) -> List['ds.DesignVariable']:
         """Return the design variables defined in this design space if not provided upon initialization of the class"""
         smt_des_vars = []
-        is_conditional = self._ds.is_conditionally_active
+        is_dv_cond = ([False]*len(self._ds.des_vars)) if self._ignore_hierarchy else self._ds.is_conditionally_active
         normalize = self.normalize is not None
         cont_relax = self._cont_relax
         for i, dv in enumerate(self._ds.des_vars):
@@ -303,7 +303,7 @@ class SBArchOptDesignSpace(BaseDesignSpace):
                     smt_des_vars.append(ds.FloatVariable(0, len(dv.options)-1))
                 else:
                     # Conditional categorical variables are currently not supported
-                    if is_conditional[i] and not self._global_disable_hierarchical_cat_fix:
+                    if is_dv_cond[i] and not self._global_disable_hierarchical_cat_fix:
                         smt_des_vars.append(ds.IntegerVariable(0, len(dv.options)-1))
                     else:
                         smt_des_vars.append(ds.CategoricalVariable(values=dv.options))
@@ -314,7 +314,7 @@ class SBArchOptDesignSpace(BaseDesignSpace):
 
     def _is_conditionally_acting(self) -> np.ndarray:
         if self._ignore_hierarchy:
-            return np.zeros((len(self._ds.is_conditionally_active),), dtype=bool)
+            return np.zeros((len(self._ds.des_vars),), dtype=bool)
 
         return self._ds.is_conditionally_active
 
