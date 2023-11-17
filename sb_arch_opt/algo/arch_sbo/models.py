@@ -46,12 +46,12 @@ try:
     import smt.utils.design_space as ds
 
     from smt import __version__
-    IS_SMT_21 = not __version__.startswith('2.0')
+    IS_SMT_22 = not __version__.startswith('2.0') and not __version__.startswith('2.1')
 
     HAS_ARCH_SBO = True
 except ImportError:
     HAS_ARCH_SBO = False
-    IS_SMT_21 = False
+    IS_SMT_22 = False
 
     class BaseDesignSpace:
         pass
@@ -60,7 +60,7 @@ except ImportError:
         pass
 
 __all__ = ['check_dependencies', 'HAS_ARCH_SBO', 'ModelFactory', 'MixedDiscreteNormalization', 'SBArchOptDesignSpace',
-           'MultiSurrogateModel', 'IS_SMT_21']
+           'MultiSurrogateModel', 'IS_SMT_22']
 
 
 def check_dependencies():
@@ -187,14 +187,14 @@ class ModelFactory:
             n_dim_apply_pls = design_space.n_var
 
             # PLS is not applied to categorical variables for EHH/HH kernels (see KrgBased._matrix_data_corr)
-            if IS_SMT_21 and kwargs['categorical_kernel'] not in [MixIntKernelType.CONT_RELAX, MixIntKernelType.GOWER]:
+            if IS_SMT_22 and kwargs['categorical_kernel'] not in [MixIntKernelType.CONT_RELAX, MixIntKernelType.GOWER]:
                 n_dim_apply_pls = design_space.n_var - np.sum(design_space.is_cat_mask)
 
             if kpls_n_comp > n_dim_apply_pls:
                 kpls_n_comp = None
 
         if kpls_n_comp is not None:
-            if not IS_SMT_21:
+            if not IS_SMT_22:
                 kwargs['categorical_kernel'] = MixIntKernelType.CONT_RELAX
 
             # Ignore hierarchy in the design space as KPLS does not support this
@@ -260,7 +260,7 @@ class ModelFactory:
 class SBArchOptDesignSpace(BaseDesignSpace):
     """SMT design space implementation using SBArchOpt's design space logic"""
 
-    _global_disable_hierarchical_cat_fix = IS_SMT_21
+    _global_disable_hierarchical_cat_fix = IS_SMT_22
 
     def __init__(self, arch_design_space: ArchDesignSpace, md_normalize=False, cont_relax=False,
                  ignore_hierarchy=False):
@@ -331,8 +331,8 @@ class SBArchOptDesignSpace(BaseDesignSpace):
             is_active = np.ones(is_active.shape, dtype=bool)
         return x, is_active
 
-    def _sample_valid_x(self, n: int) -> Tuple[np.ndarray, np.ndarray]:
-        sampler = HierarchicalSampling()
+    def _sample_valid_x(self, n: int, random_state=None) -> Tuple[np.ndarray, np.ndarray]:
+        sampler = HierarchicalSampling(seed=random_state)
         stub_problem = ArchOptProblemBase(self._ds)
         x, is_active = sampler.sample_get_x(stub_problem, n)
 
