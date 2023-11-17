@@ -157,6 +157,10 @@ class EagerCorrectorBase(CorrectorBase):
         # Set activeness information of correct vectors
         is_active[is_correct, :] = is_active_valid[correct_idx[is_correct], :]
 
+        # Check if anything should be corrected
+        if not np.any(to_be_corrected):
+            return
+
         # Get corrected design vector indices
         xi_corrected = self._get_corrected_x_idx(x[to_be_corrected, :])
         if len(xi_corrected.shape) != 1:
