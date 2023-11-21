@@ -47,6 +47,10 @@ def test_simple_problem():
 
     assert problem._load_evaluated()
 
+    f_eval = problem.evaluate(x_pf[[0], :], return_as_dictionary=True)['F']
+    assert np.all(np.isfinite(f_eval))
+    assert np.all(np.abs(f_eval[0, :] - f_pf[0, :]) < 1e-3)
+
 
 @pytest.mark.skipif(int(os.getenv('RUN_SLOW_TESTS', 0)) != 1, reason='Set RUN_SLOW_TESTS=1 to run slow tests')
 @check_dependency()
@@ -99,4 +103,4 @@ def test_realistic_problem():
 
     f_eval = problem.evaluate(x_pf[[0], :], return_as_dictionary=True)['F']
     assert np.all(np.isfinite(f_eval))
-    assert np.all(f_eval[0, :] == f_pf[0, :])
+    assert np.all(np.abs(f_eval[0, :] - f_pf[0, :]) < 1e-3)

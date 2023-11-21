@@ -246,28 +246,13 @@ class HierarchicalSampling(FloatRandomSampling):
         xl, xu = problem.xl, problem.xu
         sobol = self.sobol
 
-        def _choice(n_choose, n_from, replace=True):
-            return self._choice(n_choose, n_from, replace=replace, sobol=sobol)
-
         # If the population of all available discrete design vectors is available, sample from there
-        is_active = is_act_all
-        might_contain_duplicates = False
         if x_all is not None:
             x, is_active = self._sample_discrete_x(n_samples, is_cont_mask, x_all, is_act_all, sobol=sobol)
 
         # Otherwise, sample discrete vectors randomly
-        elif isinstance(problem, ArchOptProblemBase):
-            might_contain_duplicates = True
-            x, is_active = problem.design_space.quick_sample_discrete_x(n_samples)
-
         else:
-            might_contain_duplicates = True
-            opt_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(problem, n_cont=1)
-            x = np.empty((n_samples, problem.n_var))
-            for i_dv in range(problem.n_var):
-                if not is_cont_mask[i_dv]:
-                    i_opt_sampled = _choice(n_samples, len(opt_values[i_dv]))
-                    x[:, i_dv] = opt_values[i_dv][i_opt_sampled]
+            x, is_active = self._sample_discrete_x_random(problem, repair, n_samples, is_cont_mask, sobol=sobol)
 
         # Randomize continuous variables
         if has_x_cont:
@@ -290,21 +275,26 @@ class HierarchicalSampling(FloatRandomSampling):
 
             x[:, is_cont_mask] = x_unit_abs
 
-        if isinstance(problem, ArchOptProblemBase):
-            x, is_active = problem.correct_x(x)
-        else:
-            x = repair.do(problem, x)
-            if isinstance(repair, ArchOptRepair) and repair.latest_is_active is not None:
-                is_active = repair.latest_is_active
-        if is_active is None:
-            raise ValueError('Unexpectedly empty is_active!')
+            # Correct variables
+            x, is_active = self._correct(problem, repair, x)
 
-        if not has_x_cont and might_contain_duplicates:
-            is_unique = ~LargeDuplicateElimination.eliminate(x)
-            x = x[is_unique, :]
-            is_active = is_active[is_unique, :]
+        if x.shape[0] != n_samples:
+            log.info(f'Generated {x.shape[0]} samples, {n_samples} requested')
 
         return x, is_active
+
+    @staticmethod
+    def _correct(problem: Problem, repair: Repair, x):
+        if isinstance(problem, ArchOptProblemBase):
+            return problem.correct_x(x)
+
+        x_corr = repair.do(problem, x)
+        is_active_corr = None
+        if isinstance(repair, ArchOptRepair) and repair.latest_is_active is not None:
+            is_active_corr = repair.latest_is_active
+        if is_active_corr is None:
+            raise ValueError('Unexpectedly empty is_active!')
+        return x_corr, is_active_corr
 
     def _sample_discrete_x(self, n_samples: int, is_cont_mask, x_all: np.ndarray, is_act_all: np.ndarray, sobol=False):
         if x_all.shape[0] == 0:
@@ -332,7 +322,7 @@ class HierarchicalSampling(FloatRandomSampling):
         x = []
         is_active = []
         has_x_cont = np.any(is_cont_mask)
-        i_x_sampled = np.ones((x_all.shape[0],), dtype=bool)
+        i_x_sampled = np.zeros((x_all.shape[0],), dtype=bool)
         for i_grp in range(len(groups)):
             i_x_tgt = np.where(selected_groups == i_grp)[0]
             if len(i_x_tgt) == 0:
@@ -416,6 +406,55 @@ class HierarchicalSampling(FloatRandomSampling):
         nr_active = np.sum(is_act_all, axis=1)
         avg_nr_active = [np.sum(nr_active[group])/len(group) for group in groups]
         return avg_nr_active
+
+    def _sample_discrete_x_random(self, problem: Problem, repair: Repair, n_samples: int, is_cont_mask, sobol=False):
+        has_x_cont = np.any(is_cont_mask)
+
+        def _choice(n_choose, n_from, replace=True):
+            return self._choice(n_choose, n_from, replace=replace, sobol=sobol)
+
+        n_x = 0
+        x = is_active = None
+        for _ in range(3):
+            # Determine how many samples to request in this round:
+            # add a little margin to correct for potential duplicate vectors
+            n_add = min(n_samples, (n_samples-n_x)*5)
+
+            if isinstance(problem, ArchOptProblemBase):
+                x_add, is_active_add = problem.design_space.quick_sample_discrete_x(n_add)
+
+            else:
+                opt_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(problem, n_cont=1)
+                x_add = np.empty((n_add, problem.n_var))
+                for i_dv in range(problem.n_var):
+                    if not is_cont_mask[i_dv]:
+                        i_opt_sampled = _choice(n_add, len(opt_values[i_dv]))
+                        x_add[:, i_dv] = opt_values[i_dv][i_opt_sampled]
+
+            x = x_add if x is None else np.row_stack([x, x_add])
+
+            # Correct and remove duplicates
+            x, is_active = self._correct(problem, repair, x)
+            is_unique = ~LargeDuplicateElimination.eliminate(x)
+            x = x[is_unique, :]
+            is_active = is_active[is_unique, :]
+
+            n_x = x.shape[0]
+            if n_x > n_samples:
+                x = x[:n_samples, :]
+                is_active = is_active[:n_samples, :]
+                break
+            if n_x == n_samples:
+                break
+
+        # Duplicate discrete vectors if needed and if there are continuous dimensions
+        if x.shape[0] < n_samples and has_x_cont:
+            n_add = n_samples-x.shape[0]
+            i_select_dup = _choice(n_add, x.shape[0])
+            x = np.row_stack(x, x[i_select_dup, :])
+            is_active = np.row_stack(is_active, is_active[i_select_dup, :])
+
+        return x, is_active
 
     @staticmethod
     def _sobol(n_samples, n_dims=None) -> np.ndarray:

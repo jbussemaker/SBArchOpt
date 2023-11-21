@@ -27,9 +27,27 @@ import numpy as np
 import pandas as pd
 from typing import *
 from cached_property import cached_property
+from pymoo.operators.sampling.lhs import LatinHypercubeSampling
 from pymoo.core.variable import Variable, Real, Integer, Binary, Choice
 
-__all__ = ['ArchDesignSpace', 'ImplicitArchDesignSpace']
+__all__ = ['ArchDesignSpace', 'ImplicitArchDesignSpace', 'CorrectorInterface', 'CorrectorUnavailableError']
+
+
+class CorrectorInterface:
+    """
+    Interface for an object implementing some problem-agnostic correction behavior.
+    """
+
+    def correct_x(self, x: np.ndarray, is_active: np.ndarray):
+        """
+        Fill the activeness matrix (n x nx) and if needed correct design vectors (n x nx) that are partially inactive.
+        No need to impute inactive design variables.
+        """
+        raise NotImplementedError
+
+
+class CorrectorUnavailableError(RuntimeError):
+    pass
 
 
 class ArchDesignSpace:
@@ -58,6 +76,7 @@ class ArchDesignSpace:
     def __init__(self):
         self._choice_value_map = None
         self._is_initialized = False
+        self.use_auto_corrector = True
 
     @cached_property
     def n_var(self):
@@ -183,8 +202,35 @@ class ArchDesignSpace:
 
     def correct_x_impute(self, x: np.ndarray, is_active: np.ndarray):
         """Corrects and imputes design vectors, assuming that they have already been corrected for discreteness"""
-        self._correct_x(x, is_active)
+        self._correct_x_corrector(x, is_active)
         self.impute_x(x, is_active)
+
+    def _correct_x_corrector(self, x: np.ndarray, is_active: np.ndarray):
+        """Corrects design vectors and fills is_active matrix by a corrector if available,
+        otherwise uses the problem-specific correction mechanism"""
+
+        corrector = self.corrector
+        if corrector is not None and self.use_auto_corrector:
+            try:
+                corrector.correct_x(x, is_active)
+                return
+            except CorrectorUnavailableError:
+                pass
+
+        self._correct_x(x, is_active)
+
+    @cached_property
+    def corrector(self) -> Optional[CorrectorInterface]:
+        """
+        Correction algorithm for problem-agnostic optimal correction in case all design vectors (`all_discrete_x`) are
+        available. Set `use_auto_corrector = False` to force to use the problem-specific `_correct_x` function.
+        """
+        return self._get_corrector()
+
+    def _get_corrector(self) -> Optional[CorrectorInterface]:
+        """Get the default corrector algorithm"""
+        from sb_arch_opt.correction import ClosestEagerCorrector
+        return ClosestEagerCorrector(self)
 
     def round_x_discrete(self, x: np.ndarray):
         """
@@ -420,7 +466,9 @@ class ArchDesignSpace:
         - Impute design vectors
         - Remove duplicates
         """
+        return self._get_all_discrete_x_by_trial_and_imputation()
 
+    def _get_all_discrete_x_by_trial_and_imputation(self):
         # First sample only discrete dimensions
         opt_values = self.get_exhaustive_sample_values(n_cont=1)
         x_cart_product_gen = itertools.product(*opt_values)
@@ -428,37 +476,49 @@ class ArchDesignSpace:
         is_cont_mask = self.is_cont_mask
         is_discrete_mask = ~is_cont_mask
 
-        # Create and repair the sampled design vectors in batches
-        n_batch = 1000
-        x_discr = np.zeros((0, len(opt_values)))
-        is_act_discr = np.zeros(x_discr.shape, dtype=bool)
-        while True:
-            # Get next batch
-            x_repair = []
-            for _ in range(n_batch):
-                x_next = next(x_cart_product_gen, None)
-                if x_next is None:
+        use_auto_corrector = self.use_auto_corrector
+        self.use_auto_corrector = False
+
+        try:
+            # Create and repair the sampled design vectors in batches
+            n_batch = 1000
+            x_discr = np.zeros((0, len(opt_values)))
+            is_act_discr = np.zeros(x_discr.shape, dtype=bool)
+            while True:
+                # Get next batch
+                x_repair = []
+                for _ in range(n_batch):
+                    x_next = next(x_cart_product_gen, None)
+                    if x_next is None:
+                        break
+                    x_repair.append(x_next)
+                if len(x_repair) == 0:
                     break
-                x_repair.append(x_next)
-            if len(x_repair) == 0:
-                break
-            x_repair = np.array(x_repair)
+                x_repair = np.array(x_repair)
 
-            # Repair current batch
-            # print(f'Sampling {x_repair.shape[0]} ({x_repaired.shape[0]} sampled)')
-            x_repair_input = x_repair
-            x_repair, is_active = self.correct_x(x_repair)
+                # Repair current batch
+                # print(f'Sampling {x_repair.shape[0]} ({x_repaired.shape[0]} sampled)')
+                x_repair_input = x_repair
+                x_repair, is_active = self.correct_x(x_repair)
 
-            # Remove repaired points
-            is_not_repaired = ~np.any(x_repair[:, is_discrete_mask] != x_repair_input[:, is_discrete_mask], axis=1)
-            x_repair = x_repair[is_not_repaired, :]
-            is_active = is_active[is_not_repaired, :]
+                # Remove repaired points
+                is_not_repaired = ~np.any(x_repair[:, is_discrete_mask] != x_repair_input[:, is_discrete_mask], axis=1)
+                x_repair = x_repair[is_not_repaired, :]
+                is_active = is_active[is_not_repaired, :]
 
-            x_discr = np.row_stack([x_discr, x_repair])
-            is_act_discr = np.row_stack([is_act_discr, is_active.astype(bool)])
+                x_discr = np.row_stack([x_discr, x_repair])
+                is_act_discr = np.row_stack([is_act_discr, is_active.astype(bool)])
 
-        # Impute continuous values
-        self.impute_x(x_discr, is_act_discr)
+            # Impute continuous values
+            self.impute_x(x_discr, is_act_discr)
+
+        finally:
+            self.use_auto_corrector = use_auto_corrector
+
+        # Use these results for subsequent calls of all_discrete_x
+        all_discrete_x = self.__dict__.get('all_discrete_x')
+        if all_discrete_x is None or all_discrete_x[0] is None:
+            self.__dict__['all_discrete_x'] = (x_discr, is_act_discr)
 
         return x_discr, is_act_discr
 
@@ -471,14 +531,12 @@ class ArchDesignSpace:
         return [np.linspace(xl[i], xu[i], n_cont) if is_cont[i] else np.arange(xl[i], xu[i]+1) for i in range(len(xl))]
 
     def _quick_random_sample_discrete_x(self, n: int) -> Tuple[np.ndarray, np.ndarray]:
-        opt_values = self.get_exhaustive_sample_values(n_cont=1)
-        x = np.empty((n, self.n_var))
-        x[:, self.is_cont_mask] = self.x_mid[self.is_cont_mask]
-        is_discrete_mask = self.is_discrete_mask
-        for i_dv in range(self.n_var):
-            if is_discrete_mask[i_dv]:
-                i_opt_sampled = np.random.choice(len(opt_values[i_dv]), n, replace=True)
-                x[:, i_dv] = opt_values[i_dv][i_opt_sampled]
+        """Fallback sampling if hierarchical sampling is not available"""
+        from sb_arch_opt.problem import ArchOptProblemBase
+
+        stub_problem = ArchOptProblemBase(self)
+        x = LatinHypercubeSampling().do(stub_problem, n).get('X')
+        self.round_x_discrete(x)
 
         is_active = np.ones(x.shape, dtype=bool)
         self._correct_x(x, is_active)

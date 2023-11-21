@@ -79,6 +79,11 @@ class DummyResultSavingProblem(ArchOptProblemBase):
         is_active[:, -1] = x[:, 1] < 5
         self.impute_x(x, is_active)
 
+    def _is_conditionally_active(self):
+        is_cond_active = [False for _ in range(self.n_var)]
+        is_cond_active[-1] = True
+        return is_cond_active
+
     def store_results(self, results_folder):
         self.n_stored += 1
 
@@ -195,6 +200,10 @@ def test_doe_algo_seed(problem: ArchOptProblemBase):
     assert np.all(x_doe[0] == x_doe[2])
 
 
+class CrashError(RuntimeError):
+    pass
+
+
 class CrashingProblem(DummyResultSavingProblem):
 
     def __init__(self, failed_evals=True):
@@ -213,7 +222,7 @@ class CrashingProblem(DummyResultSavingProblem):
 
         self.i_eval += 1
         if self.i_eval > 1:
-            raise RuntimeError
+            raise CrashError
 
     def get_n_batch_evaluate(self) -> Optional[int]:
         return 10
@@ -253,7 +262,7 @@ def test_partial_restart():
                 assert len(result.pop) == 40
                 break
 
-            except RuntimeError:
+            except CrashError:
                 pass
 
 
@@ -288,7 +297,7 @@ def test_df_storage(failing_problem: ArchOptProblemBase):
         doe_algo.setup(problem)
         try:
             doe_algo.run()
-        except RuntimeError:
+        except CrashError:
             pass
 
         pop = ArchOptEvaluator.load_pop(tmp_folder, cumulative=False)
@@ -329,7 +338,7 @@ def test_partial_doe_restart():
                 doe_algo.run()
                 break
 
-            except RuntimeError:
+            except CrashError:
                 pass
 
         assert doe_algo.evaluator.n_eval == 30
@@ -384,7 +393,7 @@ def test_partial_doe_restart_ask_tell():
 
                 break
 
-            except RuntimeError:
+            except CrashError:
                 pass
 
         assert doe_algo.evaluator.n_eval == 30

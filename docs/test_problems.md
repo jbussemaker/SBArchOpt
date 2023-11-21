@@ -60,14 +60,14 @@ An overview of available test problems in `sb_arch_opt.problems` (* = recommende
 | `MOHierarchicalRosenbrock`        | 5       | 8      | 2     | 2     |     | Y   | Y   | Y    |     | 32            | 1.5       |              |                                  |
 | ~~`MOHierarchicalTestProblem`~~   | 11      | 16     | 2     | 2     |     | Y   | Y   | Y    |     | 64            | 72        |              |                                  |
 | Module: `gnc`                     |
-| `GNCNoActNrType`                  | 18      |        | 1     |       | Y   |     |     | Y    |     | 265           | 989       |              |                                  |
-| `GNCNoActType`                    | 20      |        | 2     |       | Y   |     | Y   | Y    |     | 327           | 7.2e3     |              |                                  |
-| `GNCNoActNr`                      | 24      |        | 2     |       | Y   |     | Y   | Y    |     | 26500         | 7.2e3     |              |                                  |
-| `GNCNoAct`                        | 26      |        | 2     |       | Y   |     | Y   | Y    |     | 29857         | 57.6e3    |              |                                  |
-| `GNCNoNrType`                     | 27      |        | 1     |       | Y   |     |     | Y    |     | 70225         | 1911      |              |                                  |
-| `GNCNoType`                       | 30      |        | 2     |       | Y   |     | Y   | Y    |     | 85779         | 42.2e3    |              |                                  |
-| `GNCNoNr`                         | 36      |        | 2     |       | Y   |     | Y   | Y    |     | 70225000      | 37.6e3    |              |                                  |
-| `GNC`                             | 39      |        | 2     |       | Y   |     | Y   | Y    |     | 79091323      | 901e3     |              |                                  |
+| `GNCNoActNrType`                  | 18      |        | 1     |       | Y   |     |     | Y    |     | 265           | 1.9       |              |                                  |
+| `GNCNoActType`                    | 20      |        | 2     |       | Y   |     | Y   | Y    |     | 327           | 14.1      |              |                                  |
+| `GNCNoActNr`                      | 24      |        | 2     |       | Y   |     | Y   | Y    |     | 26500         | 14.1      |              |                                  |
+| `GNCNoAct`                        | 26      |        | 2     |       | Y   |     | Y   | Y    |     | 29857         | 113       |              |                                  |
+| `GNCNoNrType`                     | 27      |        | 1     |       | Y   |     |     | Y    |     | 70225         | 3.7       |              |                                  |
+| `GNCNoType`                       | 30      |        | 2     |       | Y   |     | Y   | Y    |     | 85779         | 83        |              |                                  |
+| `GNCNoNr`                         | 36      |        | 2     |       | Y   |     | Y   | Y    |     | 70225000      | 74        |              |                                  |
+| `GNC`                             | 39      |        | 2     |       | Y   |     | Y   | Y    |     | 79091323      | 1761      |              |                                  |
 | Module: `hidden_constraints`      |
 | `Mueller01`                       |         | 5      | 1     |       |     |     |     |      | Y   |               |           |              | fail_rate: 67%                   |
 | `Mueller02`                       |         | 4      | 1     |       |     |     |     |      | Y   |               |           |              | fail_rate: 40%                   |

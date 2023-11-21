@@ -101,8 +101,12 @@ def test_init_vars():
 
 def test_get_categorical_values():
     ds = DesignSpaceTest([Choice(options=['A', 'B', 'C'])])
+    assert ds.all_discrete_x == (None, None)
     x_all, _ = ds.all_discrete_x_by_trial_and_imputation
     assert x_all.shape == (3, 1)
+
+    x_all_, _ = ds.all_discrete_x
+    assert np.all(x_all_ == x_all)
 
     cat_values = ds.get_categorical_values(x_all, 0)
     assert len(cat_values) == 3
@@ -120,6 +124,7 @@ def test_x_generation(problem: ArchOptProblemBase, discrete_problem: ArchOptProb
         assert ds.discrete_imputation_ratio == (10 * 10) / n_valid
         assert ds.continuous_imputation_ratio == cont_imp_ratio
         assert ds.imputation_ratio == cont_imp_ratio * (10*10)/n_valid
+        assert ds.corrector is not None
 
         assert not ds.is_explicit()
 

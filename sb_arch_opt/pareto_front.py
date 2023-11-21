@@ -76,15 +76,19 @@ class CachedParetoFrontMixin(Problem):
         ps, _ = self._calc_pareto_set_front(**kwargs)
         return ps
 
-    def _calc_pareto_set_front(self, *_, pop_size=200, n_gen_min=10, n_repeat=12, n_pts_keep=100, force=False, **__):
+    def _calc_pareto_set_front(self, *_, pop_size=None, n_gen_min=10, n_repeat=4, n_pts_keep=100, force=False, **__):
         if not force and not self.default_enable_pf_calc:
             raise RuntimeError('On-demand PF calc is disabled, use calc_pareto_front instead')
 
         # Check if Pareto front has already been cached
         cache_path = self._pf_cache_path()
-        if os.path.exists(cache_path):
+        if not force and os.path.exists(cache_path):
             with open(cache_path, 'rb') as fp:
                 return pickle.load(fp)
+
+        # Get population size
+        if pop_size is None:
+            pop_size = 10*self.n_var
 
         # Get an approximation of the combinatorial design space size, only relevant if there are no continuous vars
         n = 1
@@ -147,14 +151,14 @@ class CachedParetoFrontMixin(Problem):
 
     def _run_minimize(self, pop_size, n_gen, i, n):
         from sb_arch_opt.algo.pymoo_interface import get_nsga2
-        print(f'Running Pareto front discovery {i+1}/{n} ({pop_size} pop, {n_gen} gen): {self.name()}')
 
         robust_period = n_gen
         n_max_gen = n_gen*10
         n_max_eval = n_max_gen*pop_size
+        print(f'Discovering Pareto front {i+1}/{n} ({pop_size} pop, {n_gen} <= gen <= {n_max_gen}): {self.name()}')
         if self.n_obj > 1:
             termination = DefaultMultiObjectiveTermination(
-                xtol=5e-4, cvtol=1e-8, ftol=5e-3, n_skip=5, period=robust_period, n_max_gen=n_max_gen,
+                xtol=5e-4, cvtol=1e-8, ftol=1e-4, n_skip=n_gen, period=robust_period, n_max_gen=n_max_gen,
                 n_max_evals=n_max_eval)
         else:
             termination = DefaultSingleObjectiveTermination(

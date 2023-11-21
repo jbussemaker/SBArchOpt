@@ -45,8 +45,12 @@ def test_assign_enc_gnc():
         (AssignmentGNCNoType(), 85779, 82.5),
         (AssignmentGNC(), 79091323, 367),
     ]:
-        run_test_hierarchy(problem, imp_ratio, check_n_valid=False)
+        run_test_hierarchy(problem, imp_ratio, check_n_valid=n_valid < 400)
         assert problem.get_n_valid_discrete() == n_valid
 
-        with pytest.raises(RuntimeError):
+        x_all, _ = problem.all_discrete_x
+        if x_all is not None:
             _ = problem.is_conditionally_active
+        else:
+            with pytest.raises(RuntimeError):
+                _ = problem.is_conditionally_active

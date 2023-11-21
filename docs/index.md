@@ -19,6 +19,7 @@ This library hopes to support in doing this.
 The library provides:
 
 - A common interface for defining architecture optimization problems based on [pymoo](https://pymoo.org/)
+- Sampling and correction algorithms for hierarchical design spaces
 - Support in using Surrogate-Based Optimization (SBO) algorithms:
   - Implementation of a basic SBO algorithm
   - Connectors to various external SBO libraries
@@ -71,6 +72,8 @@ You then need to implement the following functionality:
 - Design variable definition in the `__init__` function using `Variable` classes (in `pymoo.core.variable`)
 - Evaluation of a design vector in `_arch_evaluate`
 - Correction (imputation/repair) of a design vector in `_correct_x`
+  - Note that this function is only used if `all_discrete_x` (as returned by `_gen_all_discrete_x`) is not available
+    or  `design_space.use_auto_correction` is set to `False`
 - Return which variables are conditionally active in `_is_conditionally_active`
 - An (optional) interface for implementing intermediate storage of problem-specific results (`store_results`), and
   restarting an optimization from these previous results (`load_previous_results`)
@@ -138,8 +141,14 @@ class DemoArchOptProblem(CachedParetoFrontMixin, ArchOptProblemBase):
         f_out[:, 0] = np.sum(x ** 2, axis=1)
 
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
-        """Fill the activeness matrix and (if needed) impute any design variables that are partially inactive.
-        Imputation of inactive design variables is always applied after this function."""
+        """
+        Fill the activeness matrix and (if needed) correct any design variables that are partially inactive.
+        Imputation of inactive design variables is always applied after this function.
+        
+        Only needed if no explicit design space model is given.
+        Only used if not all discrete design vectors `all_discrete_x` is available OR
+        `self.design_space.use_auto_corrector = False`.
+        """
 
         # Get categorical values associated to the third design variables (i_dv = 2)
         categorical_values = self.get_categorical_values(x, i_dv=2)
