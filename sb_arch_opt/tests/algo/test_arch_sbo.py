@@ -15,7 +15,7 @@ from sb_arch_opt.problems.continuous import *
 from sb_arch_opt.problems.constrained import *
 from sb_arch_opt.problems.hierarchical import *
 from sb_arch_opt.problems.hidden_constraints import *
-from sb_arch_opt.tests.algo.test_pymoo import CrashingProblem
+from sb_arch_opt.tests.algo.test_pymoo import CrashingProblem, CrashError
 from sb_arch_opt.algo.pymoo_interface import load_from_previous_results
 from pymoo.optimize import minimize
 from pymoo.core.population import Population
@@ -254,7 +254,7 @@ def test_partial_restart():
                 assert len(result.pop) == 40
                 break
 
-            except RuntimeError:
+            except CrashError:
                 pass
 
 
