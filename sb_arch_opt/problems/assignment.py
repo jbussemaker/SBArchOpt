@@ -75,9 +75,16 @@ class AssignmentProblemWrapper(HierarchyProblemBase):
 
     def _is_conditionally_active(self) -> List[bool]:
         _, is_act_all = self.all_discrete_x
-        if is_act_all is None:
-            raise RuntimeError(f'_is_conditionally_active not implemented for {self.__class__.__name__}')
-        return list(np.any(~is_act_all, axis=0))
+        if is_act_all is not None:
+            return list(np.any(~is_act_all, axis=0))
+
+        if isinstance(self._problem, MultiAssignmentProblem):
+            dv_cond = []
+            for assignment_manager in self._problem.assignment_managers:
+                dv_cond += [dv.conditionally_active for dv in assignment_manager.design_vars]
+            return dv_cond
+
+        return [dv.conditionally_active for dv in self._problem.assignment_manager.design_vars]
 
     def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
         if isinstance(self._problem, AnalyticalProblemBase):
