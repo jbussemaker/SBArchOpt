@@ -29,12 +29,16 @@ def test_partitioning():
     Partitioning().print_stats()
     run_test_hierarchy(PartitioningCovering(), 1.71)
 
+    _ = PartitioningCovering().is_conditionally_active
+
 
 @check_dependency()
 def test_unordered():
     run_test_hierarchy(UnordNonReplComb(), 2.55)
     UnordNonReplCombLarge().print_stats()
     UnorderedComb().print_stats()
+
+    _ = UnorderedComb().is_conditionally_active
 
 
 @check_dependency()
@@ -49,8 +53,4 @@ def test_assign_enc_gnc():
         assert problem.get_n_valid_discrete() == n_valid
 
         x_all, _ = problem.all_discrete_x
-        if x_all is not None:
-            _ = problem.is_conditionally_active
-        else:
-            with pytest.raises(RuntimeError):
-                _ = problem.is_conditionally_active
+        _ = problem.is_conditionally_active
