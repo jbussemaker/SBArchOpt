@@ -104,3 +104,28 @@ def test_realistic_problem():
     f_eval = problem.evaluate(x_pf[[0], :], return_as_dictionary=True)['F']
     assert np.all(np.isfinite(f_eval))
     assert np.all(np.abs(f_eval[0, :] - f_pf[0, :]) < 1e-3)
+
+
+@pytest.mark.skipif(int(os.getenv('RUN_SLOW_TESTS', 0)) != 1, reason='Set RUN_SLOW_TESTS=1 to run slow tests')
+@check_dependency()
+def test_realistic_problem_2obj():
+    problem = RealisticTurbofanArch(noise_obj=False)
+    assert problem.n_obj == 2
+    problem.print_stats()
+
+    assert problem._get_n_valid_discrete() == 142243
+    x_all, is_act_all = problem.all_discrete_x
+    assert x_all.shape[0] == problem.get_n_valid_discrete()
+
+    f_pf = problem.pareto_front()
+    assert f_pf.shape[1] == 2
+    x_pf = problem.pareto_set()
+    assert f_pf.shape[0] == x_pf.shape[0]
+    x_pf_corr, is_act_pf = problem.correct_x(x_pf)
+    assert np.all(x_pf_corr == x_pf)
+    assert not np.all(is_act_pf)
+    assert problem._load_evaluated()
+
+    f_eval = problem.evaluate(x_pf[[0], :], return_as_dictionary=True)['F']
+    assert np.all(np.isfinite(f_eval))
+    assert np.all(np.abs(f_eval[0, :] - f_pf[0, :]) < 1e-3)
