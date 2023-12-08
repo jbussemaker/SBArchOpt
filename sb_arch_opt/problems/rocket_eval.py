@@ -74,6 +74,7 @@ class Rocket:
     length_diameter_ratio: float = 12.
     max_q: float = 50000.  # Pa
     payload_density: float = 2810.  # kg/m3
+    orbit_altitude: float = 400e3  # m
 
 
 @dataclass(frozen=True)
@@ -157,7 +158,8 @@ class RocketEvaluator:
         cone_angle = rocket.cone_angle if rocket.head_shape == HeadShape.CONE else 0
         length_ratio = rocket.ellipse_l_ratio if rocket.head_shape == HeadShape.ELLIPTICAL else 0
         payload_mass, h_vector, v_vector = cls.calculate_trajectory(
-            cone_angle, length_ratio, diameter, stage_thrusts, stage_structural_masses, stage_prop_masses, stage_mdots)
+            cone_angle, length_ratio, diameter, stage_thrusts, stage_structural_masses, stage_prop_masses, stage_mdots,
+            rocket.orbit_altitude)
 
         # Cost estimation
         cost = cls.calculate_cost(stage_n_engines, stage_engine_masses, stage_solid_prop_masses, stage_h2_masses,
@@ -381,11 +383,10 @@ class RocketEvaluator:
 
     @classmethod
     def calculate_trajectory(cls, cone_angle, length_ratio, diameter, T_stages, m_structural_stages, mp_stages,
-                             mdot_stages):
+                             mdot_stages, h_orbit_target):
         """Calculation of the launcher trajectory."""
         check_dependency()
 
-        h_orbit_target = 400e3
         mu = 3.986004418e14
         r_earth = 6378e3
 

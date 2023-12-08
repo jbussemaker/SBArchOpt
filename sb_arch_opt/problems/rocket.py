@@ -32,13 +32,17 @@ log = logging.getLogger('sb_arch_opt.rocket')
 
 class RocketArch(HierarchyProblemBase):
     """
-    Multi-stage rocket design problem developed by Raúl García Sánchez:
+    Multi-stage rocket design problem developed in:
+    Raúl García Sánchez, "Adaptation of an MDO Platform for System Architecture Optimization", MSc Thesis,
+    Delft University of Technology, jan 2024.
+
+    Design variables:
     - Nr of stages [1, 2, 3]
     - For each stage: nr of engines [1, 2, 3], engine type [1 of 6 types], stage length [m]
     - Overall length-to-diameter ratio
     - Rocket head shape: [Cone (cone angle), Ellipse (ellipse length ratio), Semi-sphere]
 
-    Objectives: cost (minimize), payload mass (maximize)
+    Objectives (log10): cost (minimize), payload mass (maximize)
     Constraints: structural, payload volume
     """
 
@@ -77,7 +81,7 @@ class RocketArch(HierarchyProblemBase):
         rockets = self._get_rockets(x)
         for i, rocket in enumerate(rockets):
             perf = RocketEvaluator.evaluate(rocket)
-            f_out[i, :] = (perf.cost, -perf.payload_mass)
+            f_out[i, :] = (np.log10(perf.cost), -np.log10(perf.payload_mass))
             g_out[i, :] = (perf.delta_structural, perf.delta_payload)
 
     @classmethod
@@ -100,6 +104,7 @@ class RocketArch(HierarchyProblemBase):
                 length_diameter_ratio=xi[10],
                 max_q=50e3,
                 payload_density=2810,
+                orbit_altitude=400e3,
             ))
 
         return rockets
