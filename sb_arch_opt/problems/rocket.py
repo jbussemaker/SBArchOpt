@@ -67,7 +67,7 @@ class RocketArch(HierarchyProblemBase):
             Real(bounds=(0, 45)),  # Stage 3 length [m]
             Real(bounds=(10, 20)),  # Overall length-to-diameter ratio [10]
 
-            Choice(options=list(range(2))),  # Head shape [Cone, Elliptical, Semi-sphere] [11]
+            Choice(options=list(range(3))),  # Head shape [Cone, Elliptical, Semi-sphere] [11]
             Real(bounds=(15, 45)),  # Cone angle
             Real(bounds=(.1, .25)),  # Ellipse length ratio
         ]

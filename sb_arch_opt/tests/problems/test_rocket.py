@@ -88,4 +88,4 @@ def test_3_stages():
 @check_dependency()
 def test_rocket_problem():
     rocket = RocketArch()
-    run_test_hierarchy(rocket, 1.89)
+    run_test_hierarchy(rocket, 2.83)
