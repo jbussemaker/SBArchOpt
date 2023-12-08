@@ -1,5 +1,7 @@
 import pytest
 from sb_arch_opt.problems.rocket import *
+from sb_arch_opt.problems.rocket_eval import *
+from sb_arch_opt.tests.problems.test_hierarchical import run_test_hierarchy
 
 check_dependency = lambda: pytest.mark.skipif(not HAS_ROCKET, reason='Rocket dependencies not installed')
 
@@ -81,3 +83,9 @@ def test_3_stages():
     assert performance.payload_mass == pytest.approx(57765, abs=1)
     assert performance.delta_structural == pytest.approx(-27114, abs=1)
     assert performance.delta_payload == pytest.approx(-118.9, abs=.1)
+
+
+@check_dependency()
+def test_rocket_problem():
+    rocket = RocketArch()
+    run_test_hierarchy(rocket, 1.89)
