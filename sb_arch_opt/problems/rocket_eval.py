@@ -95,6 +95,8 @@ class RocketEvaluator:
 
         # Calculate geometrical data
         stage_lengths = [stage.length for stage in rocket.stages]
+        if sum(stage_lengths) == 0:
+            stage_lengths = [.1 for _ in range(len(stage_lengths))]
         stage_engines = [''.join(engine.value.lower() for engine in stage.engines) for stage in rocket.stages]
         diameter, surface_head, volume_available, stages_volume, fuel_volumes, ox_volumes, fuel_surfaces, \
             oxidizer_surfaces = cls.calculate_geometry(
