@@ -29,6 +29,7 @@ from pymoo.core.repair import Repair
 from pymoo.core.problem import Problem
 from pymoo.core.variable import Variable
 from pymoo.core.population import Population
+from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
 from sb_arch_opt.design_space import ArchDesignSpace, ImplicitArchDesignSpace
 
 __all__ = ['ArchOptProblemBase', 'ArchOptRepair', 'ArchDesignSpace']
@@ -189,6 +190,9 @@ class ArchOptProblemBase(Problem):
 
     @staticmethod
     def get_failed_points(pop_or_out: Union[dict, Population]):
+        if len(pop_or_out) == 0:
+            return np.array([], dtype=bool)
+
         f = pop_or_out.get('F')
         is_failed = np.any(~np.isfinite(f), axis=1)
 
@@ -201,6 +205,43 @@ class ArchOptProblemBase(Problem):
             is_failed |= np.any(~np.isfinite(h), axis=1)
 
         return is_failed
+
+    @classmethod
+    def get_population_statistics(cls, pop: Population, show=False):
+        rows = []
+
+        def _add_row(met_name, not_met_name, i_met):
+            pop_met = pop_stat[i_met]
+            n_met = len(pop_stat[i_met])
+
+            i_not_met = np.delete(np.arange(len(pop_stat)), i_met)
+            n_not_met = len(pop_stat[i_not_met])
+
+            rows.append([met_name, n_met, f'{100*n_met/(len(pop) or 1):.1f}%',
+                         not_met_name, n_not_met, f'{100*n_not_met/(len(pop) or 1):.1f}%'])
+            return pop_met
+
+        pop_stat = pop
+        i_is_eval = np.array([i for i, ind in enumerate(pop_stat) if len(ind.evaluated or []) > 0], dtype=int)
+        pop_stat = _add_row('Evaluated', 'Unknown', i_is_eval)
+        pop_stat = _add_row('Viable', 'Failed', ~cls.get_failed_points(pop_stat))
+        pop_stat = _add_row('Feasible', 'Infeasible',
+                            pop_stat.get('feas') if len(pop_stat) > 0 else np.array([], dtype=bool))
+        i_nds = NonDominatedSorting().do(pop_stat.get('F'), only_non_dominated_front=True)\
+            if len(pop_stat) > 0 else np.array([], dtype=bool)
+        _add_row('Optimal', 'Dominated', i_nds)
+
+        pop_stats = pd.DataFrame(data=rows, columns=pd.MultiIndex.from_tuples([
+            ('condition', 'name'), ('condition', 'n'), ('condition', '%'),
+            ('not met', 'name'), ('not met', 'n'), ('not met', '%'),
+        ]))
+
+        if show:
+            with pd.option_context('display.max_rows', None, 'display.max_columns', None,
+                                   'display.expand_frame_repr', False, 'max_colwidth', None):
+                print(pop_stats)
+
+        return pop_stats
 
     @staticmethod
     def get_repair():

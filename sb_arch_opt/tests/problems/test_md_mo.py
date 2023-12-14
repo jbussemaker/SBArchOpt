@@ -38,6 +38,7 @@ def run_test_no_hierarchy(problem, exh_n_cont=3):
     if pop is None:
         pop = HierarchicalSampling().do(problem, 100)
     Evaluator().eval(problem, pop)
+    problem.get_population_statistics(pop, show=True)
     return pop
 
 

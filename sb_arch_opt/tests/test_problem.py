@@ -154,6 +154,7 @@ def test_evaluate(problem: ArchOptProblemBase):
         if use_evaluator:
             pop = Evaluator().eval(problem, Population.new(X=x))
             x_out, is_active, f = pop.get('X'), pop.get('is_active'), pop.get('F')
+            problem.get_population_statistics(pop, show=True)
         else:
             out = problem.evaluate(x, return_as_dictionary=True)
             x_out, is_active, f = out['X'], out['is_active'], out['F']
@@ -172,6 +173,8 @@ def test_evaluate(problem: ArchOptProblemBase):
             [0, 3.25],
             [0, 3.875],
         ])
+
+    problem.get_population_statistics(Population.new(), show=True)
 
 
 def test_large_duplicate_elimination():

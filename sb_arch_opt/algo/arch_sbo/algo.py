@@ -31,6 +31,7 @@ from sb_arch_opt.problem import *
 from sb_arch_opt.sampling import *
 from scipy.spatial import distance
 from sb_arch_opt.algo.pymoo_interface import *
+from sb_arch_opt.algo.pymoo_interface.metrics import EHVMultiObjectiveOutput
 
 from pymoo.core.repair import Repair
 from pymoo.core.result import Result
@@ -72,8 +73,8 @@ class InfillAlgorithm(Algorithm):
     """
 
     def __init__(self, infill: InfillCriterion, infill_size=None, init_sampling: Sampling = None, init_size=100,
-                 survival: Survival = None, **kwargs):
-        super(InfillAlgorithm, self).__init__(**kwargs)
+                 survival: Survival = None, output=EHVMultiObjectiveOutput(), **kwargs):
+        super(InfillAlgorithm, self).__init__(output=output, **kwargs)
 
         self.init_size = init_size
         self.infill_size = infill_size or 1

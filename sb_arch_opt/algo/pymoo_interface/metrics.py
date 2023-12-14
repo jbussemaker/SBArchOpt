@@ -26,6 +26,7 @@ import numpy as np
 from pymoo.core.problem import Problem
 from pymoo.core.indicator import Indicator
 from pymoo.indicators.hv import Hypervolume
+from pymoo.core.population import Population
 from pymoo.util.display.column import Column
 from pymoo.core.termination import TerminateIfAny
 from pymoo.util.display.multi import MultiObjectiveOutput
@@ -34,6 +35,8 @@ from pymoo.termination.delta import DeltaToleranceTermination
 from pymoo.termination.max_gen import MaximumGenerationTermination
 from pymoo.termination.max_eval import MaximumFunctionCallTermination
 from pymoo.termination.default import DefaultSingleObjectiveTermination
+
+from sb_arch_opt.problem import ArchOptProblemBase
 
 __all__ = ['get_default_termination', 'SmoothedIndicator', 'IndicatorDeltaToleranceTermination', 'EstimateHV',
            'DeltaHVTermination', 'EHVMultiObjectiveOutput']
@@ -156,16 +159,20 @@ class DeltaHVTermination(TerminateIfAny):
 
 
 class EHVMultiObjectiveOutput(MultiObjectiveOutput):
-    """Multi-objective output that also displays the estimated HV"""
+    """Multi-objective output that also displays the estimated HV and some population statistics"""
 
-    def __init__(self):
+    def __init__(self, pop_stats=True):
         super().__init__()
         self.ehv_col = Column('hv_est')
         self.estimate_hv = EstimateHV()
 
+        self.pop_stat_cols = []
+        if pop_stats:
+            self.pop_stat_cols = [Column('not_failed'), Column('feasible'), Column('optimal')]
+
     def initialize(self, algorithm):
         super().initialize(algorithm)
-        self.columns += [self.ehv_col]
+        self.columns += [self.ehv_col]+self.pop_stat_cols
 
     def update(self, algorithm):
         super().update(algorithm)
@@ -174,3 +181,10 @@ class EHVMultiObjectiveOutput(MultiObjectiveOutput):
         f = f[feas]
 
         self.ehv_col.set(self.estimate_hv.do(f) if len(f) > 0 else None)
+
+        if len(self.pop_stat_cols) > 0:
+            pop_stats = ArchOptProblemBase.get_population_statistics(
+                algorithm.pop if algorithm.pop is not None else Population.new())
+            stats = [f'{row[0]} ({row[1]})' for row in pop_stats.iloc[1:, 1:3].values]
+            for i, stat in enumerate(stats):
+                self.pop_stat_cols[i].set(stat)
