@@ -81,7 +81,7 @@ class RocketArch(HierarchyProblemBase):
         rockets = self._get_rockets(x)
         for i, rocket in enumerate(rockets):
             perf = RocketEvaluator.evaluate(rocket)
-            f_out[i, :] = (np.log10(perf.cost), -np.log10(perf.payload_mass))
+            f_out[i, :] = (np.log10(perf.cost), -np.log10(max(1., perf.payload_mass)))
             g_out[i, :] = (perf.delta_structural, perf.delta_payload)
 
     @classmethod
