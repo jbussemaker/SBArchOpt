@@ -315,7 +315,7 @@ class HierarchicalSampling(FloatRandomSampling):
         else:
             unit_weights = weights/np.sum(weights)
             selected_groups = np.zeros((n_samples,), dtype=int)
-            selected_pos = np.linspace(0, 1, n_samples)
+            selected_pos = np.sort(self._sobol(n_samples))
             for cum_weight in np.cumsum(unit_weights)[:-1]:
                 selected_groups[selected_pos > cum_weight] += 1
 
