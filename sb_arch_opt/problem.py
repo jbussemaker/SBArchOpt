@@ -227,8 +227,11 @@ class ArchOptProblemBase(Problem):
         pop_stat = _add_row('Viable', 'Failed', ~cls.get_failed_points(pop_stat))
         pop_stat = _add_row('Feasible', 'Infeasible',
                             pop_stat.get('feas') if len(pop_stat) > 0 else np.array([], dtype=bool))
-        i_nds = NonDominatedSorting().do(pop_stat.get('F'), only_non_dominated_front=True)\
-            if len(pop_stat) > 0 else np.array([], dtype=bool)
+        try:
+            i_nds = NonDominatedSorting().do(pop_stat.get('F'), only_non_dominated_front=True, n_stop_if_ranked=1000)\
+                if len(pop_stat) > 0 else np.array([], dtype=bool)
+        except IndexError:
+            i_nds = np.array([], dtype=int)
         _add_row('Optimal', 'Dominated', i_nds)
 
         pop_stats = pd.DataFrame(data=rows, columns=pd.MultiIndex.from_tuples([
