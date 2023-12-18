@@ -143,6 +143,12 @@ class CachedParetoFrontMixin(Problem):
                 ps = ps[i_max_crowding, :]
                 pf = pf[i_max_crowding, :]
 
+        # Sort by first objective dimension to ensure Pareto front and set points match
+        # (because pymoo sorts the Pareto front but not the Pareto set)
+        i_sorted = np.argsort(pf[:, 0])
+        ps = ps[i_sorted, :]
+        pf = pf[i_sorted, :]
+
         # Store in cache
         os.makedirs(os.path.dirname(cache_path), exist_ok=True)
         with open(cache_path, 'wb') as fp:

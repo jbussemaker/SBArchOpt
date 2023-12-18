@@ -168,6 +168,14 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
             assert self._g_pf.shape[1] == self.n_ieq_constr
             assert self._x_pf.shape[0] == self._f_pf.shape[0]
             assert self._x_pf.shape[0] == self._g_pf.shape[0]
+
+            # Sort by first objective dimension to ensure Pareto front and set points match
+            # (because pymoo sorts the Pareto front but not the Pareto set)
+            i_sorted = np.argsort(self._f_pf[:, 0])
+            self._x_pf = self._x_pf[i_sorted, :]
+            self._f_pf = self._f_pf[i_sorted, :]
+            self._g_pf = self._g_pf[i_sorted, :]
+
         return self._x_pf, self._f_pf, self._g_pf
 
     def _calc_pareto_front(self):
@@ -340,14 +348,61 @@ class RealisticTurbofanArch(OpenTurbArchProblemWrapper):
     """
     _sub_folder = 'realistic'
 
-    def __init__(self, n_parallel=None):
+    def __init__(self, n_parallel=None, noise_obj=True):
         check_dependency()
-        super().__init__(get_architecting_problem(), n_parallel=n_parallel)
+        self.noise_obj = noise_obj
+
+        arch_prob = get_architecting_problem()
+        if not noise_obj:
+            arch_prob._objectives = arch_prob._objectives[:2]
+            arch_prob._opt_obj = None
+
+        super().__init__(arch_prob, n_parallel=n_parallel)
+
+        if not noise_obj:
+            assert self.n_obj == 2
+            assert len(self._obj_factors) == 2
 
     def get_original_pf(self):
         x_pf, f_pf, g_pf = load_pareto_front()
         x_pf, _ = self.correct_x(x_pf)
+        x_pf, f_pf, g_pf = self._correct_pf(x_pf, f_pf, g_pf)
         return x_pf, f_pf, g_pf
+
+    def _correct_pf(self, x_pf, f_pf, g_pf):
+        if not self.noise_obj:
+            from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
+            f_pf = f_pf[:, :2]
+            i_pf = NonDominatedSorting().do(f_pf, only_non_dominated_front=True)
+            x_pf, f_pf, g_pf = x_pf[i_pf, :], f_pf[i_pf, :], g_pf[i_pf, :]
+
+        return x_pf, f_pf, g_pf
+
+    def load_pareto_front(self):
+        if self._f_pf is None:
+            n_obj = self.n_obj
+            self.n_obj = 3
+
+            self._x_pf, self._f_pf, self._g_pf = self._correct_pf(*super().load_pareto_front())
+
+            self.n_obj = n_obj
+
+        return self._x_pf, self._f_pf, self._g_pf
+
+    def _load_evaluated(self):
+        n_obj = self.n_obj
+        self.n_obj = 3
+        x, f, g = super()._load_evaluated()
+        self.n_obj = n_obj
+        return x, f, g
+
+    def _arch_evaluate_x(self, x: np.ndarray):
+        x_imp, f, g, is_active = super()._arch_evaluate_x(x)
+
+        if not self.noise_obj:
+            f = f[:2]
+
+        return x_imp, f, g, is_active
 
     def _get_n_valid_discrete(self) -> int:
         n_valid_no_fan = 1
@@ -391,6 +446,10 @@ class RealisticTurbofanArch(OpenTurbArchProblemWrapper):
         is_cond_active[8] = False  # Shaft 1 RPM
 
         return is_cond_active
+
+    def __repr__(self):
+        noise_obj = 'noise_obj=False' if not self.noise_obj else ''
+        return f'{self.__class__.__name__}({noise_obj})'
 
 
 class SimpleTurbofanArchModel(SimpleTurbofanArch):
