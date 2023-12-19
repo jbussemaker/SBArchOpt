@@ -70,7 +70,7 @@ An overview of available test problems in `sb_arch_opt.problems` (* = recommende
 | `GNC`                             | 30      |        | 2     |       | Y |    | Y  | Y    |     | 79091323      | 1761      |              |                                  |
 | `MDGNCNoActNr`                    | 9       | 6      | 2     |       |   | Y  | Y  | Y    |     | 265           | 23.2      |              |                                  |
 | `MDGNCNoAct`                      | 11      | 6      | 2     |       |   | Y  | Y  | Y    |     | 327           | 150       |              |                                  |
-| `SPMDGNCNoAct`                    | 11      | 6      | 1     |       |   | Y  |    | Y    |     | 327           | 150       |              |                                  |
+| `SOMDGNCNoAct`                    | 11      | 6      | 1     |       |   | Y  |    | Y    |     | 327           | 150       |              |                                  |
 | `MDGNCNoNr`                       | 18      | 9      | 2     |       |   | Y  | Y  | Y    |     | 70225         | 44.8      |              |                                  |
 | `MDGNC`                           | 21      | 9      | 2     |       |   | Y  | Y  | Y    |     | 85779         | 925       |              |                                  |
 | Module: `rocket`                  |         |        |       |       |   |    |    |      |     |               |           | `rocket`     |                                  |
