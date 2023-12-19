@@ -60,14 +60,19 @@ An overview of available test problems in `sb_arch_opt.problems` (* = recommende
 | `MOHierarchicalRosenbrock`        | 5       | 8      | 2     | 2     |   | Y  | Y  | Y    |     | 32            | 1.5       |              |                                  |
 | ~~`MOHierarchicalTestProblem`~~   | 11      | 16     | 2     | 2     |   | Y  | Y  | Y    |     | 64            | 72        |              |                                  |
 | Module: `gnc`                     |
-| `GNCNoActNrType`                  | 18      |        | 1     |       | Y |    |    | Y    |     | 265           | 1.9       |              |                                  |
-| `GNCNoActType`                    | 20      |        | 2     |       | Y |    | Y  | Y    |     | 327           | 14.1      |              |                                  |
-| `GNCNoActNr`                      | 24      |        | 2     |       | Y |    | Y  | Y    |     | 26500         | 14.1      |              |                                  |
-| `GNCNoAct`                        | 26      |        | 2     |       | Y |    | Y  | Y    |     | 29857         | 113       |              |                                  |
-| `GNCNoNrType`                     | 27      |        | 1     |       | Y |    |    | Y    |     | 70225         | 3.7       |              |                                  |
-| `GNCNoType`                       | 30      |        | 2     |       | Y |    | Y  | Y    |     | 85779         | 83        |              |                                  |
-| `GNCNoNr`                         | 36      |        | 2     |       | Y |    | Y  | Y    |     | 70225000      | 74        |              |                                  |
-| `GNC`                             | 39      |        | 2     |       | Y |    | Y  | Y    |     | 79091323      | 1761      |              |                                  |
+| `GNCNoActNrType`                  | 9       |        | 1     |       | Y |    |    | Y    |     | 265           | 1.9       |              |                                  |
+| `GNCNoActType`                    | 11      |        | 2     |       | Y |    | Y  | Y    |     | 327           | 14.1      |              |                                  |
+| `GNCNoActNr`                      | 15      |        | 2     |       | Y |    | Y  | Y    |     | 26500         | 14.1      |              |                                  |
+| `GNCNoAct`                        | 17      |        | 2     |       | Y |    | Y  | Y    |     | 29857         | 113       |              |                                  |
+| `GNCNoNrType`                     | 18      |        | 1     |       | Y |    |    | Y    |     | 70225         | 3.7       |              |                                  |
+| `GNCNoType`                       | 21      |        | 2     |       | Y |    | Y  | Y    |     | 85779         | 83        |              |                                  |
+| `GNCNoNr`                         | 27      |        | 2     |       | Y |    | Y  | Y    |     | 70225000      | 74        |              |                                  |
+| `GNC`                             | 30      |        | 2     |       | Y |    | Y  | Y    |     | 79091323      | 1761      |              |                                  |
+| `MDGNCNoActNr`                    | 9       | 6      | 2     |       |   | Y  | Y  | Y    |     | 265           | 23.2      |              |                                  |
+| `MDGNCNoAct`                      | 11      | 6      | 2     |       |   | Y  | Y  | Y    |     | 327           | 150       |              |                                  |
+| `SPMDGNCNoAct`                    | 11      | 6      | 1     |       |   | Y  |    | Y    |     | 327           | 150       |              |                                  |
+| `MDGNCNoNr`                       | 18      | 9      | 2     |       |   | Y  | Y  | Y    |     | 70225         | 44.8      |              |                                  |
+| `MDGNC`                           | 21      | 9      | 2     |       |   | Y  | Y  | Y    |     | 85779         | 925       |              |                                  |
 | Module: `rocket`                  |         |        |       |       |   |    |    |      |     |               |           | `rocket`     |                                  |
 | `RocketArch`                      | 8       | 6      | 2     | 2     |   | Y  | Y  | Y    |     | 18522         | 3.7       | `rocket`     |                                  |
 | `LCRocketArch`                    | 8       | 6      | 2     | 2     |   | Y  | Y  | Y    |     | 18522         | 3.7       | `rocket`     |                                  |

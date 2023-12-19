@@ -17,6 +17,12 @@ def test_gnc():
         (GNCNoType(), 85779, 82.5),
         (GNCNoNr(), 70225000, 73.5),
         (GNC(), 79091323, 1761),
+
+        (MDGNCNoActNr(), 265, 1.93),
+        (MDGNCNoAct(), 327, 14.1),
+        (SOMDGNCNoAct(), 327, 14.1),
+        (MDGNCNoNr(), 70225, 3.73),
+        (MDGNC(), 85779, 82.5),
     ]:
         run_test_hierarchy(problem, imp_ratio, check_n_valid=n_valid < 400)
         assert problem.get_n_valid_discrete() == n_valid
@@ -30,4 +36,7 @@ def test_gnc():
         assert np.all(is_act_corr == is_act_corr_)
 
         pop = HierarchicalSampling().do(problem, 300)
-        assert len(pop) == min(n_valid, 300)
+        if np.all(problem.is_discrete_mask):
+            assert len(pop) == min(n_valid, 300)
+        else:
+            assert len(pop) == 300
