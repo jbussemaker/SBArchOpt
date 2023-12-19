@@ -107,6 +107,8 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
                                       for con in open_turb_arch_problem.opt_constraints])
         self._con_offsets = np.array([con.limit_value for con in open_turb_arch_problem.opt_constraints])
 
+        self.exclude_from_serialization = {'_models'}
+
     def set_max_iter(self, max_iter: int):
         self._problem.max_iter = max_iter
 
@@ -229,6 +231,10 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
     def _choice_g_props(self):
         return [(choice, choice.get_constraints() is not None, len(choice.get_design_variables()))
                 for choice in self._problem.choices]
+
+    def _ensure_models_trained(self):
+        if self._models is None:
+            self._train_models()
 
     def _train_models(self):
         from sklearn import ensemble
@@ -573,6 +579,7 @@ class SimpleTurbofanArchModel(SimpleTurbofanArch):
 
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
+        self._ensure_models_trained()
         x[:, :], f_out[:, :], g_out[:, :], is_active_out[:, :] = self._arch_evaluate_x_surrogate(x)
 
     def _arch_evaluate_x(self, x: np.ndarray):
