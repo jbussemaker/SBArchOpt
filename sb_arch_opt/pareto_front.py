@@ -84,7 +84,15 @@ class CachedParetoFrontMixin(Problem):
         cache_path = self._pf_cache_path()
         if not force and os.path.exists(cache_path):
             with open(cache_path, 'rb') as fp:
-                return pickle.load(fp)
+                ps, pf = pickle.load(fp)
+
+            # Sort by first objective dimension to ensure Pareto front and set points match
+            # (because pymoo sorts the Pareto front but not the Pareto set)
+            i_sorted = np.argsort(pf[:, 0])
+            ps = ps[i_sorted, :]
+            pf = pf[i_sorted, :]
+
+            return ps, pf
 
         # Get population size
         if pop_size is None:

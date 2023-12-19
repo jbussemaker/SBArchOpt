@@ -89,3 +89,15 @@ def test_3_stages():
 def test_rocket_problem():
     rocket = RocketArch()
     run_test_hierarchy(rocket, 2.83)
+
+
+@check_dependency()
+def test_lc_rocket_problem():
+    rocket = LCRocketArch()
+    run_test_hierarchy(rocket, 2.83)
+
+
+@check_dependency()
+def test_so_lc_rocket_problem():
+    rocket = SOLCRocketArch(obj=RocketObj.OBJ_WEIGHTED)
+    run_test_hierarchy(rocket, 2.83)
