@@ -571,7 +571,7 @@ class ArchDesignSpace:
         the imputation ratio"""
         raise NotImplementedError
 
-    def _get_n_active_cont_mean(self) -> Optional[int]:
+    def _get_n_active_cont_mean(self) -> Optional[float]:
         """
         Get the mean number of active continuous dimensions, as seen over all discrete design vectors.
 
@@ -596,7 +596,7 @@ class ImplicitArchDesignSpace(ArchDesignSpace):
 
     def __init__(self, des_vars: List[Variable], correct_x_func: Callable[[np.ndarray, np.ndarray], None],
                  is_conditional_func: Callable[[], List[bool]],
-                 n_valid_discrete_func: Callable[[], int] = None, n_active_cont_mean: Callable[[], int] = None,
+                 n_valid_discrete_func: Callable[[], int] = None, n_active_cont_mean: Callable[[], float] = None,
                  gen_all_discrete_x_func: Callable[[], Optional[Tuple[np.ndarray, np.ndarray]]] = None):
         self._variables = des_vars
         self._correct_x_func = correct_x_func
@@ -625,7 +625,7 @@ class ImplicitArchDesignSpace(ArchDesignSpace):
         if self._n_valid_discrete_func is not None:
             return self._n_valid_discrete_func()
 
-    def _get_n_active_cont_mean(self) -> Optional[int]:
+    def _get_n_active_cont_mean(self) -> Optional[float]:
         if self._n_active_cont_mean is not None:
             return self._n_active_cont_mean()
 

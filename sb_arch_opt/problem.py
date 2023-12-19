@@ -329,7 +329,7 @@ class ArchOptProblemBase(Problem):
         """Return the number of valid discrete design points (ignoring continuous dimensions); enables calculation of
         the imputation ratio. Not needed if an explicit design space is provided."""
 
-    def _get_n_active_cont_mean(self) -> int:
+    def _get_n_active_cont_mean(self) -> float:
         """
         Get the mean number of active continuous dimensions, as seen over all discrete design vectors.
 

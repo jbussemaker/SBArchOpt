@@ -51,7 +51,7 @@ class DummyArchDesignSpace(ArchDesignSpace):
     def _get_n_valid_discrete(self) -> Optional[int]:
         return self._x_all.shape[0]
 
-    def _get_n_active_cont_mean(self) -> Optional[int]:
+    def _get_n_active_cont_mean(self) -> Optional[float]:
         pass
 
     def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
