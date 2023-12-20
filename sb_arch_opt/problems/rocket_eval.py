@@ -379,15 +379,15 @@ class RocketEvaluator:
     def modified_atmosphere(cls, x):
 
         if cls._rho_interp is None:
-            x_sample = np.linspace(0, 80000, 1000)
-            cls._rho_interp = interp1d(x_sample, np.log10(ambiance.Atmosphere(x_sample).density))
+            x_sample = np.linspace(0, 80000, 100)
+            cls._rho_interp = x_sample, np.log10(ambiance.Atmosphere(x_sample).density)
 
         if x < 0:
             x = 0
         elif x > 80000:
             x = 80000
 
-        return 10**cls._rho_interp(x)
+        return 10**np.interp(x, *cls._rho_interp)
 
     @classmethod
     def calculate_trajectory(cls, cone_angle, length_ratio, diameter, T_stages, m_structural_stages, mp_stages,
@@ -409,6 +409,7 @@ class RocketEvaluator:
 
         s = np.pi + diameter ** 2 / 4
         stages_max = len(T_stages) - 1
+        n_steps = 200
 
         def simulate_trajectory(m_payload):
 
@@ -430,8 +431,8 @@ class RocketEvaluator:
 
             g = 9.81
             tfinal = mp_stages[stage] / mdot - 5
-            t = np.linspace(0, tfinal, 500)
-            sol = solve_ivp(fun=stage_state_eq, t_span=[t[0], t[-1]], y0=[0, 0], t_eval=t)
+            t = np.linspace(0, tfinal, n_steps)
+            sol = solve_ivp(fun=stage_state_eq, t_span=[t[0], t[-1]], y0=[0, 0], t_eval=t, dense_output=False)
             h, v = sol.y
             pos, = np.where(h > 10000)
 
@@ -444,8 +445,8 @@ class RocketEvaluator:
                 m0 = m_unloaded + sum(mp_stages[stage:])
                 mdot = mdot_stages[stage]
                 tfinal = mp_stages[stage] / mdot - 5
-                t = np.linspace(0, tfinal, 500)
-                sol = solve_ivp(fun=stage_state_eq, t_span=[t[0], t[-1]], y0=[h[-1], v[-1]], t_eval=t)
+                t = np.linspace(0, tfinal, n_steps)
+                sol = solve_ivp(fun=stage_state_eq, t_span=[t[0], t[-1]], y0=[h[-1], v[-1]], t_eval=t, dense_output=False)
                 h, v = sol.y
                 pos, = np.where(h > 10000)
                 if len(pos) == 0 and stage < stages_max:  # This means that a third rocket stage is available and needed
@@ -457,8 +458,8 @@ class RocketEvaluator:
                     m0 = m_unloaded + sum(mp_stages[stage:])
                     mdot = mdot_stages[stage]
                     tfinal = mp_stages[stage] / mdot - 5
-                    t = np.linspace(0, tfinal, 500)
-                    sol = solve_ivp(fun=stage_state_eq, t_span=[t[0], t[-1]], y0=[h[-1], v[-1]], t_eval=t)
+                    t = np.linspace(0, tfinal, n_steps)
+                    sol = solve_ivp(fun=stage_state_eq, t_span=[t[0], t[-1]], y0=[h[-1], v[-1]], t_eval=t, dense_output=False)
                     h, v = sol.y
                     pos, = np.where(h > 10000)
                     if len(pos) == 0:
@@ -496,8 +497,8 @@ class RocketEvaluator:
             gamma = 135 * np.pi / 180
 
             tfinal = mp_remaining / mdot - 5
-            t = np.linspace(0, tfinal, 500)
-            sol2 = solve_ivp(fun=stage_state_eq, t_span=[t[0], t[-1]], y0=[h_0, v_0], t_eval=t)
+            t = np.linspace(0, tfinal, n_steps)
+            sol2 = solve_ivp(fun=stage_state_eq, t_span=[t[0], t[-1]], y0=[h_0, v_0], t_eval=t, dense_output=False)
             h, v = sol2.y
             pos2, = np.where(h > 100000)
             if len(pos2) == 0 and stage < stages_max:  # This means that a second rocket stage is available and needed
@@ -510,8 +511,8 @@ class RocketEvaluator:
                 m0 = m_unloaded + sum(mp_stages[stage:])
                 mdot = mdot_stages[stage]
                 tfinal = mp_stages[stage] / mdot - 5
-                t = np.linspace(0, tfinal, 500)
-                sol2 = solve_ivp(fun=stage_state_eq, t_span=[t[0], t[-1]], y0=[h[-1], v[-1]], t_eval=t)
+                t = np.linspace(0, tfinal, n_steps)
+                sol2 = solve_ivp(fun=stage_state_eq, t_span=[t[0], t[-1]], y0=[h[-1], v[-1]], t_eval=t, dense_output=False)
                 h, v = sol2.y
                 pos2, = np.where(h > 100000)
                 if len(pos2) == 0 and stage < stages_max:  # A third rocket stage is available and needed
@@ -524,8 +525,8 @@ class RocketEvaluator:
                     m0 = m_unloaded + sum(mp_stages[stage:])
                     mdot = mdot_stages[stage]
                     tfinal = mp_stages[stage] / mdot - 5
-                    t = np.linspace(0, tfinal, 500)
-                    sol2 = solve_ivp(fun=stage_state_eq, t_span=[t[0], t[-1]], y0=[h[-1], v[-1]], t_eval=t)
+                    t = np.linspace(0, tfinal, n_steps)
+                    sol2 = solve_ivp(fun=stage_state_eq, t_span=[t[0], t[-1]], y0=[h[-1], v[-1]], t_eval=t, dense_output=False)
                     h, v = sol2.y
                     pos2, = np.where(h > 100000)
                     if len(pos2) == 0:
@@ -582,7 +583,6 @@ class RocketEvaluator:
                 v_final_, h_vector_, v_vector_ = simulate_trajectory(m_payload)
 
                 # Orbit minimum speed
-                v_orbit = (mu / (r_earth + h_orbit_target)) ** 0.5
                 v_target_diff = v_final_ - v_orbit
 
                 return v_target_diff, v_final_, h_vector_, v_vector_

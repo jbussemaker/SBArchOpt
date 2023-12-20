@@ -23,9 +23,9 @@ def test_1_stage():
 
     performance = RocketEvaluator.evaluate(rocket)
     assert performance.cost == pytest.approx(53845830.)
-    assert performance.payload_mass == pytest.approx(2808, abs=1)
-    assert performance.delta_structural == pytest.approx(-23071, abs=1)
-    assert performance.delta_payload == pytest.approx(-2.823, abs=1e-3)
+    assert performance.payload_mass == pytest.approx(2783, abs=1)
+    assert performance.delta_structural == pytest.approx(-23532, abs=1)
+    assert performance.delta_payload == pytest.approx(-2.832, abs=1e-3)
 
 
 @check_dependency()
@@ -49,9 +49,9 @@ def test_2_stages():
 
     performance = RocketEvaluator.evaluate(rocket)
     assert performance.cost == pytest.approx(87563960.)
-    assert performance.payload_mass == pytest.approx(7588, abs=1.)
-    assert performance.delta_structural == pytest.approx(-27614, abs=1)
-    assert performance.delta_payload == pytest.approx(-0.920, abs=1e-3)
+    assert performance.payload_mass == pytest.approx(7578, abs=1.)
+    assert performance.delta_structural == pytest.approx(-27686, abs=1)
+    assert performance.delta_payload == pytest.approx(-0.923, abs=1e-3)
 
 
 @check_dependency()
@@ -80,8 +80,8 @@ def test_3_stages():
 
     performance = RocketEvaluator.evaluate(rocket)
     assert performance.cost == pytest.approx(337894901.)
-    assert performance.payload_mass == pytest.approx(57765, abs=1)
-    assert performance.delta_structural == pytest.approx(-27114, abs=1)
+    assert performance.payload_mass == pytest.approx(57777, abs=1)
+    assert performance.delta_structural == pytest.approx(-27031, abs=1)
     assert performance.delta_payload == pytest.approx(-118.9, abs=.1)
 
 
