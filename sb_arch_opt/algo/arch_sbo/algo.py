@@ -547,17 +547,10 @@ class SurrogateInfillOptimizationProblem(ArchOptProblemBase):
             n_ieq_constr += 1
         self.eliminate_duplicates = LargeDuplicateElimination()
 
-        des_vars = problem.des_vars
-        super().__init__(des_vars=des_vars, n_obj=n_obj, n_ieq_constr=n_ieq_constr)
+        super().__init__(problem.design_space, n_obj=n_obj, n_ieq_constr=n_ieq_constr)
 
         self.infill = infill
         self._problem: ArchOptProblemBase = problem
-
-    def _get_n_valid_discrete(self) -> int:
-        return self._problem.get_n_valid_discrete()
-
-    def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
-        return self._problem.all_discrete_x
 
     def might_have_hidden_constraints(self):
         return False
@@ -587,12 +580,6 @@ class SurrogateInfillOptimizationProblem(ArchOptProblemBase):
         if g.shape != (x.shape[0], self.n_constr):
             raise RuntimeError(f'Wrong constraint results shape: {g.shape!r} != {(x.shape[0], self.n_constr)!r}')
         g_out[:, :] = g
-
-    def _is_conditionally_active(self) -> List[bool]:
-        return self._problem.is_conditionally_active
-
-    def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
-        x[:, :], is_active[:, :] = self._problem.correct_x(x)
 
     def __repr__(self):
         return f'{self.__class__.__name__}({self.infill!r}, {self._problem!r})'
