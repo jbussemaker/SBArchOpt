@@ -582,9 +582,10 @@ class RealisticTurbofanArch(OpenTurbArchProblemWrapper):
 
 class SimpleTurbofanArchModel(SimpleTurbofanArch):
 
-    def __init__(self):
+    def __init__(self, train=True):
         super().__init__()
-        self._train_models()
+        if train:
+            self._train_models()
 
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
