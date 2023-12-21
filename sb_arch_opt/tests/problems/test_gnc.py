@@ -40,3 +40,14 @@ def test_gnc():
             assert len(pop) == min(n_valid, 300)
         else:
             assert len(pop) == 300
+
+
+def test_gnc_cont_corr():
+    problem = MDGNCNoActNr()
+    assert np.all(problem.is_cont_mask[:6])
+
+    x = np.array([problem.xl.copy()])
+    x[0, :3] = [.5, .25, .75]
+    x, is_active = problem.correct_x(x)
+    assert np.all(x[0, :3] == [.5, .5, .75])
+    assert np.all(is_active[0, :3])

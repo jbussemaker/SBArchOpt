@@ -62,6 +62,11 @@ def test_mo_hier_rosenbrock():
 def test_hier_zaefferer():
     run_test_hierarchy(ZaeffererHierarchical.from_mode(ZaeffererProblemMode.A_OPT_INACT_IMP_PROF_UNI), 1)
 
+    problem = ZaeffererHierarchical.from_mode(ZaeffererProblemMode.A_OPT_INACT_IMP_PROF_UNI)
+    x, is_act = problem.correct_x(np.array([[0, .75]]))
+    assert np.all(x == [[0, .5]])
+    assert np.all(is_act == [[True, False]])
+
 
 def test_hier_test_problem():
     run_test_hierarchy(MOHierarchicalTestProblem(), 72)

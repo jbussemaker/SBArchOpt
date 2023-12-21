@@ -422,6 +422,8 @@ class ZaeffererHierarchical(HierarchyProblemBase):
         des_vars = [Real(bounds=(0, 1)), Real(bounds=(0, 1))]
         super().__init__(des_vars, n_obj=1)
 
+        self.design_space.needs_cont_correction = True
+
     def _get_n_valid_discrete(self) -> int:
         return 1
 

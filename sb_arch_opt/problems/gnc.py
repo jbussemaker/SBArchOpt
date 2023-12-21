@@ -602,6 +602,11 @@ class MDGNCProblemBase(GNCProblemBase):
         'A': lambda p: .0002-.0001*(2*(p-.55))**2,
     }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.design_space.needs_cont_correction = True
+
     def _get_n_valid_discrete(self) -> int:
         choose_type = self.choose_type
         self.choose_type = False

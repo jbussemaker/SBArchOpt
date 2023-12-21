@@ -77,6 +77,7 @@ class ArchDesignSpace:
         self._choice_value_map = None
         self._is_initialized = False
         self.use_auto_corrector = True
+        self.needs_cont_correction = False
 
     @cached_property
     def n_var(self):
@@ -213,7 +214,11 @@ class ArchDesignSpace:
         if corrector is not None and self.use_auto_corrector:
             try:
                 corrector.correct_x(x, is_active)
-                return
+
+                # The corrector only corrects discrete variables, check if correction of continuous variables is needed
+                if not self.needs_cont_correction:
+                    return
+
             except CorrectorUnavailableError:
                 pass
 

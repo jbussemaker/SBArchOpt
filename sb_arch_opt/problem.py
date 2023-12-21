@@ -388,7 +388,10 @@ class ArchOptProblemBase(Problem):
 
         Only needed if no explicit design space model is given.
         Only used if not all discrete design vectors `all_discrete_x` is available OR
-        `self.design_space.use_auto_corrector = False`.
+        `self.design_space.use_auto_corrector = False` OR `self.design_space.needs_cont_correction = True`:
+        --> set `self.design_space.use_auto_corrector = False` to prevent using an automatic corrector
+        --> set `self.design_space.needs_cont_correction = True` if automatic correction can be used but also continuous
+            variables might have to be corrected (the automatic corrector only corrects discrete variables)
         """
 
     def __repr__(self):
