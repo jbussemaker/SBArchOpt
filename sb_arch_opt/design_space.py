@@ -432,6 +432,15 @@ class ArchDesignSpace:
         n_cont_dim_declared = len(i_is_cont)
         return n_cont_dim_declared / n_cont_active_mean
 
+    @cached_property
+    def correction_fraction(self) -> float:
+        """The fraction of design space hierarchy (quantified by the imputation ratio) that is due to the need for
+        correction (i.e. value constraints)."""
+        imputation_ratio = self.imputation_ratio
+        if imputation_ratio == 1.:
+            return 0.
+        return np.log10(self.correction_ratio) / np.log10(imputation_ratio)
+
     def get_discrete_rates(self, force=False, show=False) -> Optional[pd.DataFrame]:
         """Returns for each discrete value of the discrete design variables, how often the relatively occur over all
         possible design vectors. A value of -1 represents an inactive design variable. Results are returned in a

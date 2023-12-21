@@ -280,16 +280,18 @@ class ArchOptProblemBase(Problem):
         if not np.isnan(imp_ratio) or not np.isnan(discrete_imp_ratio):
             print(f'HIER         : {imp_ratio > 1 or discrete_imp_ratio > 1}')  # Is it a hierarchical problem?
             print(f'n_valid_discr: {self.get_n_valid_discrete()}')  # Number of valid discrete design points
-            print(f'imp_ratio    : {imp_ratio:.2f} (discrete: {discrete_imp_ratio:.2f}; '
-                  f'continuous: {cont_imp_ratio:.2f})')  # Imputation ratio: nr of declared designs / n_valid_discr
+            print(f'imp_ratio    : {imp_ratio:.2f} (discr.: {discrete_imp_ratio:.2f}; '
+                  f'cont.: {cont_imp_ratio:.2f})')  # Imputation ratio: nr of declared designs / n_valid_discr
 
         corr_ratio = self.get_correction_ratio()
         discrete_corr_ratio = self.get_discrete_correction_ratio()
         cont_corr_ratio = self.get_continuous_correction_ratio()
+        corr_fraction = self.design_space.correction_fraction
         if not np.isnan(corr_ratio) or not np.isnan(discrete_corr_ratio):
-            print(f'n_corr_discr : {self.get_n_correct_discrete()}')  # Number of correct discrete design points
-            print(f'corr_ratio   : {corr_ratio:.2f} (discrete: {discrete_corr_ratio:.2f}; '
-                  f'continuous: {cont_corr_ratio:.2f})')  # Correction ratio: nr of declared designs / n_correct_discr
+            # print(f'n_corr_discr : {self.get_n_correct_discrete()}')  # Number of correct discrete design points
+            # Correction ratio: nr of declared designs / n_correct_discr
+            print(f'corr_ratio   : {corr_ratio:.2f} (discr.: {discrete_corr_ratio:.2f}; '
+                  f'cont.: {cont_corr_ratio:.2f}; fraction of imp_ratio: {corr_fraction*100:.1f}%)')
 
         fail_rate = self.get_failure_rate()
         if fail_rate is not None and fail_rate > 0:
