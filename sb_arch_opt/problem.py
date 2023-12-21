@@ -78,6 +78,8 @@ class ArchOptProblemBase(Problem):
                 self._get_n_valid_discrete,
                 self._get_n_active_cont_mean,
                 self._gen_all_discrete_x,
+                self._get_n_correct_discrete,
+                self._get_n_active_cont_mean_correct,
             )
         self.design_space = design_space
 
@@ -139,6 +141,11 @@ class ArchOptProblemBase(Problem):
         """Return the number of valid discrete design points (ignoring continuous dimensions); enables calculation of
         the imputation ratio"""
         return self.design_space.get_n_valid_discrete()
+
+    def get_n_correct_discrete(self) -> Optional[int]:
+        """Return the number of correct discrete design points (ignoring continuous dimensions); enables calculation of
+        the correction ratio"""
+        return self.design_space.get_n_correct_discrete()
 
     def get_n_declared_discrete(self) -> int:
         """Returns the number of declared discrete design points (ignoring continuous dimensions), calculated from the
@@ -276,6 +283,14 @@ class ArchOptProblemBase(Problem):
             print(f'imp_ratio    : {imp_ratio:.2f} (discrete: {discrete_imp_ratio:.2f}; '
                   f'continuous: {cont_imp_ratio:.2f})')  # Imputation ratio: nr of declared designs / n_valid_discr
 
+        corr_ratio = self.get_correction_ratio()
+        discrete_corr_ratio = self.get_discrete_correction_ratio()
+        cont_corr_ratio = self.get_continuous_correction_ratio()
+        if not np.isnan(corr_ratio) or not np.isnan(discrete_corr_ratio):
+            print(f'n_corr_discr : {self.get_n_correct_discrete()}')  # Number of correct discrete design points
+            print(f'corr_ratio   : {corr_ratio:.2f} (discrete: {discrete_corr_ratio:.2f}; '
+                  f'continuous: {cont_corr_ratio:.2f})')  # Correction ratio: nr of declared designs / n_correct_discr
+
         fail_rate = self.get_failure_rate()
         if fail_rate is not None and fail_rate > 0:
             might_have_warn = ' (CHECK DECLARATION)' if not self.might_have_hidden_constraints() else ''
@@ -304,11 +319,37 @@ class ArchOptProblemBase(Problem):
     def get_continuous_imputation_ratio(self) -> float:
         """
         Returns the imputation ratio considering only the continuous design variables: it represents the nr of
-        continuous dimensions over the mean number of active continuous dimensions, as seen over all possible discrete
+        continuous dimensions over the mean number of active continuous dimensions, as seen over all valid discrete
         design vectors. The higher the number, the less continuous dimensions are active on average. A value of 1
         indicates all continuous dimensions are always active.
         """
         return self.design_space.continuous_imputation_ratio
+
+    def get_correction_ratio(self) -> float:
+        """
+        Returns the problem-level correction ratio, a measure of how much of the imputation ratio is due to a need for
+        correction (i.e. value constraints).
+        It is calculated from the product of the discrete and continuous correction ratios.
+        """
+        return self.design_space.correction_ratio
+
+    def get_discrete_correction_ratio(self) -> float:
+        """
+        Returns the correction ratio considering only the discrete design vectors: it represents the ratio between
+        number of declared discrete dimensions (Cartesian product) and the number of correct discrete design vectors.
+        A value of 1 indicates no correction is needed, any value higher than 1 means correction is needed and the
+        higher the value, the more difficult it is to randomly sample a correct design vector.
+        """
+        return self.design_space.discrete_correction_ratio
+
+    def get_continuous_correction_ratio(self) -> float:
+        """
+        Returns the correction ratio considering only the continuous design variables: it represents the nr of
+        continuous dimensions over the mean number of active continuous dimensions, as seen over all correct discrete
+        design vectors. The higher the number, the less continuous dimensions are active on average. A value of 1
+        indicates all continuous dimensions are always active.
+        """
+        return self.design_space.continuous_correction_ratio
 
     def get_discrete_rates(self, force=False, show=False) -> Optional[pd.DataFrame]:
         """Returns for each discrete value of the discrete design variables, how often the relatively occur over all
@@ -326,20 +367,46 @@ class ArchOptProblemBase(Problem):
         if an explicit design space is provided."""
 
     def _get_n_valid_discrete(self) -> int:
-        """Return the number of valid discrete design points (ignoring continuous dimensions); enables calculation of
-        the imputation ratio. Not needed if an explicit design space is provided."""
+        """
+        Return the number of valid discrete design points (ignoring continuous dimensions); enables calculation of
+        the imputation ratio.
+        Valid discrete design points are discrete design points where value constraints are satisfied and where
+        inactive design variables are imputed/canonical (compare _get_n_correct_discrete).
+        """
 
     def _get_n_active_cont_mean(self) -> float:
         """
-        Get the mean number of active continuous dimensions, as seen over all discrete design vectors.
+        Get the mean number of active continuous dimensions, as seen over all valid discrete design vectors.
 
-        For example, if there are two discrete design vectors like this"
+        For example, if there are two valid discrete design vectors like this:
         x_discrete x_continuous1 x_continuous2
         0          Active        Active
         1          Active        Inactive
 
         Then the mean number of active continuous dimensions is:
         3 (total nr of active continuous dimensions) / 2 (number of discrete vectors) = 1.5
+        """
+
+    def _get_n_correct_discrete(self) -> Optional[int]:
+        """
+        Return the number of correct discrete design points (ignoring continuous dimensions); enables calculation of
+        the correction ratio.
+        Correct discrete design points are discrete design points where value constraints are satisfied, where however
+        inactive design variables can have any value (compare _get_n_valid_discrete).
+        """
+
+    def _get_n_active_cont_mean_correct(self) -> Optional[float]:
+        """
+        Get the mean number of active continuous dimensions, as seen over all valid discrete design vectors.
+
+        For example, if there are two correct discrete design vectors like this:
+        x_discrete x_continuous1 x_continuous2
+        0          Active        Active
+        1          Active        Inactive
+        2          Active        Inactive
+
+        Then the mean number of active continuous dimensions is:
+        4 (total nr of active continuous dimensions) / 3 (number of discrete vectors) = 1.3333...
         """
 
     def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:

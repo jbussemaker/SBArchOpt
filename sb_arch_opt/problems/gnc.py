@@ -79,12 +79,19 @@ class GNCProblemBase(HierarchyProblemBase):
         super().__init__(des_vars, n_obj=n_obj)
 
     def _get_n_valid_discrete(self) -> int:
+        return self._calc_n_valid_discrete()
+
+    def _get_n_correct_discrete(self) -> int:
+        return self._calc_n_valid_discrete(weighted=True)
+
+    def _calc_n_valid_discrete(self, weighted=False) -> int:
         # Pre-count the number of possible connections, taking into account that each connector at least needs one
-        # We can ignore any combinations where there are either 1 sources or targets, as there there is only 1
+        # We can ignore any combinations where there are either 1 sources or targets, as there is only 1
         # connection possibility (namely all-to-one or one-to-all)
         n_comb_conn = self._get_n_comb_conn()
 
         # Loop over the number of object instances
+        n_conn_dv = self.n_max*self.n_max
         n_node_exist = list(range(1, self.n_max+1)) if self.choose_nr else [self.n_max]
         n_actuators = n_node_exist if self.actuators else [0]
         n_valid = 0
@@ -94,7 +101,12 @@ class GNCProblemBase(HierarchyProblemBase):
             if self.choose_type:
                 for n in n_objs:
                     if n > 0:
-                        n_inst_comb *= len(list(itertools.combinations_with_replacement('ABC', n)))
+                        n_comb_type = len(list(itertools.combinations_with_replacement('ABC', n)))
+                        if weighted:
+                            n_inactive = self.n_max-n
+                            n_comb_type *= 2**n_inactive
+
+                        n_inst_comb *= n_comb_type
 
             # Count the number of possible inter-object connections
             for n_src, n_tgt in zip(n_objs[:-1], n_objs[1:]):
@@ -103,9 +115,16 @@ class GNCProblemBase(HierarchyProblemBase):
                 if n_tgt == 0:
                     continue
                 if n_src == 1 or n_tgt == 1:
-                    continue
+                    n_comb = 1
+                else:
+                    n_comb = n_comb_conn[n_src, n_tgt]
 
-                n_inst_comb *= n_comb_conn[n_src, n_tgt]
+                weight = 1
+                if weighted:
+                    n_inactive = n_conn_dv - n_src*n_tgt
+                    weight = 2**n_inactive  # 2 correct values for each inactive design variable
+
+                n_inst_comb *= n_comb*weight
 
             n_valid += n_inst_comb
         return n_valid
@@ -616,16 +635,32 @@ class MDGNCProblemBase(GNCProblemBase):
             self.choose_type = choose_type
         return n_valid
 
+    def _get_n_correct_discrete(self) -> int:
+        choose_type = self.choose_type
+        self.choose_type = False
+        try:
+            n_valid = super()._get_n_correct_discrete()
+        finally:
+            self.choose_type = choose_type
+        return n_valid
+
     def _get_n_active_cont_mean(self) -> float:
+        return self._calc_n_active_cont_mean()
+
+    def _get_n_active_cont_mean_correct(self) -> float:
+        return self._calc_n_active_cont_mean(correction=True)
+
+    def _calc_n_active_cont_mean(self, correction=False) -> float:
         if not self.choose_type:
             return float(np.sum(self.is_cont_mask))
 
         # Pre-count the number of possible connections, taking into account that each connector at least needs one
-        # We can ignore any combinations where there are either 1 sources or targets, as there there is only 1
+        # We can ignore any combinations where there are either 1 sources or targets, as there is only 1
         # connection possibility (namely all-to-one or one-to-all)
         n_comb_conn = self._get_n_comb_conn()
 
         # Loop over the number of object instances
+        n_conn_dv = self.n_max*self.n_max
         n_node_exist = list(range(1, self.n_max+1)) if self.choose_nr else [self.n_max]
         n_actuators = n_node_exist if self.actuators else [0]
         n_valid = 0
@@ -640,9 +675,16 @@ class MDGNCProblemBase(GNCProblemBase):
                 if n_tgt == 0:
                     continue
                 if n_src == 1 or n_tgt == 1:
-                    continue
+                    n_comb = 1
+                else:
+                    n_comb = n_comb_conn[n_src, n_tgt]
 
-                n_inst_comb *= n_comb_conn[n_src, n_tgt]
+                weight = 1
+                if correction:
+                    n_inactive = n_conn_dv - n_src*n_tgt
+                    weight = 2**n_inactive  # 2 correct values for each inactive design variable
+
+                n_inst_comb *= n_comb*weight
 
             n_valid += n_inst_comb
 

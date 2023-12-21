@@ -360,6 +360,14 @@ class ExplicitArchDesignSpace(ArchDesignSpace):
     def _get_n_active_cont_mean(self) -> Optional[float]:
         """Currently only possible by generating all discrete x"""
 
+    def _get_n_correct_discrete(self) -> Optional[int]:
+        """Return the number of correct discrete design points (ignoring continuous dimensions); enables calculation of
+        the correction ratio"""
+        # Currently only possible by generating all discrete x
+
+    def _get_n_active_cont_mean_correct(self) -> Optional[float]:
+        """Currently only possible by generating all discrete x"""
+
     def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
         """Generate all possible discrete design vectors (if available). Returns design vectors and activeness
         information."""

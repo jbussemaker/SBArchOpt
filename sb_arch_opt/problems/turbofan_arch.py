@@ -118,6 +118,15 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
     def _get_n_valid_discrete(self) -> int:
         raise NotImplementedError
 
+    def _get_n_active_cont_mean(self) -> Optional[float]:
+        return
+
+    def _get_n_correct_discrete(self) -> Optional[int]:
+        return
+
+    def _get_n_active_cont_mean_correct(self) -> Optional[float]:
+        return
+
     def get_failure_rate(self) -> float:
         raise NotImplementedError
 

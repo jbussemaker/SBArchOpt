@@ -7,7 +7,8 @@ from sb_arch_opt.problems.hierarchical import *
 from pymoo.core.evaluator import Evaluator
 
 
-def run_test_hierarchy(problem, imp_ratio, check_n_valid=True, validate_exhaustive=False, exh_n_cont=3):
+def run_test_hierarchy(problem, imp_ratio, check_n_valid=True, validate_exhaustive=False, exh_n_cont=3,
+                       corr_ratio=None):
     x_discrete, is_act_discrete = problem.all_discrete_x
     if check_n_valid or x_discrete is not None:
         if x_discrete is not None:
@@ -28,6 +29,13 @@ def run_test_hierarchy(problem, imp_ratio, check_n_valid=True, validate_exhausti
     assert HierarchicalExhaustiveSampling.has_cheap_all_x_discrete(problem) == (x_discrete is not None)
 
     assert problem.get_discrete_imputation_ratio() == pytest.approx(imp_ratio, rel=.02)
+    if corr_ratio is None:
+        corr_ratio = 1  # Assume no correction
+    if np.isnan(corr_ratio):
+        assert np.isnan(problem.get_discrete_correction_ratio())
+    else:
+        assert problem.get_discrete_correction_ratio() == pytest.approx(corr_ratio, rel=.02)
+        assert problem.get_discrete_correction_ratio() <= problem.get_discrete_imputation_ratio()
     problem.print_stats()
 
     pop = None
@@ -67,6 +75,9 @@ def test_hier_zaefferer():
     assert np.all(x == [[0, .5]])
     assert np.all(is_act == [[True, False]])
 
+    assert problem.get_imputation_ratio() == 2/(2-problem.c)
+    assert problem.get_correction_ratio() == 1
+
 
 def test_hier_test_problem():
     run_test_hierarchy(MOHierarchicalTestProblem(), 72)
@@ -78,25 +89,23 @@ def test_jenatton():
 
 
 def test_hier_branin():
-    run_test_hierarchy(HierBranin(), 3.24, validate_exhaustive=True)
+    run_test_hierarchy(HierBranin(), 3.24, validate_exhaustive=True, corr_ratio=1.05)
 
 
 @pytest.mark.skipif(int(os.getenv('RUN_SLOW_TESTS', 0)) != 1, reason='Set RUN_SLOW_TESTS=1 to run slow tests')
 def test_hier_zdt1():
-    run_test_hierarchy(HierZDT1Small(), 1.8, validate_exhaustive=True)
-    run_test_hierarchy(HierZDT1(), 4.86, validate_exhaustive=True)
-    run_test_hierarchy(HierZDT1Large(), 8.19)
-    run_test_hierarchy(HierDiscreteZDT1(), 4.1)
+    run_test_hierarchy(HierZDT1Small(), 1.8, validate_exhaustive=True, corr_ratio=1.125)
+    run_test_hierarchy(HierZDT1(), 4.86, validate_exhaustive=True, corr_ratio=1.07)
+    run_test_hierarchy(HierZDT1Large(), 8.19, corr_ratio=1.12)
+    run_test_hierarchy(HierDiscreteZDT1(), 4.1, corr_ratio=1.12)
 
 
-@pytest.mark.skipif(int(os.getenv('RUN_SLOW_TESTS', 0)) != 1, reason='Set RUN_SLOW_TESTS=1 to run slow tests')
 def test_hier_cantilevered_beam():
-    run_test_hierarchy(HierCantileveredBeam(), 5.4)
+    run_test_hierarchy(HierCantileveredBeam(), 5.4, corr_ratio=1.04)
 
 
-@pytest.mark.skipif(int(os.getenv('RUN_SLOW_TESTS', 0)) != 1, reason='Set RUN_SLOW_TESTS=1 to run slow tests')
 def test_hier_carside():
-    run_test_hierarchy(HierCarside(), 6.48)
+    run_test_hierarchy(HierCarside(), 6.48, corr_ratio=1.05)
 
 
 def test_hier_nn():

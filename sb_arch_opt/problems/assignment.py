@@ -73,6 +73,9 @@ class AssignmentProblemWrapper(HierarchyProblemBase):
     def _get_n_valid_discrete(self) -> int:
         return self._problem.get_n_valid_design_points(n_cont=1)
 
+    def _get_n_correct_discrete(self) -> int:
+        pass
+
     def _is_conditionally_active(self) -> List[bool]:
         _, is_act_all = self.all_discrete_x
         if is_act_all is not None:

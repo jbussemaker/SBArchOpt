@@ -1,30 +1,29 @@
 import numpy as np
 from sb_arch_opt.problems.gnc import *
-from sb_arch_opt.problem import ArchOptProblemBase
 from sb_arch_opt.sampling import HierarchicalSampling
 from sb_arch_opt.tests.problems.test_hierarchical import run_test_hierarchy
 
 
 def test_gnc():
-    problem: ArchOptProblemBase
-    for problem, n_valid, imp_ratio in [
-        (GNCNoActNrType(), 265, 1.93),
-        (GNCNoActType(), 327, 14.1),
-        (GNCNoActNr(), 26500, 14.1),
-        (GNCNoAct(), 29857, 112.5),
+    problem: GNCProblemBase
+    for problem, n_valid, imp_ratio, corr_ratio in [
+        (GNCNoActNrType(), 265, 1.93, 1.93),
+        (GNCNoActType(), 327, 14.1, 3.01),
+        (GNCNoActNr(), 26500, 14.1, 14.1),
+        (GNCNoAct(), 29857, 112.5, 17.2),
 
-        (GNCNoNrType(), 70225, 3.73),
-        (GNCNoType(), 85779, 82.5),
-        (GNCNoNr(), 70225000, 73.5),
-        (GNC(), 79091323, 1761),
+        (GNCNoNrType(), 70225, 3.73, 3.73),
+        (GNCNoType(), 85779, 82.5, 9.01),
+        (GNCNoNr(), 70225000, 73.5, 73.5),
+        (GNC(), 79091323, 1761, 123),
 
-        (MDGNCNoActNr(), 265, 1.93),
-        (MDGNCNoAct(), 327, 14.1),
-        (SOMDGNCNoAct(), 327, 14.1),
-        (MDGNCNoNr(), 70225, 3.73),
-        (MDGNC(), 85779, 82.5),
+        (MDGNCNoActNr(), 265, 1.93, 1.93),
+        (MDGNCNoAct(), 327, 14.1, 3.01),
+        (SOMDGNCNoAct(), 327, 14.1, 3.01),
+        (MDGNCNoNr(), 70225, 3.73, 3.73),
+        (MDGNC(), 85779, 82.5, 9.01),
     ]:
-        run_test_hierarchy(problem, imp_ratio, check_n_valid=n_valid < 400)
+        run_test_hierarchy(problem, imp_ratio, check_n_valid=n_valid < 400, corr_ratio=corr_ratio)
         assert problem.get_n_valid_discrete() == n_valid
 
         assert np.any(~problem.is_conditionally_active)
@@ -39,7 +38,17 @@ def test_gnc():
         if np.all(problem.is_discrete_mask):
             assert len(pop) == min(n_valid, 300)
         else:
+            # Mixed-discrete problems
             assert len(pop) == 300
+            assert problem.get_continuous_imputation_ratio() > 1
+            assert problem.get_imputation_ratio() > imp_ratio
+            assert problem.get_continuous_correction_ratio() > 1
+            assert problem.get_correction_ratio() > corr_ratio
+
+            if not problem.choose_type or not problem.choose_nr:
+                assert problem.get_continuous_correction_ratio() == problem.get_continuous_imputation_ratio()
+            else:
+                assert problem.get_continuous_correction_ratio() != problem.get_continuous_imputation_ratio()
 
 
 def test_gnc_cont_corr():

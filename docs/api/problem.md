@@ -16,10 +16,12 @@
             - all_discrete_x
             - print_stats
             - get_imputation_ratio
+            - get_correction_ratio
             - get_discrete_rates
             - get_failure_rate
             - get_n_declared_discrete
             - get_n_valid_discrete
+            - get_n_correct_discrete
             - _arch_evaluate
             - _correct_x
 
@@ -41,6 +43,7 @@
             - quick_sample_discrete_x
             - des_vars
             - imputation_ratio
+            - correction_ratio
             - is_conditionally_active
             - is_cat_mask
             - is_cont_mask
@@ -52,3 +55,4 @@
             - get_discrete_rates
             - get_n_declared_discrete
             - get_n_valid_discrete
+            - get_n_correct_discrete
