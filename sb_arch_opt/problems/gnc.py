@@ -436,7 +436,8 @@ class GNCProblemBase(HierarchyProblemBase):
 
             if self.obj == GNCObjective.BOTH:
                 f_out[i, 0] = failure_rate
-                f_out[i, 1] = mass
+                if f_out.shape[1] > 1:
+                    f_out[i, 1] = mass
             elif self.obj == GNCObjective.FAILURE:
                 f_out[i, 0] = failure_rate
             elif self.obj == GNCObjective.WEIGHT:
@@ -770,7 +771,8 @@ class MDGNCProblemBase(GNCProblemBase):
 
             if self.obj == GNCObjective.BOTH:
                 f_out[i, 0] = failure_rate
-                f_out[i, 1] = mass
+                if f_out.shape[1] > 1:
+                    f_out[i, 1] = mass
             elif self.obj == GNCObjective.FAILURE:
                 f_out[i, 0] = failure_rate
             elif self.obj == GNCObjective.WEIGHT:
