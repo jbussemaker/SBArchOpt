@@ -19,7 +19,6 @@ This test suite contains the mixed-discrete, hierarchical, multi-objective turbo
 More information: https://github.com/jbussemaker/OpenTurbofanArchitecting
 """
 import pickle
-import joblib
 import logging
 import numpy as np
 from typing import *
@@ -246,6 +245,7 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
             self._train_models()
 
     def _train_models(self):
+        import joblib
         from sklearn import ensemble
         model_data_dir = self._get_data_path('model_data')
         os.makedirs(model_data_dir, exist_ok=True)
