@@ -169,7 +169,7 @@ class CachedParetoFrontMixin(Problem):
         robust_period = n_gen
         n_max_gen = n_gen*10
         n_max_eval = n_max_gen*pop_size
-        print(f'Discovering Pareto front {i+1}/{n} ({pop_size} pop, {n_gen} <= gen <= {n_max_gen}): {self.name()}')
+        print(f'Discovering Pareto front {i+1}/{n} ({pop_size} pop, {n_gen} <= gen <= {n_max_gen}): {self!r}')
         if self.n_obj > 1:
             termination = DefaultMultiObjectiveTermination(
                 xtol=5e-4, cvtol=1e-8, ftol=1e-4, n_skip=n_gen, period=robust_period, n_max_gen=n_max_gen,

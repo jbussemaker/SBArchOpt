@@ -31,7 +31,8 @@ __all__ = ['GNCProblemBase', 'GNCNoActNrType', 'GNCNoActType', 'GNCNoActNr', 'GN
 class GNCObjective(enum.Enum):
     BOTH = 1
     FAILURE = 2
-    WEIGHTED = 3
+    WEIGHT = 3
+    WEIGHTED = 4
 
 
 class GNCProblemBase(HierarchyProblemBase):
@@ -433,11 +434,17 @@ class GNCProblemBase(HierarchyProblemBase):
                                                    actuator_types=obj_types[2] if self.actuators else None,
                                                    act_conns=conn_edges[1] if self.actuators else None)
 
-            f_out[i, 0] = failure_rate
-            if f_out.shape[1] > 1:
+            if self.obj == GNCObjective.BOTH:
+                f_out[i, 0] = failure_rate
                 f_out[i, 1] = mass
+            elif self.obj == GNCObjective.FAILURE:
+                f_out[i, 0] = failure_rate
+            elif self.obj == GNCObjective.WEIGHT:
+                f_out[i, 0] = mass
             elif self.obj == GNCObjective.WEIGHTED:
                 f_out[i, 0] += self._f_weighted_mass_factor*mass
+            else:
+                raise ValueError(f'Unknown objective: {self.obj}')
 
     @classmethod
     def _calc_mass(cls, sensor_types, computer_types, actuator_types=None):
@@ -761,11 +768,17 @@ class MDGNCProblemBase(GNCProblemBase):
             failure_rate = self._calc_failure_rate_md(obj_par[0], obj_par[1], conn_edges[0],
                                                       actuator_params=act_params, act_conns=act_conns)
 
-            f_out[i, 0] = failure_rate
-            if f_out.shape[1] > 1:
+            if self.obj == GNCObjective.BOTH:
+                f_out[i, 0] = failure_rate
                 f_out[i, 1] = mass
+            elif self.obj == GNCObjective.FAILURE:
+                f_out[i, 0] = failure_rate
+            elif self.obj == GNCObjective.WEIGHT:
+                f_out[i, 0] = mass
             elif self.obj == GNCObjective.WEIGHTED:
                 f_out[i, 0] += self._f_weighted_mass_factor*mass
+            else:
+                raise ValueError(f'Unknown objective: {self.obj}')
 
     @classmethod
     def _calc_mass_md(cls, sensor_params, computer_params, conns, actuator_params=None, act_conns=None):
@@ -820,11 +833,11 @@ class MDGNCNoAct(MDGNCProblemBase):
 
 class SOMDGNCNoAct(MDGNCProblemBase):
 
-    def __init__(self):
-        super().__init__(actuators=False, obj=GNCObjective.WEIGHTED)
+    def __init__(self, obj=GNCObjective.WEIGHTED):
+        super().__init__(actuators=False, obj=obj)
 
     def __repr__(self):
-        return f'{self.__class__.__name__}()'
+        return f'{self.__class__.__name__}(obj={self.obj!s})'
 
 
 class MDGNCNoNr(MDGNCProblemBase):
@@ -863,12 +876,13 @@ if __name__ == '__main__':
 
     # problem = MDGNCNoActNr()
     # problem = MDGNCNoAct()
-    problem = SOMDGNCNoAct()
+    # problem = SOMDGNCNoAct()
+    problem = SOMDGNCNoAct(obj=GNCObjective.WEIGHT)
     # problem = MDGNCNoNr()
     # problem = MDGNC()
 
+    # problem.reset_pf_cache()
     pf = problem.pareto_front()
 
     problem.print_stats()
-    # problem.reset_pf_cache()
     problem.plot_pf(n_sample=1000)
