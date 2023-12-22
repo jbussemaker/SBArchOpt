@@ -24,48 +24,47 @@ SOFTWARE.
 """
 import os
 import sys
-
 sys.path.insert(0, os.path.dirname(__file__))
 from sb_arch_opt import __version__
 from setuptools import setup, find_packages
 
 
 def _get_readme():
-    with open(os.path.join(os.path.dirname(__file__), "README.md"), "r") as fp:
+    with open(os.path.join(os.path.dirname(__file__), 'README.md'), 'r') as fp:
         return fp.read()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     setup(
-        name="sb-arch-opt",
+        name='sb-arch-opt',
         version=__version__,
-        description="SBArchOpt: Surrogate-Based Architecture Optimization",
+        description='SBArchOpt: Surrogate-Based Architecture Optimization',
         long_description=_get_readme(),
-        long_description_content_type="text/markdown",
-        author="Jasper Bussemaker",
-        author_email="jasper.bussemaker@dlr.de",
+        long_description_content_type='text/markdown',
+        author='Jasper Bussemaker',
+        author_email='jasper.bussemaker@dlr.de',
         classifiers=[
-            "Intended Audience :: Science/Research",
-            "Topic :: Scientific/Engineering",
-            "Programming Language :: Python :: 3",
-            "License :: OSI Approved :: MIT License",
+            'Intended Audience :: Science/Research',
+            'Topic :: Scientific/Engineering',
+            'Programming Language :: Python :: 3',
+            'License :: OSI Approved :: MIT License',
         ],
-        license="MIT",
+        license='MIT',
         install_requires=[
-            "numpy",
-            "pymoo~=0.6.0.1",
-            "scipy",
-            "deprecated",
-            "pandas",
-            "cached-property~=1.5",
-            "ConfigSpace~=0.6.1",
-            "more-itertools~=9.1",
+            'numpy',
+            'pymoo~=0.6.0.1',
+            'scipy',
+            'deprecated',
+            'pandas',
+            'cached-property~=1.5',
+            'ConfigSpace~=0.6.1',
+            'more-itertools~=9.1',
         ],
         extras_require={
-            "arch_sbo": [
-                "smt~=2.2",
-                "numba",
-                "scikit-learn",
+            'arch_sbo': [
+                'smt~=2.2',
+                'numba',
+                'scikit-learn',
             ],
             # 'ota': [  # pip install -r requirements-ota.txt
             #     'open_turb_arch @ git+https://github.com/jbussemaker/OpenTurbofanArchitecting@pymoo_optional#egg=open_turb_arch',
@@ -73,30 +72,28 @@ if __name__ == "__main__":
             # 'assignment': [  # pip install -r requirements-assignment.txt
             #     'assign_enc @ git+https://github.com/jbussemaker/AssignmentEncoding#egg=assign_enc',
             # ],
-            "botorch": [
-                "ax-platform~=0.3.0",
-                "botorch~=0.8.2",
+            'botorch': [
+                'ax-platform~=0.3.0',
+                'botorch~=0.8.2',
             ],
-            "trieste": [
-                "trieste~=1.0.0",
+            'trieste': [
+                'trieste~=1.0.0',
                 # Until https://github.com/GPflow/GPflow/pull/2050 is merged and GPflow has been updated
-                "gpflow==2.7.0",
-                "keras==2.10.0",
-                "tensorflow-probability==0.18.0",
+                'gpflow==2.7.0', 'keras==2.10.0', 'tensorflow-probability==0.18.0',
             ],
-            "tpe": [
-                "tpe==0.0.8",
+            'tpe': [
+                'tpe==0.0.8',
             ],
             # 'hebo': [  # pip install -r requirements-hebo.txt
             #     'HEBO',  # Disabled until commit f050865fd2f554b5ca94642667257b365c753f29 has been released on PyPI
             # ],
-            "egor": [
-                "egobox~=0.14.0",
+            'egor': [
+                'egobox~=0.14.0',
             ],
         },
-        python_requires=">=3.7",
-        packages=find_packages(include="sb_arch_opt*"),
+        python_requires='>=3.7',
+        packages=find_packages(include='sb_arch_opt*'),
         package_data={
-            "sb_arch_opt.problems": ["turbofan_data/*"],
+            'sb_arch_opt.problems': ['turbofan_data/*'],
         },
     )
