@@ -34,4 +34,4 @@ def get_egor_optimizer(problem: ArchOptProblemBase, n_init: int, seed=None):
     """
     check_dependencies()
     results_folder = "./"
-    return EGORArchOptInterface(problem, results_folder, n_init, seed=seed)
+    return EgorArchOptInterface(problem, results_folder, n_init, seed=seed)

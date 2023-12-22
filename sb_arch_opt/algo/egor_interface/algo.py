@@ -40,7 +40,7 @@ try:
 except ImportError:
     HAS_EGOBOX = False
 
-__all__ = ["HAS_EGOBOX", "check_dependencies", "EGORArchOptInterface"]
+__all__ = ["HAS_EGOBOX", "check_dependencies", "EgorArchOptInterface"]
 
 log = logging.getLogger("sb_arch_opt.egor")
 
@@ -50,7 +50,7 @@ def check_dependencies():
         raise ImportError(f"egobox not installed!")
 
 
-class EGORArchOptInterface:
+class EgorArchOptInterface:
     """
     Class for interfacing with EGOR
     """
@@ -60,7 +60,7 @@ class EGORArchOptInterface:
         problem: ArchOptProblemBase,
         results_folder: str,
         n_init: int,
-        seed: "None|int",
+        seed: "None|int" = None,
     ):
         check_dependencies()
         self._problem = problem
