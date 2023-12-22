@@ -1,1 +1,3 @@
 git+https://github.com/jbussemaker/OpenTurbofanArchitecting@pymoo_optional#egg=open_turb_arch
+scikit-learn
+joblib
