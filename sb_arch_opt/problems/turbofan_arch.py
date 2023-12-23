@@ -360,8 +360,9 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
 
         is_ok = ~is_failed
         x_ok = x_imp[is_ok, :]
-        for i in range(f.shape[1]):
-            f[is_ok, i] = self._models[f'f{i}'].predict(x_ok)
+        if x_ok.shape[0] > 0:
+            for i in range(f.shape[1]):
+                f[is_ok, i] = self._models[f'f{i}'].predict(x_ok)
 
         g_from_x, n_eval_g = self._g_from_x
         if np.any(g_from_x):
@@ -384,9 +385,10 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
 
             g[:, g_from_x] = (g[:, g_from_x]-self._con_offsets[g_from_x])*self._con_factors[g_from_x]
 
-        for i in range(g.shape[1]):
-            if not g_from_x[i]:
-                g[is_ok, i] = self._models[f'g{i}'].predict(x_ok)
+        if x_ok.shape[0] > 0:
+            for i in range(g.shape[1]):
+                if not g_from_x[i]:
+                    g[is_ok, i] = self._models[f'g{i}'].predict(x_ok)
 
         return x_imp, f, g, is_active
 
