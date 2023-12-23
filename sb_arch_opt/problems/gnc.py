@@ -443,7 +443,7 @@ class GNCProblemBase(HierarchyProblemBase):
             elif self.obj == GNCObjective.WEIGHT:
                 f_out[i, 0] = mass
             elif self.obj == GNCObjective.WEIGHTED:
-                f_out[i, 0] += self._f_weighted_mass_factor*mass
+                f_out[i, 0] = failure_rate + self._f_weighted_mass_factor*mass
             else:
                 raise ValueError(f'Unknown objective: {self.obj}')
 
@@ -778,7 +778,7 @@ class MDGNCProblemBase(GNCProblemBase):
             elif self.obj == GNCObjective.WEIGHT:
                 f_out[i, 0] = mass
             elif self.obj == GNCObjective.WEIGHTED:
-                f_out[i, 0] += self._f_weighted_mass_factor*mass
+                f_out[i, 0] = failure_rate + self._f_weighted_mass_factor*mass
             else:
                 raise ValueError(f'Unknown objective: {self.obj}')
 

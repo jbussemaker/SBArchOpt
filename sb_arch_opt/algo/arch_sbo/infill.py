@@ -659,7 +659,7 @@ class ProbabilityOfImprovementInfill(ConstrainedInfill):
 
     @staticmethod
     def _poi(f_targets: np.ndarray, f: np.ndarray, f_var: np.ndarray) -> np.ndarray:
-        return norm.cdf((f_targets-f) / np.sqrt(f_var))
+        return norm.cdf((f_targets-f) / np.sqrt(f_var+1e-8))
 
 
 class LowerConfidenceBoundInfill(ConstrainedInfill):
