@@ -28,10 +28,9 @@ from sb_arch_opt.algo.egor_interface.algo import *
 __all__ = ["HAS_EGOBOX", "get_egor_optimizer"]
 
 
-def get_egor_optimizer(problem: ArchOptProblemBase, n_init: int, seed=None):
+def get_egor_optimizer(problem: ArchOptProblemBase, n_init: int, results_folder: "None|str"=None, seed=None):
     """
-    Gets the main interface to HEBO. Use the `optimize` method to run the DOE and infill loops.
+    Gets the main interface to Egor. Use the `minimize` method to run the DOE and infill loops.
     """
     check_dependencies()
-    results_folder = "./"
-    return EgorArchOptInterface(problem, results_folder, n_init, seed=seed)
+    return EgorArchOptInterface(problem, n_init, results_folder, seed=seed)

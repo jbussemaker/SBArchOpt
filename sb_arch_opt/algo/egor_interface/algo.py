@@ -25,6 +25,7 @@ SOFTWARE.
 import logging
 import numpy as np
 from typing import Tuple
+from sb_arch_opt.algo.pymoo_interface.storage_restart import ArchOptEvaluator, load_from_previous_results
 from sb_arch_opt.sampling import *
 from sb_arch_opt.util import capture_log
 from sb_arch_opt.problem import ArchOptProblemBase
@@ -58,13 +59,16 @@ class EgorArchOptInterface:
     def __init__(
         self,
         problem: ArchOptProblemBase,
-        results_folder: str,
         n_init: int,
+        results_folder: str = None,
         seed: "None|int" = None,
     ):
         check_dependencies()
         self._problem = problem
         self._results_folder = results_folder
+        self._evaluator = None
+        if results_folder is not None:
+            self._evaluator = ArchOptEvaluator(results_folder=results_folder)
         self.n_init = n_init
         self.n_infill = None
         self._seed = seed
@@ -145,24 +149,14 @@ class EgorArchOptInterface:
         if results_folder is None:
             results_folder = self._results_folder
 
-        # Load from problem state
-        population = self._problem.load_previous_results(results_folder)
-        if population is not None:
+        population = load_from_previous_results(self._problem, results_folder)
+        if population is None:
+            log.info(f'No previous population found, not changing initialization strategy')
+        else:
             self._x, self._x_failed, self._y = self._get_xy(population)
-            log.info(
-                f"Previous results loaded from problem results: {len(population)} design points "
-                f"({self.n} ok, {self.n_failed} failed)"
-            )
-            return
-
-        log.info("No previous results found")
-
+    
     def minimize(self, n_infill: int):
         capture_log()
-
-        # Automatically initialize from previous results if reusing the same storage folder
-        if self._x is None:
-            self.initialize_from_previous()
 
         # Run DOE if needed
         n_available = self.n_tried
@@ -175,23 +169,20 @@ class EgorArchOptInterface:
         # Run optimization
         n_available = self.n_tried
         if n_available < self.n_init + n_infill:
-            n_infills = n_infill - (n_available - self.n_init)
+            n_infills = self.n_init + n_infill - n_available
             log.info(
                 f"Running optimization: {n_infills} infill points (ok DOE points: {self.n})"
             )
-            opt_res = self._run_infills(n_infills)
+            self._run_infills(n_infills)
 
-        # Save final results and return Pareto front
-        self._save_results()
-
-        return opt_res
+        # Use egor filter to return best point
+        return self.egor.get_result(self._x, self._y)
 
     def _run_doe(self, n: int = None):
         if n is None:
             n = self.n_init
 
         x_doe = self._sample_doe(n)
-        print(x_doe)
         self._x, self._x_failed, self._y = self._get_xy(self._evaluate(x_doe))
 
         if self._x.shape[0] < 2:
@@ -199,8 +190,6 @@ class EgorArchOptInterface:
                 f"Not enough points sampled ({self._x.shape[0]} success, {self._x_failed.shape[0]} failed),"
                 f"problems with model fitting can be expected"
             )
-
-        self._save_results()
 
     def _sample_doe(self, n: int) -> np.ndarray:
         return HierarchicalSampling().do(self._problem, n).get("X")
@@ -217,14 +206,19 @@ class EgorArchOptInterface:
             log.info(
                 f"Evaluating point {i+1}/{n_infills} (point {self._x.shape[0]+1} overall)"
             )
-            x, x_failed, y = self._get_xy(self._evaluate(np.array(x)))
-            # Update and save DOE
+            pop = self._evaluate(np.array(x))
+            x, x_failed, y = self._get_xy(pop)
+
+            # Update
             self._x = np.row_stack([self._x, x])
             self._y = np.row_stack([self._y, y])
             self._x_failed = np.row_stack([self._x_failed, x_failed])
-            self._save_results()
 
-        return self.egor.get_result(self._x, self.y)
+            # Store results
+            if self._results_folder is not None:
+                self._evaluator.store_pop(self.get_population(self._x, self._y), cumulative=True)
+                self._problem.store_results(self._results_folder)
+
 
     @property
     def egor(self):
@@ -262,7 +256,6 @@ class EgorArchOptInterface:
                     self._design_space.append(egx.XSpec(egx.XType.INT, [0, 1]))
 
                 elif isinstance(var_def, var.Choice):
-                    print(f"ENUM [{len(var_def.options)}]")
                     self._design_space.append(
                         egx.XSpec(egx.XType.ENUM, [len(var_def.options)])
                     )
@@ -280,8 +273,6 @@ class EgorArchOptInterface:
             )
         return constraints_nb
 
-    def _save_results(self):
-        self._problem.store_results(self._results_folder)
 
     def _evaluate(self, x: np.ndarray) -> Population:
         """
