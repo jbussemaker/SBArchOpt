@@ -383,6 +383,9 @@ class HierarchicalRosenbrock(HierarchyProblemBase):
         if show:
             plt.show()
 
+    def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
+        return self.design_space.all_discrete_x_by_trial_and_imputation
+
 
 class MOHierarchicalRosenbrock(HierarchicalRosenbrock):
     """
