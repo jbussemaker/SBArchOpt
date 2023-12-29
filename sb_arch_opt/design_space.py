@@ -454,51 +454,70 @@ class ArchDesignSpace:
                 return
             x_all, is_act_all = self.all_discrete_x_by_trial_and_imputation
 
-        # Set inactive values to -1
-        x_merged = (x_all-self.xl).astype(int)
-        x_merged[~is_act_all] = -1
-        n = x_merged.shape[0]
-
-        # Count the values
-        is_discrete_mask = self.is_discrete_mask
-        counts = {}
-        i_opts = set()
-        for ix in range(len(is_discrete_mask)):
-            if not is_discrete_mask[ix]:
-                counts[f'x{ix}'] = {}
-                continue
-
-            values, counts_i = np.unique(x_merged[:, ix], return_counts=True)
-            i_opts |= set(values)
-            counts[f'x{ix}'] = {value: counts_i[iv]/n for iv, value in enumerate(values)}
-
-        df = pd.DataFrame(index=sorted(list(i_opts)), columns=list(counts.keys()), data=counts)
-        df = df.rename(index={val: 'inactive' if val == -1 else f'opt {val}' for val in df.index})
-
-        # Add a measure of diversity: the range between the lowest and highest occurring values
-        diversity = df.max(axis=0)-df.min(axis=0)
-        if -1 in i_opts:
-            df_active = df.iloc[1:, :]
-            col_sums = df_active.sum(axis=0)
-            df_active /= col_sums
-            active_diversity = df_active.max(axis=0)-df_active.min(axis=0)
-        else:
-            active_diversity = diversity
-
-        df = pd.concat([df, pd.Series(diversity, name='diversity').to_frame().T,
-                        pd.Series(active_diversity, name='active-diversity').to_frame().T], axis=0)
-
-        max_diversity = np.zeros((len(df),))*np.nan
-        max_diversity[-2] = df.iloc[-2, :].max()
-        max_diversity[-1] = df.iloc[-1, :].max()
-        df = pd.concat([df, pd.Series(index=df.index, data=max_diversity, name='max')], axis=1)
+        df = self.calculate_discrete_rates(x_all-self.xl, is_act_all, self.is_discrete_mask)
 
         if show:
             is_discrete_mask = np.concatenate([self.is_discrete_mask, [True]])
             with pd.option_context('display.max_rows', None, 'display.max_columns', None,
                                    'display.expand_frame_repr', False, 'max_colwidth', None):
                 print(df.iloc[:, is_discrete_mask].replace(np.nan, ''))
+        return df
 
+    @staticmethod
+    def calculate_discrete_rates_raw(x: np.ndarray, is_active: np.ndarray, is_discrete_mask: np.ndarray) \
+            -> Tuple[np.ndarray, np.ndarray, np.ndarray, set]:
+        # x should be moved to 0!
+        x_merged = x.astype(int)+1
+        x_merged[~is_active] = 0
+        n = x_merged.shape[0]
+
+        i_opts = set()
+        if np.all(~is_discrete_mask):
+            counts = np.zeros((1, x.shape[1]))*np.nan
+        else:
+            # Count the values
+            counts = np.zeros((int(np.max(x[:, is_discrete_mask]))+2, x.shape[1]))*np.nan
+            for ix in range(x.shape[1]):
+                if not is_discrete_mask[ix]:
+                    continue
+
+                counts_i = np.bincount(x_merged[:, ix])
+                for iv, count in enumerate(counts_i):
+                    if count > 0:
+                        counts[int(iv), ix] = count/n
+
+        # Calculate diversity metric: the range between the lowest and highest occurring values
+        diversity = np.nanmax(counts, axis=0) - np.nanmin(counts, axis=0)
+        if -1 in i_opts:
+            active_counts = counts[1:, :]
+            active_counts /= np.nansum(active_counts, axis=0)
+            active_diversity = np.nanmax(active_counts, axis=0) - np.nanmin(active_counts, axis=0)
+        else:
+            active_diversity = diversity
+
+        return counts, diversity, active_diversity, i_opts
+
+    @classmethod
+    def calculate_discrete_rates(cls, x: np.ndarray, is_active: np.ndarray, is_discrete_mask: np.ndarray) \
+            -> pd.DataFrame:
+
+        counts, diversity, active_diversity, i_opts = cls.calculate_discrete_rates_raw(x, is_active, is_discrete_mask)
+
+        # Create dataframe
+        has_value = np.array([iv-1 in i_opts for iv in range(counts.shape[0])])
+        counts = counts[has_value, :]
+
+        columns = [f'x{ix}' for ix in range(x.shape[1])]
+        df = pd.DataFrame(index=sorted(list(i_opts)), columns=columns, data=counts)
+        df = df.rename(index={val: 'inactive' if val == -1 else f'opt {val}' for val in df.index})
+
+        df = pd.concat([df, pd.Series(index=columns, data=diversity, name='diversity').to_frame().T,
+                        pd.Series(index=columns, data=active_diversity, name='active-diversity').to_frame().T], axis=0)
+
+        max_diversity = np.zeros((len(df),))*np.nan
+        max_diversity[-2] = df.iloc[-2, :].max()
+        max_diversity[-1] = df.iloc[-1, :].max()
+        df = pd.concat([df, pd.Series(index=df.index, data=max_diversity, name='max')], axis=1)
         return df
 
     def quick_sample_discrete_x(self, n: int) -> Tuple[np.ndarray, np.ndarray]:
