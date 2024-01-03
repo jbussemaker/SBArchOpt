@@ -244,7 +244,7 @@ class ClosestEagerCorrector(EagerCorrectorBase):
     Optionally distances are weighted to prefer changes on the right side of the design vectors.
     """
 
-    def __init__(self, design_space: ArchDesignSpace, euclidean=True, correct_correct_x: bool = None,
+    def __init__(self, design_space: ArchDesignSpace, euclidean=False, correct_correct_x: bool = None,
                  random_if_multiple: bool = None):
         self.euclidean = euclidean
         super().__init__(design_space, correct_correct_x=correct_correct_x, random_if_multiple=random_if_multiple)
