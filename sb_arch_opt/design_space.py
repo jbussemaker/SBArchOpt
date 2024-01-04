@@ -234,8 +234,8 @@ class ArchDesignSpace:
 
     def _get_corrector(self) -> Optional[CorrectorInterface]:
         """Get the default corrector algorithm"""
-        from sb_arch_opt.correction import ClosestEagerCorrector
-        return ClosestEagerCorrector(self)
+        # from sb_arch_opt.correction import ClosestEagerCorrector
+        # return ClosestEagerCorrector(self)
 
     def round_x_discrete(self, x: np.ndarray):
         """
