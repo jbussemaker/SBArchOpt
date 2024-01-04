@@ -485,6 +485,7 @@ class ArchDesignSpace:
                 for iv, count in enumerate(counts_i):
                     if count > 0:
                         counts[int(iv), ix] = count/n
+                        i_opts.add(iv-1)
 
         # Calculate diversity metric: the range between the lowest and highest occurring values
         diversity = np.nanmax(counts, axis=0) - np.nanmin(counts, axis=0)
