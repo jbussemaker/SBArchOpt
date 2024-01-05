@@ -96,6 +96,20 @@ def test_arch_sbo_ei(problem: ArchOptProblemBase):
 
 
 @check_dependency()
+def test_arch_sbo_ei_explicit():
+    assert HAS_ARCH_SBO
+
+    problem = Jenatton()
+    assert problem.design_space.is_explicit()
+
+    model = ModelFactory.get_kriging_model()
+    infill = ExpectedImprovementInfill()
+    sbo = get_sbo(model, infill, init_size=10)
+    result = minimize(problem, sbo, termination=('n_eval', 12))
+    assert len(result.pop) == 12
+
+
+@check_dependency()
 def test_arch_sbo_mvpf():
     model = ModelFactory.get_kriging_model()
     infill = MinVariancePFInfill()

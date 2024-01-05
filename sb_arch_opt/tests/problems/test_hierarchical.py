@@ -84,7 +84,10 @@ def test_hier_test_problem():
 
 
 def test_jenatton():
-    run_test_hierarchy(Jenatton(), 2)
+    problem = Jenatton()
+    run_test_hierarchy(problem, 2)
+    run_test_hierarchy(problem, 2)
+
     run_test_hierarchy(Jenatton(explicit=False), 2)
 
 

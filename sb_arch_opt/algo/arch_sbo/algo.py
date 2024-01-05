@@ -557,7 +557,8 @@ class SurrogateInfillOptimizationProblem(ArchOptProblemBase):
 
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
-        self._correct_x_impute(x, is_active_out)
+        if not self.design_space.is_explicit():
+            self._correct_x_impute(x, is_active_out)
 
         # Get infill search objectives and constraints
         f, g = self.infill.evaluate(x, is_active_out)
