@@ -25,7 +25,10 @@ SOFTWARE.
 import logging
 import numpy as np
 from typing import Tuple
-from sb_arch_opt.algo.pymoo_interface.storage_restart import ArchOptEvaluator, load_from_previous_results
+from sb_arch_opt.algo.pymoo_interface.storage_restart import (
+    ArchOptEvaluator,
+    load_from_previous_results,
+)
 from sb_arch_opt.sampling import *
 from sb_arch_opt.util import capture_log
 from sb_arch_opt.problem import ArchOptProblemBase
@@ -33,6 +36,7 @@ from sb_arch_opt.sampling import HierarchicalSampling
 
 import pymoo.core.variable as var
 from pymoo.core.population import Population
+import tempfile
 
 try:
     import egobox as egx
@@ -67,8 +71,9 @@ class EgorArchOptInterface:
         self._problem = problem
         self._results_folder = results_folder
         self._evaluator = None
-        if results_folder is not None:
-            self._evaluator = ArchOptEvaluator(results_folder=results_folder)
+        if results_folder is None:
+            results_folder = tempfile.mkdtemp("EgorArchOptInterface")
+        self._evaluator = ArchOptEvaluator(results_folder=results_folder)
         self.n_init = n_init
         self.n_infill = None
         self._seed = seed
@@ -151,10 +156,12 @@ class EgorArchOptInterface:
 
         population = load_from_previous_results(self._problem, results_folder)
         if population is None:
-            log.info(f'No previous population found, not changing initialization strategy')
+            log.info(
+                f"No previous population found, not changing initialization strategy"
+            )
         else:
             self._x, self._x_failed, self._y = self._get_xy(population)
-    
+
     def minimize(self, n_infill: int):
         capture_log()
 
@@ -183,7 +190,9 @@ class EgorArchOptInterface:
             n = self.n_init
 
         x_doe = self._sample_doe(n)
-        self._x, self._x_failed, self._y = self._get_xy(self._evaluate(x_doe))
+        self._x, self._x_failed, self._y = self._get_xy(
+            self._evaluator.eval(self._problem, Population.new(X=x_doe))
+        )
 
         if self._x.shape[0] < 2:
             log.info(
@@ -206,7 +215,7 @@ class EgorArchOptInterface:
             log.info(
                 f"Evaluating point {i+1}/{n_infills} (point {self._x.shape[0]+1} overall)"
             )
-            pop = self._evaluate(np.array(x))
+            pop = self._evaluator.eval(self._problem, Population.new(X=x))
             x, x_failed, y = self._get_xy(pop)
 
             # Update
@@ -216,9 +225,10 @@ class EgorArchOptInterface:
 
             # Store results
             if self._results_folder is not None:
-                self._evaluator.store_pop(self.get_population(self._x, self._y), cumulative=True)
+                self._evaluator.store_pop(
+                    self.get_population(self._x, self._y), cumulative=True
+                )
                 self._problem.store_results(self._results_folder)
-
 
     @property
     def egor(self):
@@ -272,19 +282,6 @@ class EgorArchOptInterface:
                 "Egor does not handle equality constraints, only negative ineq constraints (c <= 0)"
             )
         return constraints_nb
-
-
-    def _evaluate(self, x: np.ndarray) -> Population:
-        """
-        Evaluates a list of design points (x is a matrix of size n x nx). A population is returned with matrices:
-        - X: imputed design vectors
-        - is_active: activeness vectors (booleans defining which design variable is active in each design vector)
-        - F: objective values
-        - G: inequality constraints (None if there are no inequality constraints)
-        - H: equality constraints (None if there are no equality constraints)
-        """
-        out = self._problem.evaluate(x, return_as_dictionary=True)
-        return Population.new(**out)
 
     def _get_xy(
         self, population: Population
