@@ -454,7 +454,7 @@ class ArchDesignSpace:
                 return
             x_all, is_act_all = self.all_discrete_x_by_trial_and_imputation
 
-        df = self.calculate_discrete_rates(x_all-self.xl, is_act_all, self.is_discrete_mask)
+        df = self.calculate_discrete_rates(x_all-self.xl, is_act_all)
 
         if show:
             is_discrete_mask = np.concatenate([self.is_discrete_mask, [True]])
@@ -498,11 +498,10 @@ class ArchDesignSpace:
 
         return counts, diversity, active_diversity, i_opts
 
-    @classmethod
-    def calculate_discrete_rates(cls, x: np.ndarray, is_active: np.ndarray, is_discrete_mask: np.ndarray) \
-            -> pd.DataFrame:
+    def calculate_discrete_rates(self, x: np.ndarray, is_active: np.ndarray) -> pd.DataFrame:
 
-        counts, diversity, active_diversity, i_opts = cls.calculate_discrete_rates_raw(x, is_active, is_discrete_mask)
+        is_discrete_mask = self.is_discrete_mask
+        counts, diversity, active_diversity, i_opts = self.calculate_discrete_rates_raw(x, is_active, is_discrete_mask)
 
         # Create dataframe
         has_value = np.array([iv-1 in i_opts for iv in range(counts.shape[0])])
@@ -512,12 +511,21 @@ class ArchDesignSpace:
         df = pd.DataFrame(index=sorted(list(i_opts)), columns=columns, data=counts)
         df = df.rename(index={val: 'inactive' if val == -1 else f'opt {val}' for val in df.index})
 
-        df = pd.concat([df, pd.Series(index=columns, data=diversity, name='diversity').to_frame().T,
-                        pd.Series(index=columns, data=active_diversity, name='active-diversity').to_frame().T], axis=0)
+        is_cat_mask = self.is_cat_mask
+        x_type = [('cat' if is_cat_mask[ix] else 'int') if is_discrete_mask[ix] else 'cont'
+                  for ix in range(x.shape[1])]
+
+        df = pd.concat([
+            df,
+            pd.Series(index=columns, data=diversity, name='diversity').to_frame().T,
+            pd.Series(index=columns, data=active_diversity, name='active-diversity').to_frame().T,
+            pd.Series(index=columns, data=x_type, name='x_type').to_frame().T,
+            pd.Series(index=columns, data=self.is_conditionally_active, name='is_cond').to_frame().T,
+        ], axis=0)
 
         max_diversity = np.zeros((len(df),))*np.nan
-        max_diversity[-2] = df.iloc[-2, :].max()
-        max_diversity[-1] = df.iloc[-1, :].max()
+        max_diversity[-4] = df.iloc[-4, :].max()
+        max_diversity[-3] = df.iloc[-3, :].max()
         df = pd.concat([df, pd.Series(index=df.index, data=max_diversity, name='max')], axis=1)
         return df
 
