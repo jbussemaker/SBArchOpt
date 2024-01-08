@@ -235,6 +235,7 @@ class EgorArchOptInterface:
         See help(egobox.Egor) for more information."""
         if self._egor is None:
             kpls_dim = None
+            # heuristic: use dim reduction when input dimension reach 10
             if self._problem.n_var > 9:
                 kpls_dim = 3
 

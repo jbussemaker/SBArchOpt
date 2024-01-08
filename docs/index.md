@@ -50,6 +50,7 @@ Each framework has a dedicated readme file with instructions on how to use and h
 - [Trieste](algo/trieste.md): Bayesian Optimization framework based on Tensorflow developed by Secondmind Labs
 - [HEBO](algo/hebo.md): Bayesian Optimization algorithm developed by Huawei Noahs Ark DMnR lab
 - [TPE](algo/tpe.md): Tree Parzen Estimator algorithm
+- [Egor](algo/egor.md): SBO algorithm written in Rust developed by ONERA
 
 Following proprietary frameworks are also integrated:
 
