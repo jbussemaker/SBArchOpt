@@ -66,6 +66,7 @@ class EgorArchOptInterface:
         n_init: int,
         results_folder: str = None,
         seed: "None|int" = None,
+        **kwargs,
     ):
         check_dependencies()
         self._problem = problem
@@ -83,6 +84,8 @@ class EgorArchOptInterface:
         self._x = None
         self._x_failed = None
         self._y = None
+
+        self._egor_kwargs = kwargs
 
     @property
     def x(self) -> np.ndarray:
@@ -134,22 +137,17 @@ class EgorArchOptInterface:
         return g
 
     @property
-    def h(self) -> np.ndarray:
-        """Equality constraints"""
-        _, _, h = self._split_y(self.y)
-        return h
-
-    @property
     def pop(self) -> Population:
         """Population of all evaluated points"""
-        return self.get_population(self.x, self.y)
-
-    @property
-    def opt(self) -> Population:
-        """Optimal points (Pareto front if multi-objective)"""
-        return self._get_pareto_front(self.pop)
+        return self._get_population(self.x, self.y)
 
     def initialize_from_previous(self, results_folder: str = None):
+        """Initialize the algorithm from previously stored results
+
+        Note: Previous results might be generated on a previous run when
+        the results_forder is specified in EgorArchOptInterface constructor,
+        eg EgorArchOptInterface(problem=..., n_init=..., results_folder=...).
+        """
         capture_log()
         if results_folder is None:
             results_folder = self._results_folder
@@ -162,7 +160,8 @@ class EgorArchOptInterface:
         else:
             self._x, self._x_failed, self._y = self._get_xy(population)
 
-    def minimize(self, n_infill: int):
+    def minimize(self, n_infill: int) -> Population:
+        """Run the optimization for the given n_infills number of iterations"""
         capture_log()
 
         # Run DOE if needed
@@ -182,7 +181,6 @@ class EgorArchOptInterface:
             )
             self._run_infills(n_infills)
 
-        # Use egor filter to return best point
         return self.egor.get_result(self._x, self._y)
 
     def _run_doe(self, n: int = None):
@@ -226,27 +224,33 @@ class EgorArchOptInterface:
             # Store results
             if self._results_folder is not None:
                 self._evaluator.store_pop(
-                    self.get_population(self._x, self._y), cumulative=True
+                    self._get_population(self._x, self._y), cumulative=True
                 )
                 self._problem.store_results(self._results_folder)
 
     @property
     def egor(self):
+        """Get the native Egor optimizer object.
+
+        See help(egobox.Egor) for more information."""
         if self._egor is None:
             kpls_dim = None
             if self._problem.n_var > 9:
                 kpls_dim = 3
 
-            self._egor = egx.Egor(
-                self.design_space,
-                n_cstr=self._get_constraints_nb(),
-                seed=self._seed,
-                kpls_dim=kpls_dim,
-            )
+            egor_kwargs = {
+                "n_cstr": self._get_constraints_nb(),
+                "kpls_dim": kpls_dim,
+            }
+
+            egor_kwargs.update(self._egor_kwargs)
+
+            self._egor = egx.Egor(self.design_space, **egor_kwargs)
         return self._egor
 
     @property
     def design_space(self) -> "list[egx.XSpec]":
+        """Get the design space a native Egor input specification"""
         if self._design_space is None:
             self._design_space = []
             for var_def in self._problem.des_vars:
@@ -322,7 +326,7 @@ class EgorArchOptInterface:
 
         return f, g, h
 
-    def get_population(self, x: np.ndarray, y: np.ndarray) -> Population:
+    def _get_population(self, x: np.ndarray, y: np.ndarray) -> Population:
         f, g, h = self._split_y(y)
         kwargs = {"X": x, "F": f, "G": g, "H": h}
         pop = Population.new(**kwargs)
