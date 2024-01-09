@@ -91,6 +91,9 @@ if __name__ == '__main__':
             'rocket': [
                 'ambiance',
             ],
+            'egor': [
+                'egobox~=0.14.0',
+            ],
         },
         python_requires='>=3.7',
         packages=find_packages(include='sb_arch_opt*'),
