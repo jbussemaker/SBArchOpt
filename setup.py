@@ -87,6 +87,9 @@ if __name__ == '__main__':
             # 'hebo': [  # pip install -r requirements-hebo.txt
             #     'HEBO',  # Disabled until commit f050865fd2f554b5ca94642667257b365c753f29 has been released on PyPI
             # ],
+            'egor': [
+                'egobox~=0.14.0',
+            ],
         },
         python_requires='>=3.7',
         packages=find_packages(include='sb_arch_opt*'),
