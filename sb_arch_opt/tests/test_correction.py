@@ -51,7 +51,7 @@ class DummyArchDesignSpace(ArchDesignSpace):
     def _get_n_valid_discrete(self) -> Optional[int]:
         return self._x_all.shape[0]
 
-    def _get_n_active_cont_mean(self) -> Optional[int]:
+    def _get_n_active_cont_mean(self) -> Optional[float]:
         pass
 
     def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
@@ -59,7 +59,7 @@ class DummyArchDesignSpace(ArchDesignSpace):
 
     def is_valid(self, xi: np.ndarray) -> Optional[np.ndarray]:
         eager_corr = EagerCorrectorBase(self)
-        i_valid = eager_corr.get_valid_idx(np.array([xi]))[0]
+        i_valid = eager_corr.get_correct_idx(np.array([xi]))[0]
         if i_valid == -1:
             return
         _, is_active_valid = eager_corr.x_valid_active
@@ -101,7 +101,7 @@ def test_eager_corrector():
                       [2, 0],  # Canonical, 5
                       [2, 1]])  # Valid, non-canonical, 5
 
-    assert np.all(corr.get_valid_idx(x_try) == np.array([3, -1, 5, 5]))
+    assert np.all(corr.get_correct_idx(x_try) == np.array([3, -1, 5, 5]))
     assert np.all(corr.get_canonical_idx(x_try) == np.array([3, -1, 5, -1]))
 
 
@@ -121,12 +121,13 @@ def test_closest_eager_corrector():
     is_act_all[-2, 1:] = False
     ds = DummyArchDesignSpace(x_all=x_all, is_act_all=is_act_all)
 
-    for correct_valid_x in [False, True]:
+    for correct_correct_x in [False, True]:
         for random_if_multiple in [False, True]:
             for _ in range(10 if random_if_multiple else 1):
                 for euclidean in [False, True]:
                     ds.corrector = corr = ClosestEagerCorrector(
-                        ds, euclidean=euclidean, correct_valid_x=correct_valid_x, random_if_multiple=random_if_multiple)
+                        ds, euclidean=euclidean, correct_correct_x=correct_correct_x,
+                        random_if_multiple=random_if_multiple)
                     assert repr(corr)
 
                     x_corr, is_act_corr = ds.correct_x(np.array([[0, 0, 0],
@@ -148,7 +149,7 @@ def test_closest_eager_corrector():
                                            [2, 0, 0]])
                     if euclidean:
                         corr_first[1, :] = [0, 1, 2]
-                    if correct_valid_x:
+                    if correct_correct_x:
                         corr_first[-2, :] = [1, 0, 2]
                         corr_first[-1, :] = [1, 0, 2]
                     corr_second = corr_first.copy()

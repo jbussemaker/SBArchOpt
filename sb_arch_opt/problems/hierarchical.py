@@ -47,6 +47,18 @@ class HierarchyProblemBase(ArchOptTestProblemBase):
     def _get_n_valid_discrete(self) -> int:
         raise NotImplementedError
 
+    def _get_n_active_cont_mean(self) -> Optional[float]:
+        if np.all(~self.is_conditionally_active[self.is_cont_mask]):
+            return float(np.sum(self.is_cont_mask))
+
+    def _get_n_correct_discrete(self) -> int:
+        # True if only imputation is ever applied (no correction)
+        return self.get_n_declared_discrete()
+
+    def _get_n_active_cont_mean_correct(self) -> Optional[float]:
+        # True if only imputation is ever applied (no correction)
+        return float(np.sum(self.is_cont_mask))
+
     def _is_conditionally_active(self) -> List[bool]:
         _, is_act_all = self.all_discrete_x
         if is_act_all is None:
@@ -371,6 +383,9 @@ class HierarchicalRosenbrock(HierarchyProblemBase):
         if show:
             plt.show()
 
+    def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
+        return self.design_space.all_discrete_x_by_trial_and_imputation
+
 
 class MOHierarchicalRosenbrock(HierarchicalRosenbrock):
     """
@@ -422,8 +437,19 @@ class ZaeffererHierarchical(HierarchyProblemBase):
         des_vars = [Real(bounds=(0, 1)), Real(bounds=(0, 1))]
         super().__init__(des_vars, n_obj=1)
 
+        self.design_space.needs_cont_correction = True
+
     def _get_n_valid_discrete(self) -> int:
         return 1
+
+    def _get_n_active_cont_mean(self) -> float:
+        return 2-self.c
+
+    def _get_n_correct_discrete(self) -> int:
+        return 1
+
+    def _get_n_active_cont_mean_correct(self) -> Optional[float]:
+        return 2
 
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
@@ -924,6 +950,18 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
         n_discrete_underlying = self._problem.get_n_valid_discrete()
         return n_discrete_underlying*self._x_sub.shape[0]
 
+    def _get_n_correct_discrete(self) -> int:
+        n_correct_underlying = self._problem.get_n_correct_discrete()
+
+        n_sub = self._x_sub.shape[1]
+        n_opts_sub = self.xu[:n_sub]-self.xl[:n_sub]+1
+        n_correct = np.ones(self._x_sub.shape)
+        for j in range(n_sub):
+            n_correct[~self._is_act_sub[:, j], j] = n_opts_sub[j]
+
+        n_correct_sub = np.sum(np.prod(n_correct, axis=1))
+        return int(n_correct_underlying*n_correct_sub)
+
     def might_have_hidden_constraints(self):
         return self._problem.might_have_hidden_constraints()
 
@@ -1169,9 +1207,6 @@ class NeuralNetwork(HierarchyProblemBase):
             n_base*6**3,  # x0 == 2
         ])
 
-    def _get_n_active_cont_mean(self) -> int:
-        return 2
-
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
         self._correct_x_impute(x, is_active_out)
@@ -1224,7 +1259,7 @@ if __name__ == '__main__':
     # # HierarchicalRosenbrock().plot_pf()
     # MOHierarchicalRosenbrock().plot_pf()
 
-    # ZaeffererHierarchical.from_mode(ZaeffererProblemMode.A_OPT_INACT_IMP_PROF_UNI).print_stats()
+    ZaeffererHierarchical.from_mode(ZaeffererProblemMode.A_OPT_INACT_IMP_PROF_UNI).print_stats()
     # ZaeffererHierarchical.from_mode(ZaeffererProblemMode.A_OPT_INACT_IMP_PROF_UNI).plot_pf()
     # ZaeffererHierarchical.from_mode(ZaeffererProblemMode.A_OPT_INACT_IMP_PROF_UNI).plot_design_space()
 

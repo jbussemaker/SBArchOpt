@@ -35,29 +35,29 @@ __all__ = ['CorrectorBase', 'EagerCorrectorBase', 'ClosestEagerCorrector']
 class CorrectorBase(CorrectorInterface):
     """
     Base class implementing some generic correction algorithm.
-    Correction is the mechanism of taking any input design vector x and ensuring it is a valid design vector, that is:
+    Correction is the mechanism of taking any input design vector x and ensuring it is a correct design vector, that is:
     all (hierarchical) value constraints are satisfied.
-    Imputation is the mechanism of turning a valid vector into a canonical vector, that is: an x where inactive
-    variables are replaced by 0 (discrete) or mid-bounds (continuous).
+    Imputation is the mechanism of turning a correct vector into a valid vector, that is, an x where inactive
+    variables are replaced by canonical values: 0 (discrete) or mid-bounds (continuous).
 
     We assume that only discrete variables determine activeness and are subject to value constraints, so only
     discrete variables need to be corrected.
 
     From this, there are three "statuses" that design vectors can have:
-    - Canonical: valid and inactive discrete variables are imputed
-    - Valid: active discrete variables represent a valid combination (all value constraints are satisfied)
+    - Valid: correct, and inactive discrete variables are imputed (canonical)
+    - Correct: active discrete variables represent a correct combination (all value constraints are satisfied)
     - Invalid: one or more value constraints are violated (for discrete variables)
 
-    Invalid design vectors always need to be corrected to a valid/canonical design vector.
-    Valid design vectors may optionally be "corrected" to a canonical design vector too, which allows non-canonical
+    Invalid design vectors always need to be corrected to a correct/valid design vector.
+    Correct design vectors may optionally be "corrected" to a valid design vector too, which allows non-canonical
     design vectors to be modified.
     """
 
-    default_correct_valid_x = False
+    default_correct_correct_x = False
 
-    def __init__(self, design_space: ArchDesignSpace, correct_valid_x: bool = None):
+    def __init__(self, design_space: ArchDesignSpace, correct_correct_x: bool = None):
         self._design_space = design_space
-        self.correct_valid_x = self.default_correct_valid_x if correct_valid_x is None else correct_valid_x
+        self.correct_correct_x = self.default_correct_correct_x if correct_correct_x is None else correct_correct_x
 
     @property
     def design_space(self) -> ArchDesignSpace:
@@ -126,10 +126,10 @@ class EagerCorrectorBase(CorrectorBase):
 
     default_random_if_multiple = False
 
-    def __init__(self, design_space: ArchDesignSpace, correct_valid_x: bool = None, random_if_multiple: bool = None):
+    def __init__(self, design_space: ArchDesignSpace, correct_correct_x: bool = None, random_if_multiple: bool = None):
         self._x_valid = None
         self._random_if_multiple = self.default_random_if_multiple if random_if_multiple is None else random_if_multiple
-        super().__init__(design_space, correct_valid_x=correct_valid_x)
+        super().__init__(design_space, correct_correct_x=correct_correct_x)
 
     @property
     def x_valid_active(self) -> Tuple[np.ndarray, np.ndarray]:
@@ -150,7 +150,7 @@ class EagerCorrectorBase(CorrectorBase):
             raise CorrectorUnavailableError(f'Eager corrector unavailable because problem does not provide x_all')
 
         # Separate canonical design vectors
-        correct_idx = self.get_canonical_idx(x) if self.correct_valid_x else self.get_valid_idx(x)
+        correct_idx = self.get_canonical_idx(x) if self.correct_correct_x else self.get_correct_idx(x)
         is_correct = correct_idx != -1
         to_be_corrected = ~is_correct
 
@@ -185,8 +185,8 @@ class EagerCorrectorBase(CorrectorBase):
 
         return canonical_idx
 
-    def get_valid_idx(self, x: np.ndarray) -> np.ndarray:
-        """Returns a vector specifying for each vector the corresponding valid design vector idx or -1 if not found."""
+    def get_correct_idx(self, x: np.ndarray) -> np.ndarray:
+        """Returns a vector specifying for each vector the corresp. valid design vector idx or -1 if not found."""
         valid_idx = -np.ones(x.shape[0], dtype=int)
         for i, xi in enumerate(x):
             ix_valid = self._get_valid_idx_single(xi)
@@ -233,7 +233,7 @@ class EagerCorrectorBase(CorrectorBase):
         raise NotImplementedError
 
     def __repr__(self):
-        return f'{self.__class__.__name__}(correct_valid_x={self.correct_valid_x}, ' \
+        return f'{self.__class__.__name__}(correct_correct_x={self.correct_correct_x}, ' \
                f'random_if_multiple={self._random_if_multiple})'
 
 
@@ -244,10 +244,10 @@ class ClosestEagerCorrector(EagerCorrectorBase):
     Optionally distances are weighted to prefer changes on the right side of the design vectors.
     """
 
-    def __init__(self, design_space: ArchDesignSpace, euclidean=True, correct_valid_x: bool = None,
+    def __init__(self, design_space: ArchDesignSpace, euclidean=False, correct_correct_x: bool = None,
                  random_if_multiple: bool = None):
         self.euclidean = euclidean
-        super().__init__(design_space, correct_valid_x=correct_valid_x, random_if_multiple=random_if_multiple)
+        super().__init__(design_space, correct_correct_x=correct_correct_x, random_if_multiple=random_if_multiple)
 
     def _get_corrected_x_idx(self, x: np.ndarray) -> np.ndarray:
         # Calculate distances from provided design vectors to canonical design vectors
@@ -271,5 +271,5 @@ class ClosestEagerCorrector(EagerCorrectorBase):
         return xi_canonical
 
     def __repr__(self):
-        return f'{self.__class__.__name__}(correct_valid_x={self.correct_valid_x}, ' \
+        return f'{self.__class__.__name__}(correct_correct_x={self.correct_correct_x}, ' \
                f'random_if_multiple={self._random_if_multiple}, euclidean={self.euclidean})'

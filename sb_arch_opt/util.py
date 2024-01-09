@@ -1,4 +1,6 @@
+import os
 import logging.config
+from appdirs import user_cache_dir
 
 _debug_log_captured = False
 
@@ -43,3 +45,11 @@ def capture_log(level='INFO'):
 def get_np_random_singleton():
     from scipy._lib._util import check_random_state
     return check_random_state(seed=None)
+
+
+def get_cache_path(sub_path: str = None):
+    path = user_cache_dir('SBArchOpt')
+    os.makedirs(path, exist_ok=True)
+    if sub_path is not None:
+        path = os.path.join(path, sub_path)
+    return path

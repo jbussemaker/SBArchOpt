@@ -14,6 +14,9 @@ def test_init_no_vars():
     assert ds.discrete_imputation_ratio == 1.
     assert ds.continuous_imputation_ratio == 1
     assert ds.imputation_ratio == 1
+    assert ds.discrete_correction_ratio == 1.
+    assert ds.continuous_correction_ratio == 1
+    assert ds.correction_ratio == 1
 
     assert ds.is_explicit()
 
@@ -43,6 +46,10 @@ def test_init_vars():
     assert ds.discrete_imputation_ratio == 1
     assert ds.continuous_imputation_ratio == 1
     assert ds.imputation_ratio == 1
+
+    assert ds.discrete_correction_ratio == 1
+    assert ds.continuous_correction_ratio == 1
+    assert ds.correction_ratio == 1
 
 
 def test_num_x():
@@ -165,6 +172,12 @@ def test_hierarchy():
     assert ds.continuous_imputation_ratio == 1/(3/5)
     assert ds.imputation_ratio == (12/5) * (5/3)
 
+    assert np.all(ds.all_discrete_x_n_correct == [2, 2, 2, 2, 4])
+    assert ds.get_n_correct_discrete() == 12
+    assert ds.discrete_correction_ratio == 12 / 12
+    assert ds.continuous_correction_ratio == 12 / (12-4)
+    assert ds.correction_ratio == (12/12) * (3/2)
+
     x, is_active = ds.quick_sample_discrete_x(100)
     assert x.shape == (100, 4)
 
@@ -279,6 +292,11 @@ def test_forbidden():
     assert ds.discrete_imputation_ratio == 1.2
     assert ds.continuous_imputation_ratio == 10/4
     assert ds.imputation_ratio == (10/4) * 1.2
+
+    assert np.all(ds.all_discrete_x_n_correct == 1)
+    assert ds.discrete_correction_ratio == 1.2
+    assert ds.continuous_correction_ratio == 10/4
+    assert ds.correction_ratio == (10/4) * 1.2
 
     x = HierarchicalSampling().do(ArchOptProblemBase(ds), 100).get('X')
     assert x.shape == (100, 4)

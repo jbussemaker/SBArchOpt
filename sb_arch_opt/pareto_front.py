@@ -84,7 +84,15 @@ class CachedParetoFrontMixin(Problem):
         cache_path = self._pf_cache_path()
         if not force and os.path.exists(cache_path):
             with open(cache_path, 'rb') as fp:
-                return pickle.load(fp)
+                ps, pf = pickle.load(fp)
+
+            # Sort by first objective dimension to ensure Pareto front and set points match
+            # (because pymoo sorts the Pareto front but not the Pareto set)
+            i_sorted = np.argsort(pf[:, 0])
+            ps = ps[i_sorted, :]
+            pf = pf[i_sorted, :]
+
+            return ps, pf
 
         # Get population size
         if pop_size is None:
@@ -161,7 +169,7 @@ class CachedParetoFrontMixin(Problem):
         robust_period = n_gen
         n_max_gen = n_gen*10
         n_max_eval = n_max_gen*pop_size
-        print(f'Discovering Pareto front {i+1}/{n} ({pop_size} pop, {n_gen} <= gen <= {n_max_gen}): {self.name()}')
+        print(f'Discovering Pareto front {i+1}/{n} ({pop_size} pop, {n_gen} <= gen <= {n_max_gen}): {self!r}')
         if self.n_obj > 1:
             termination = DefaultMultiObjectiveTermination(
                 xtol=5e-4, cvtol=1e-8, ftol=1e-4, n_skip=n_gen, period=robust_period, n_max_gen=n_max_gen,

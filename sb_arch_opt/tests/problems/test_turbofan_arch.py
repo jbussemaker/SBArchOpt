@@ -73,6 +73,32 @@ def test_simple_problem_eval():
 
 
 @check_dependency()
+def test_simple_problem_model():
+    problem = SimpleTurbofanArchModel()
+    problem.print_stats()
+
+    assert len(HierarchicalExhaustiveSampling(n_cont=1).do(problem, 0)) == problem._get_n_valid_discrete()
+
+    problem.get_discrete_rates(force=True, show=True)
+
+    x_all, is_act_all = problem.all_discrete_x
+    assert is_act_all is not None
+    out = problem.evaluate(x_all, return_as_dictionary=True)
+    is_failed = np.where(problem.get_failed_points(out))[0]
+    assert len(is_failed) == 67
+
+    x_model_best = np.array([[1.00000000e+00, 1.24341485e+01, 1.31267687e+00, 2.00000000e+00,
+                              5.71184472e+01, 5.00000000e-01, 5.00000000e-01, 8.39151709e+03,
+                              1.05000000e+04, 7.85928873e+03, 1.00000000e+00, 3.00000000e+00,
+                              0.00000000e+00, 0.00000000e+00, 0.00000000e+00]])
+    out = problem.evaluate(x_model_best, return_as_dictionary=True)
+    assert out['F'][0, 0] == pytest.approx(6.79, abs=1e-2)
+
+    x = HierarchicalSampling().do(problem, 1000).get('X')
+    problem.evaluate(x, return_as_dictionary=True)
+
+
+@check_dependency()
 def test_realistic_problem():
     problem = RealisticTurbofanArch()
     problem.print_stats()

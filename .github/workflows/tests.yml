@@ -19,7 +19,7 @@ jobs:
         python-version: ["3.10"]
         include:
           - os: ubuntu-latest
-            python-version: "3.8"
+            python-version: "3.9"
 
     steps:
     - uses: actions/checkout@v3
@@ -37,7 +37,7 @@ jobs:
         pip install -r requirements-tests.txt
         pip install -r requirements-assignment.txt
         pip install -r requirements-hebo.txt
-        pip install -e .[arch_sbo,botorch,trieste,tpe,egor]
+        pip install -e .[arch_sbo,botorch,trieste,tpe,rocket,egor]
 
     - name: Test with pytest
       run: pytest sb_arch_opt --durations=0

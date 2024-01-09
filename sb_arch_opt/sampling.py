@@ -38,6 +38,7 @@ from pymoo.operators.sampling.rnd import FloatRandomSampling
 from pymoo.core.duplicate import DefaultDuplicateElimination
 from pymoo.operators.sampling.lhs import sampling_lhs_unit
 
+from sb_arch_opt.design_space import ArchDesignSpace
 from sb_arch_opt.problem import ArchOptProblemBase, ArchOptRepair
 from sb_arch_opt.util import get_np_random_singleton
 
@@ -177,7 +178,7 @@ class HierarchicalSampling(FloatRandomSampling):
     Hierarchical mixed-discrete sampling. There are two ways the random sampling is performed:
     A: Generate and select:
        1. Generate all possible discrete design vectors
-       2. Separate discrete design vectors by active discrete variables
+       2. Separate discrete design vectors based on discrete rate diversity
        3. Within each group, uniformly sample discrete design vectors
        4. Concatenate and randomize active continuous variables
     B: One-shot:
@@ -190,12 +191,13 @@ class HierarchicalSampling(FloatRandomSampling):
 
     _n_comb_gen_all_max = 100e3
 
-    def __init__(self, repair: Repair = None, sobol=True, seed=None):
+    def __init__(self, repair: Repair = None, sobol=True, seed=None, min_rd_split=.8):
         if repair is None:
             repair = ArchOptRepair()
         self._repair = repair
         self.sobol = sobol
         self.n_iter = 10
+        self.min_rd_split = min_rd_split
         super().__init__()
 
         # Simply set the seed on the global numpy instance
@@ -315,7 +317,7 @@ class HierarchicalSampling(FloatRandomSampling):
         else:
             unit_weights = weights/np.sum(weights)
             selected_groups = np.zeros((n_samples,), dtype=int)
-            selected_pos = np.linspace(0, 1, n_samples)
+            selected_pos = np.sort(self._sobol(n_samples))
             for cum_weight in np.cumsum(unit_weights)[:-1]:
                 selected_groups[selected_pos > cum_weight] += 1
 
@@ -397,15 +399,52 @@ class HierarchicalSampling(FloatRandomSampling):
         return np.concatenate([i_x_selected, i_x_tries[i_best]])
 
     def group_design_vectors(self, x_all: np.ndarray, is_act_all: np.ndarray, is_cont_mask) -> List[np.ndarray]:
-        # Group by active design variables
-        is_active_unique, unique_indices = np.unique(is_act_all, axis=0, return_inverse=True)
-        return [np.where(unique_indices == i)[0] for i in range(len(is_active_unique))]
+        # # Group by active design variables
+        # is_active_unique, unique_indices = np.unique(is_act_all, axis=0, return_inverse=True)
+        # return [np.where(unique_indices == i)[0] for i in range(len(is_active_unique))]
+
+        # Group by rate diversity (difference between discrete value occurrences)
+        is_discrete_mask = ~is_cont_mask
+        min_rd_split = self.min_rd_split
+
+        def recursive_get_groups(group_i: np.ndarray) -> List[np.ndarray]:
+            if len(group_i) == 0:
+                return []
+
+            # For current group, get rate diversity information
+            x_grp = x_all[group_i, :]
+            x_min = np.min(x_grp, axis=0).astype(int)
+            is_act_grp = is_act_all[group_i, :]
+            counts, diversity, active_diversity, i_opts = \
+                ArchDesignSpace.calculate_discrete_rates_raw(x_grp - x_min, is_act_grp, is_discrete_mask)
+
+            # Get discrete variables above minimum rate diversity
+            rd_split_rates, = np.where(active_diversity >= min_rd_split)
+            if len(rd_split_rates) == 0:
+                return [group_i]
+
+            # Split on first matched variable
+            xi_split = rd_split_rates[0]
+            opt_rates = counts[1:, xi_split]
+            i_opt_min = np.nanargmin(opt_rates) + x_min[xi_split]
+
+            min_rate_group = x_grp[:, xi_split] == i_opt_min
+            group_i_min = group_i[min_rate_group]
+            group_i_other = group_i[~min_rate_group]
+
+            # Recursively define groups within split groups
+            return recursive_get_groups(group_i_min) + recursive_get_groups(group_i_other)
+
+        return recursive_get_groups(np.arange(x_all.shape[0]))
 
     def _get_group_weights(self, groups: List[np.ndarray], is_act_all: np.ndarray) -> List[float]:
-        # Weight subgroups by nr of active variables
-        nr_active = np.sum(is_act_all, axis=1)
-        avg_nr_active = [np.sum(nr_active[group])/len(group) for group in groups]
-        return avg_nr_active
+        # Uniform sampling
+        return [1.]*len(groups)
+
+        # # Weight subgroups by nr of active variables
+        # nr_active = np.sum(is_act_all, axis=1)
+        # avg_nr_active = [np.sum(nr_active[group])/len(group) for group in groups]
+        # return avg_nr_active
 
     def _sample_discrete_x_random(self, problem: Problem, repair: Repair, n_samples: int, is_cont_mask, sobol=False):
         has_x_cont = np.any(is_cont_mask)

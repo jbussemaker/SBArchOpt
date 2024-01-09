@@ -77,6 +77,7 @@ class ArchDesignSpace:
         self._choice_value_map = None
         self._is_initialized = False
         self.use_auto_corrector = True
+        self.needs_cont_correction = False
 
     @cached_property
     def n_var(self):
@@ -213,7 +214,11 @@ class ArchDesignSpace:
         if corrector is not None and self.use_auto_corrector:
             try:
                 corrector.correct_x(x, is_active)
-                return
+
+                # The corrector only corrects discrete variables, check if correction of continuous variables is needed
+                if not self.needs_cont_correction:
+                    return
+
             except CorrectorUnavailableError:
                 pass
 
@@ -229,8 +234,8 @@ class ArchDesignSpace:
 
     def _get_corrector(self) -> Optional[CorrectorInterface]:
         """Get the default corrector algorithm"""
-        from sb_arch_opt.correction import ClosestEagerCorrector
-        return ClosestEagerCorrector(self)
+        # from sb_arch_opt.correction import ClosestEagerCorrector
+        # return ClosestEagerCorrector(self)
 
     def round_x_discrete(self, x: np.ndarray):
         """
@@ -287,6 +292,17 @@ class ArchDesignSpace:
         if x_discrete is not None:
             return x_discrete.shape[0]
 
+    def get_n_correct_discrete(self) -> Optional[int]:
+        """Return the number of correct design points (ignoring continuous dimensions); enables calculation of the
+        correction ratio"""
+        n_correct = self._get_n_correct_discrete()
+        if n_correct is not None:
+            return n_correct
+
+        all_discrete_x_n_correct = self.all_discrete_x_n_correct
+        if all_discrete_x_n_correct is not None:
+            return int(np.sum(all_discrete_x_n_correct))
+
     def get_n_declared_discrete(self) -> int:
         """Returns the number of declared discrete design points (ignoring continuous dimensions), calculated from the
         cartesian product of discrete design variables"""
@@ -331,7 +347,7 @@ class ArchDesignSpace:
     def continuous_imputation_ratio(self) -> float:
         """
         Returns the imputation ratio considering only the continuous design variables: it represents the nr of
-        continuous dimensions over the mean number of active continuous dimensions, as seen over all possible discrete
+        continuous dimensions over the mean number of active continuous dimensions, as seen over all valid discrete
         design vectors. The higher the number, the less continuous dimensions are active on average. A value of 1
         indicates all continuous dimensions are always active.
         """
@@ -356,6 +372,75 @@ class ArchDesignSpace:
         n_cont_dim_declared = len(i_is_cont)
         return n_cont_dim_declared / n_cont_active_mean
 
+    @cached_property
+    def correction_ratio(self) -> float:
+        """
+        Returns the problem-level correction ratio, a measure of how much of the imputation ratio is due to a need for
+        correction (i.e. value constraints).
+        It is calculated from the product of the discrete and continuous correction ratios.
+        """
+        return self.discrete_correction_ratio * self.continuous_correction_ratio
+
+    @cached_property
+    def discrete_correction_ratio(self) -> float:
+        """
+        Returns the correction ratio considering only the discrete design vectors: it represents the ratio between
+        number of declared discrete dimensions (Cartesian product) and the number of correct discrete design vectors.
+        A value of 1 indicates no correction is needed, any value higher than 1 means correction is needed and the
+        higher the value, the more difficult it is to randomly sample a correct design vector.
+        """
+
+        # Get correct design points
+        n_correct = self.get_n_correct_discrete()
+        if n_correct is None:
+            return np.nan
+        if n_correct == 0:
+            return 1.
+
+        n_declared = self.get_n_declared_discrete()
+        discrete_imp_ratio = n_declared/n_correct
+        return discrete_imp_ratio
+
+    @cached_property
+    def continuous_correction_ratio(self) -> float:
+        """
+        Returns the correction ratio considering only the continuous design variables: it represents the nr of
+        continuous dimensions over the mean number of active continuous dimensions, as seen over all correct discrete
+        design vectors. The higher the number, the less continuous dimensions are active on average. A value of 1
+        indicates all continuous dimensions are always active.
+        """
+
+        # Check if we have any continuous dimensions
+        i_is_cont = np.where(self.is_cont_mask)[0]
+        if len(i_is_cont) == 0:
+            return 1.
+
+        # Check if mean active continuous dimensions is explicitly defined
+        n_cont_active_mean = self._get_n_active_cont_mean_correct()
+
+        # Get from discrete design vectors
+        if n_cont_active_mean is None:
+            x_all, is_active_all = self.all_discrete_x
+            n_correct = self.all_discrete_x_n_correct
+            if x_all is None or n_correct is None:
+                return np.nan
+
+            is_active_weighted = is_active_all[:, i_is_cont].astype(float) * np.array([n_correct]).T
+            n_cont_active_mean = np.sum(is_active_weighted) / np.sum(n_correct)
+
+        # Calculate imputation ratio from declared / mean_active
+        n_cont_dim_declared = len(i_is_cont)
+        return n_cont_dim_declared / n_cont_active_mean
+
+    @cached_property
+    def correction_fraction(self) -> float:
+        """The fraction of design space hierarchy (quantified by the imputation ratio) that is due to the need for
+        correction (i.e. value constraints)."""
+        imputation_ratio = self.imputation_ratio
+        if imputation_ratio == 1.:
+            return 0.
+        return np.log10(self.correction_ratio) / np.log10(imputation_ratio)
+
     def get_discrete_rates(self, force=False, show=False) -> Optional[pd.DataFrame]:
         """Returns for each discrete value of the discrete design variables, how often the relatively occur over all
         possible design vectors. A value of -1 represents an inactive design variable. Results are returned in a
@@ -369,51 +454,79 @@ class ArchDesignSpace:
                 return
             x_all, is_act_all = self.all_discrete_x_by_trial_and_imputation
 
-        # Set inactive values to -1
-        x_merged = (x_all-self.xl).astype(int)
-        x_merged[~is_act_all] = -1
-        n = x_merged.shape[0]
-
-        # Count the values
-        is_discrete_mask = self.is_discrete_mask
-        counts = {}
-        i_opts = set()
-        for ix in range(len(is_discrete_mask)):
-            if not is_discrete_mask[ix]:
-                counts[f'x{ix}'] = {}
-                continue
-
-            values, counts_i = np.unique(x_merged[:, ix], return_counts=True)
-            i_opts |= set(values)
-            counts[f'x{ix}'] = {value: counts_i[iv]/n for iv, value in enumerate(values)}
-
-        df = pd.DataFrame(index=sorted(list(i_opts)), columns=list(counts.keys()), data=counts)
-        df = df.rename(index={val: 'inactive' if val == -1 else f'opt {val}' for val in df.index})
-
-        # Add a measure of diversity: the range between the lowest and highest occurring values
-        diversity = df.max(axis=0)-df.min(axis=0)
-        if -1 in i_opts:
-            df_active = df.iloc[1:, :]
-            col_sums = df_active.sum(axis=0)
-            df_active /= col_sums
-            active_diversity = df_active.max(axis=0)-df_active.min(axis=0)
-        else:
-            active_diversity = diversity
-
-        df = pd.concat([df, pd.Series(diversity, name='diversity').to_frame().T,
-                        pd.Series(active_diversity, name='active-diversity').to_frame().T], axis=0)
-
-        max_diversity = np.zeros((len(df),))*np.nan
-        max_diversity[-2] = df.iloc[-2, :].max()
-        max_diversity[-1] = df.iloc[-1, :].max()
-        df = pd.concat([df, pd.Series(index=df.index, data=max_diversity, name='max')], axis=1)
+        df = self.calculate_discrete_rates(x_all-self.xl, is_act_all)
 
         if show:
             is_discrete_mask = np.concatenate([self.is_discrete_mask, [True]])
             with pd.option_context('display.max_rows', None, 'display.max_columns', None,
                                    'display.expand_frame_repr', False, 'max_colwidth', None):
                 print(df.iloc[:, is_discrete_mask].replace(np.nan, ''))
+        return df
 
+    @staticmethod
+    def calculate_discrete_rates_raw(x: np.ndarray, is_active: np.ndarray, is_discrete_mask: np.ndarray) \
+            -> Tuple[np.ndarray, np.ndarray, np.ndarray, set]:
+        # x should be moved to 0!
+        x_merged = x.astype(int)+1
+        x_merged[~is_active] = 0
+        n = x_merged.shape[0]
+
+        i_opts = set()
+        if np.all(~is_discrete_mask):
+            counts = np.zeros((1, x.shape[1]))*np.nan
+        else:
+            # Count the values
+            counts = np.zeros((int(np.max(x[:, is_discrete_mask]))+2, x.shape[1]))*np.nan
+            for ix in range(x.shape[1]):
+                if not is_discrete_mask[ix]:
+                    continue
+
+                counts_i = np.bincount(x_merged[:, ix])
+                for iv, count in enumerate(counts_i):
+                    if count > 0:
+                        counts[int(iv), ix] = count/n
+                        i_opts.add(iv-1)
+
+        # Calculate diversity metric: the range between the lowest and highest occurring values
+        diversity = np.nanmax(counts, axis=0) - np.nanmin(counts, axis=0)
+        if -1 in i_opts:
+            active_counts = counts[1:, :]
+            active_counts /= np.nansum(active_counts, axis=0)
+            active_diversity = np.nanmax(active_counts, axis=0) - np.nanmin(active_counts, axis=0)
+        else:
+            active_diversity = diversity
+
+        return counts, diversity, active_diversity, i_opts
+
+    def calculate_discrete_rates(self, x: np.ndarray, is_active: np.ndarray) -> pd.DataFrame:
+
+        is_discrete_mask = self.is_discrete_mask
+        counts, diversity, active_diversity, i_opts = self.calculate_discrete_rates_raw(x, is_active, is_discrete_mask)
+
+        # Create dataframe
+        has_value = np.array([iv-1 in i_opts for iv in range(counts.shape[0])])
+        counts = counts[has_value, :]
+
+        columns = [f'x{ix}' for ix in range(x.shape[1])]
+        df = pd.DataFrame(index=sorted(list(i_opts)), columns=columns, data=counts)
+        df = df.rename(index={val: 'inactive' if val == -1 else f'opt {val}' for val in df.index})
+
+        is_cat_mask = self.is_cat_mask
+        x_type = [('cat' if is_cat_mask[ix] else 'int') if is_discrete_mask[ix] else 'cont'
+                  for ix in range(x.shape[1])]
+
+        df = pd.concat([
+            df,
+            pd.Series(index=columns, data=diversity, name='diversity').to_frame().T,
+            pd.Series(index=columns, data=active_diversity, name='active-diversity').to_frame().T,
+            pd.Series(index=columns, data=x_type, name='x_type').to_frame().T,
+            pd.Series(index=columns, data=self.is_conditionally_active, name='is_cond').to_frame().T,
+        ], axis=0)
+
+        max_diversity = np.zeros((len(df),))*np.nan
+        max_diversity[-4] = df.iloc[-4, :].max()
+        max_diversity[-3] = df.iloc[-3, :].max()
+        df = pd.concat([df, pd.Series(index=df.index, data=max_diversity, name='max')], axis=1)
         return df
 
     def quick_sample_discrete_x(self, n: int) -> Tuple[np.ndarray, np.ndarray]:
@@ -457,6 +570,29 @@ class ArchDesignSpace:
             raise RuntimeError(f'Inconsistent estimation of nr of discrete design vectors: {n_valid} != {x.shape[0]}')
 
         return x, is_active
+
+    @cached_property
+    def all_discrete_x_n_correct(self) -> Optional[np.ndarray]:
+        """For each valid discrete design vector, get the number of correct versions (i.e. design vectors where inactive
+        variables have any value)"""
+        _, is_active = self.all_discrete_x
+        if is_active is None:
+            return
+
+        # Get nr of discrete options for each discrete design variable
+        is_discrete_mask = self.is_discrete_mask
+        is_inactive_discrete = ~is_active[:, is_discrete_mask]
+        if is_inactive_discrete.shape[0] == 0 or is_inactive_discrete.shape[1] == 0:
+            return np.ones((is_inactive_discrete.shape[0],), dtype=int)
+        n_opts_discrete = self.xu[is_discrete_mask]-self.xl[is_discrete_mask]+1
+
+        # For each valid discrete vector, get the number of correct versions
+        n_correct = np.ones(is_inactive_discrete.shape)
+        for j in range(is_inactive_discrete.shape[1]):
+            n_correct[is_inactive_discrete[:, j], j] = n_opts_discrete[j]
+
+        n_correct = np.prod(n_correct, axis=1).astype(int)
+        return n_correct
 
     @cached_property
     def all_discrete_x_by_trial_and_imputation(self):
@@ -567,21 +703,49 @@ class ArchDesignSpace:
         raise NotImplementedError
 
     def _get_n_valid_discrete(self) -> Optional[int]:
-        """Return the number of valid discrete design points (ignoring continuous dimensions); enables calculation of
-        the imputation ratio"""
+        """
+        Return the number of valid discrete design points (ignoring continuous dimensions); enables calculation of
+        the imputation ratio.
+        Valid discrete design points are discrete design points where value constraints are satisfied and where
+        inactive design variables are imputed/canonical (compare _get_n_correct_discrete).
+        """
         raise NotImplementedError
 
-    def _get_n_active_cont_mean(self) -> Optional[int]:
+    def _get_n_active_cont_mean(self) -> Optional[float]:
         """
-        Get the mean number of active continuous dimensions, as seen over all discrete design vectors.
+        Get the mean number of active continuous dimensions, as seen over all valid discrete design vectors.
 
-        For example, if there are two discrete design vectors like this"
+        For example, if there are two valid discrete design vectors like this:
         x_discrete x_continuous1 x_continuous2
         0          Active        Active
         1          Active        Inactive
 
         Then the mean number of active continuous dimensions is:
         3 (total nr of active continuous dimensions) / 2 (number of discrete vectors) = 1.5
+        """
+        raise NotImplementedError
+
+    def _get_n_correct_discrete(self) -> Optional[int]:
+        """
+        Return the number of correct discrete design points (ignoring continuous dimensions); enables calculation of
+        the correction ratio.
+        Correct discrete design points are discrete design points where value constraints are satisfied, where however
+        inactive design variables can have any value (compare _get_n_valid_discrete).
+        """
+        raise NotImplementedError
+
+    def _get_n_active_cont_mean_correct(self) -> Optional[float]:
+        """
+        Get the mean number of active continuous dimensions, as seen over all valid discrete design vectors.
+
+        For example, if there are two correct discrete design vectors like this:
+        x_discrete x_continuous1 x_continuous2
+        0          Active        Active
+        1          Active        Inactive
+        2          Active        Inactive
+
+        Then the mean number of active continuous dimensions is:
+        4 (total nr of active continuous dimensions) / 3 (number of discrete vectors) = 1.3333...
         """
         raise NotImplementedError
 
@@ -596,13 +760,17 @@ class ImplicitArchDesignSpace(ArchDesignSpace):
 
     def __init__(self, des_vars: List[Variable], correct_x_func: Callable[[np.ndarray, np.ndarray], None],
                  is_conditional_func: Callable[[], List[bool]],
-                 n_valid_discrete_func: Callable[[], int] = None, n_active_cont_mean: Callable[[], int] = None,
-                 gen_all_discrete_x_func: Callable[[], Optional[Tuple[np.ndarray, np.ndarray]]] = None):
+                 n_valid_discrete_func: Callable[[], int] = None, n_active_cont_mean: Callable[[], float] = None,
+                 gen_all_discrete_x_func: Callable[[], Optional[Tuple[np.ndarray, np.ndarray]]] = None,
+                 n_correct_discrete_func: Callable[[], int] = None,
+                 n_active_cont_mean_correct: Callable[[], float] = None):
         self._variables = des_vars
         self._correct_x_func = correct_x_func
         self._is_conditional_func = is_conditional_func
         self._n_valid_discrete_func = n_valid_discrete_func
         self._n_active_cont_mean = n_active_cont_mean
+        self._n_correct_discrete_func = n_correct_discrete_func
+        self._n_active_cont_mean_correct = n_active_cont_mean_correct
         self._gen_all_discrete_x_func = gen_all_discrete_x_func
         super().__init__()
 
@@ -625,9 +793,17 @@ class ImplicitArchDesignSpace(ArchDesignSpace):
         if self._n_valid_discrete_func is not None:
             return self._n_valid_discrete_func()
 
-    def _get_n_active_cont_mean(self) -> Optional[int]:
+    def _get_n_active_cont_mean(self) -> Optional[float]:
         if self._n_active_cont_mean is not None:
             return self._n_active_cont_mean()
+
+    def _get_n_correct_discrete(self) -> Optional[int]:
+        if self._n_correct_discrete_func is not None:
+            return self._n_correct_discrete_func()
+
+    def _get_n_active_cont_mean_correct(self) -> Optional[float]:
+        if self._n_active_cont_mean_correct is not None:
+            return self._n_active_cont_mean_correct()
 
     def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
         if self._gen_all_discrete_x_func is not None:

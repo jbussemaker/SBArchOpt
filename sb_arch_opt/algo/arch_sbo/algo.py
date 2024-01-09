@@ -31,6 +31,7 @@ from sb_arch_opt.problem import *
 from sb_arch_opt.sampling import *
 from scipy.spatial import distance
 from sb_arch_opt.algo.pymoo_interface import *
+from sb_arch_opt.algo.pymoo_interface.metrics import EHVMultiObjectiveOutput
 
 from pymoo.core.repair import Repair
 from pymoo.core.result import Result
@@ -72,8 +73,8 @@ class InfillAlgorithm(Algorithm):
     """
 
     def __init__(self, infill: InfillCriterion, infill_size=None, init_sampling: Sampling = None, init_size=100,
-                 survival: Survival = None, **kwargs):
-        super(InfillAlgorithm, self).__init__(**kwargs)
+                 survival: Survival = None, output=EHVMultiObjectiveOutput(), **kwargs):
+        super(InfillAlgorithm, self).__init__(output=output, **kwargs)
 
         self.init_size = init_size
         self.infill_size = infill_size or 1
@@ -546,24 +547,18 @@ class SurrogateInfillOptimizationProblem(ArchOptProblemBase):
             n_ieq_constr += 1
         self.eliminate_duplicates = LargeDuplicateElimination()
 
-        des_vars = problem.des_vars
-        super().__init__(des_vars=des_vars, n_obj=n_obj, n_ieq_constr=n_ieq_constr)
+        super().__init__(problem.design_space, n_obj=n_obj, n_ieq_constr=n_ieq_constr)
 
         self.infill = infill
         self._problem: ArchOptProblemBase = problem
-
-    def _get_n_valid_discrete(self) -> int:
-        return self._problem.get_n_valid_discrete()
-
-    def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
-        return self._problem.all_discrete_x
 
     def might_have_hidden_constraints(self):
         return False
 
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
-        self._correct_x_impute(x, is_active_out)
+        if not self.design_space.is_explicit():
+            self._correct_x_impute(x, is_active_out)
 
         # Get infill search objectives and constraints
         f, g = self.infill.evaluate(x, is_active_out)
@@ -586,12 +581,6 @@ class SurrogateInfillOptimizationProblem(ArchOptProblemBase):
         if g.shape != (x.shape[0], self.n_constr):
             raise RuntimeError(f'Wrong constraint results shape: {g.shape!r} != {(x.shape[0], self.n_constr)!r}')
         g_out[:, :] = g
-
-    def _is_conditionally_active(self) -> List[bool]:
-        return self._problem.is_conditionally_active
-
-    def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
-        x[:, :], is_active[:, :] = self._problem.correct_x(x)
 
     def __repr__(self):
         return f'{self.__class__.__name__}({self.infill!r}, {self._problem!r})'

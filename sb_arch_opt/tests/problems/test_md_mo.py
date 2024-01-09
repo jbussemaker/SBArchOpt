@@ -10,6 +10,7 @@ def test_md_base():
     problem = MixedDiscretizerProblemBase(ZDT1(n_var=4), n_opts=4, n_vars_int=2)
     assert problem.get_n_declared_discrete() == 4**2
     assert problem.get_imputation_ratio() == 1
+    assert problem.get_correction_ratio() == 1
     problem.print_stats()
 
     pop = HierarchicalExhaustiveSampling(n_cont=3).do(problem, 0)
@@ -19,6 +20,7 @@ def test_md_base():
 
 def run_test_no_hierarchy(problem, exh_n_cont=3):
     assert problem.get_imputation_ratio() == 1
+    assert problem.get_correction_ratio() == 1
     assert np.all(~problem.is_conditionally_active)
     problem.print_stats()
 
@@ -38,6 +40,7 @@ def run_test_no_hierarchy(problem, exh_n_cont=3):
     if pop is None:
         pop = HierarchicalSampling().do(problem, 100)
     Evaluator().eval(problem, pop)
+    problem.get_population_statistics(pop, show=True)
     return pop
 
 
