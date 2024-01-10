@@ -191,13 +191,13 @@ class HierarchicalSampling(FloatRandomSampling):
 
     _n_comb_gen_all_max = 100e3
 
-    def __init__(self, repair: Repair = None, sobol=True, seed=None, min_rd_split=.8):
+    def __init__(self, repair: Repair = None, sobol=True, seed=None, high_rd_split=.8):
         if repair is None:
             repair = ArchOptRepair()
         self._repair = repair
         self.sobol = sobol
         self.n_iter = 10
-        self.min_rd_split = min_rd_split
+        self.high_rd_split = high_rd_split
         super().__init__()
 
         # Simply set the seed on the global numpy instance
@@ -405,7 +405,7 @@ class HierarchicalSampling(FloatRandomSampling):
 
         # Group by rate diversity (difference between discrete value occurrences)
         is_discrete_mask = ~is_cont_mask
-        min_rd_split = self.min_rd_split
+        min_rd_split = self.high_rd_split
 
         def recursive_get_groups(group_i: np.ndarray) -> List[np.ndarray]:
             if len(group_i) == 0:
