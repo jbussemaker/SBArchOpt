@@ -191,13 +191,14 @@ class HierarchicalSampling(FloatRandomSampling):
 
     _n_comb_gen_all_max = 100e3
 
-    def __init__(self, repair: Repair = None, sobol=True, seed=None, high_rd_split=.8):
+    def __init__(self, repair: Repair = None, sobol=True, seed=None, high_rd_split=.8, low_rd_split=.5):
         if repair is None:
             repair = ArchOptRepair()
         self._repair = repair
         self.sobol = sobol
         self.n_iter = 10
         self.high_rd_split = high_rd_split
+        self.low_rd_split = low_rd_split
         super().__init__()
 
         # Simply set the seed on the global numpy instance
@@ -405,9 +406,12 @@ class HierarchicalSampling(FloatRandomSampling):
 
         # Group by rate diversity (difference between discrete value occurrences)
         is_discrete_mask = ~is_cont_mask
-        min_rd_split = self.high_rd_split
+        high_rd_split = self.high_rd_split
+        low_rd_split = self.low_rd_split
+        i_low_rd_split = None
 
         def recursive_get_groups(group_i: np.ndarray) -> List[np.ndarray]:
+            nonlocal i_low_rd_split
             if len(group_i) == 0:
                 return []
 
@@ -418,13 +422,29 @@ class HierarchicalSampling(FloatRandomSampling):
             counts, diversity, active_diversity, i_opts = \
                 ArchDesignSpace.calculate_discrete_rates_raw(x_grp - x_min, is_act_grp, is_discrete_mask)
 
-            # Get discrete variables above minimum rate diversity
-            rd_split_rates, = np.where(active_diversity >= min_rd_split)
-            if len(rd_split_rates) == 0:
-                return [group_i]
+            # Split on low split rate
+            xi_split = None
+            if low_rd_split is not None:
+                rd_split_rates, = np.where(active_diversity >= low_rd_split)
+                if i_low_rd_split is None:  # If no low-split variable has been set
+                    if len(rd_split_rates) == 0:
+                        i_low_rd_split = -1  # Set to "no low-split var"
+                    else:
+                        i_low_rd_split = rd_split_rates[0]  # Choose first var
+                        xi_split = rd_split_rates[0]
 
-            # Split on first matched variable
-            xi_split = rd_split_rates[0]
+                elif i_low_rd_split != -1 and len(rd_split_rates) > 0 and rd_split_rates[0] == i_low_rd_split:
+                    # Split on same low-split variable
+                    xi_split = rd_split_rates[0]
+
+            # Check high split rate
+            if xi_split is None:
+                rd_split_rates, = np.where(active_diversity >= high_rd_split)
+                if len(rd_split_rates) == 0:
+                    return [group_i]
+                # Split on first variable
+                xi_split = rd_split_rates[0]
+
             opt_rates = counts[1:, xi_split]
             i_opt_min = np.nanargmin(opt_rates) + x_min[xi_split]
 
