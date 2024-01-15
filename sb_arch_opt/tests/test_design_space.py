@@ -140,7 +140,8 @@ def test_x_generation(problem: ArchOptProblemBase, discrete_problem: ArchOptProb
         assert ds.continuous_correction_ratio == cont_imp_ratio
         assert ds.correction_ratio == cont_imp_ratio * (10*10)/n_correct
 
-        assert ds.corrector is None
+        assert ds.corrector is not None
+        assert not ds.use_auto_corrector
 
         assert not ds.is_explicit()
 

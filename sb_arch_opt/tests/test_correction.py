@@ -17,6 +17,8 @@ class DummyArchDesignSpace(ArchDesignSpace):
         self._is_discrete_mask = is_discrete_mask
         super().__init__()
 
+        self.use_auto_corrector = True
+
     @property
     def corrector(self):
         if self._corrector is None:
