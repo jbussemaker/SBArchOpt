@@ -154,6 +154,7 @@ def test_evaluate(problem: ArchOptProblemBase):
         if use_evaluator:
             pop = Evaluator().eval(problem, Population.new(X=x))
             x_out, is_active, f = pop.get('X'), pop.get('is_active'), pop.get('F')
+            problem.get_population_statistics(pop, show=True)
         else:
             out = problem.evaluate(x, return_as_dictionary=True)
             x_out, is_active, f = out['X'], out['is_active'], out['F']
@@ -173,6 +174,8 @@ def test_evaluate(problem: ArchOptProblemBase):
             [0, 3.875],
         ])
 
+    problem.get_population_statistics(Population.new(), show=True)
+
 
 def test_large_duplicate_elimination():
     x = np.array([
@@ -185,6 +188,8 @@ def test_large_duplicate_elimination():
         [1, 0, 0],
         [1, 0, 0],
     ])
+    is_dup = LargeDuplicateElimination.eliminate(x)
+    assert np.all(np.where(~is_dup)[0] == [0, 1, 3, 4, 6])
     pop = LargeDuplicateElimination().do(Population.new(X=x))
     assert len(pop) == 5
 
@@ -226,13 +231,14 @@ def test_hierarchical_exhaustive_sampling(problem: ArchOptProblemBase):
 
 class HierarchicalDummyProblem(ArchOptProblemBase):
 
-    def __init__(self, n=4):
+    def __init__(self, n=4, has_cont=True):
         self._n = n
         des_vars = []
         for _ in range(n):
             des_vars.append(Binary())
-        for _ in range(n):
-            des_vars.append(Real(bounds=(0, 1)))
+        if has_cont:
+            for _ in range(n):
+                des_vars.append(Real(bounds=(0, 1)))
         super().__init__(des_vars)
 
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
@@ -298,15 +304,27 @@ def test_sobol_sampling():
     assert np.all(i1 == i3)
 
 
+def _disable_x_all(problem: ArchOptProblemBase):
+    def _raise():
+        raise MemoryError
+
+    problem.design_space.all_discrete_x = (None, None)
+    problem.design_space._get_all_discrete_x_by_trial_and_imputation = _raise
+
+
 def test_hierarchical_random_sampling(problem: ArchOptProblemBase):
 
     sampling_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(problem)
     assert len(sampling_values) == 5
     assert np.prod([len(values) for values in sampling_values]) == 12500
 
+    _disable_x_all(problem)
+
     for sobol in [False, True]:
         sampling = HierarchicalSampling(sobol=sobol)
         assert isinstance(sampling._repair, ArchOptRepair)
+        assert sampling.get_hierarchical_cartesian_product(problem, sampling.repair) == (None, None)
+
         x = sampling.do(problem, 1000).get('X')
         assert x.shape == (1000, 5)
         assert np.unique(x, axis=0).shape[0] == 1000
@@ -334,12 +352,29 @@ def test_hierarchical_random_sampling_discrete_hierarchical(discrete_problem: Ar
     assert len(sampling_values) == 2
     assert np.prod([len(values) for values in sampling_values]) == 100
 
+    _disable_x_all(discrete_problem)
+
     for sobol in [False, True]:
         sampling = HierarchicalSampling(sobol=sobol)
         assert isinstance(sampling._repair, ArchOptRepair)
+        assert sampling.get_hierarchical_cartesian_product(discrete_problem, sampling.repair) == (None, None)
+
         x = sampling.do(discrete_problem, 1000).get('X')
         assert x.shape == (55, 2)
         assert np.unique(x, axis=0).shape[0] == 55
+        discrete_problem.evaluate(x)
+
+        x_imp, _ = discrete_problem.correct_x(x)
+        assert np.all(x_imp == x)
+
+    for sobol in [False, True]:
+        sampling = HierarchicalSampling(sobol=sobol)
+        assert isinstance(sampling._repair, ArchOptRepair)
+        assert sampling.get_hierarchical_cartesian_product(discrete_problem, sampling.repair) == (None, None)
+
+        x = sampling.do(discrete_problem, 50).get('X')
+        assert x.shape[0] < 50
+        assert np.unique(x, axis=0).shape[0] == x.shape[0]
         discrete_problem.evaluate(x)
 
         x_imp, _ = discrete_problem.correct_x(x)
@@ -352,12 +387,13 @@ def test_hierarchical_random_sampling_non_exhaustive(problem: ArchOptProblemBase
     assert len(sampling_values) == 5
     assert np.prod([len(values) for values in sampling_values]) == 12500
 
-    limit = HierarchicalSampling._n_comb_gen_all_max
-    HierarchicalSampling._n_comb_gen_all_max = 10
+    _disable_x_all(problem)
 
     for sobol in [False, True]:
         sampling = HierarchicalSampling(sobol=sobol)
         assert isinstance(sampling._repair, ArchOptRepair)
+        assert sampling.get_hierarchical_cartesian_product(problem, sampling.repair) == (None, None)
+
         x = sampling.do(problem, 1000).get('X')
         assert x.shape == (1000, 5)
         assert np.unique(x, axis=0).shape[0] == 1000
@@ -374,8 +410,6 @@ def test_hierarchical_random_sampling_non_exhaustive(problem: ArchOptProblemBase
         np.random.seed(42)
         x3 = sampling.do(problem, 1000).get('X')
         assert np.all(x1 == x3)
-
-    HierarchicalSampling._n_comb_gen_all_max = limit
 
 
 def test_cached_pareto_front_mixin(problem: ArchOptTestProblemBase, discrete_problem: ArchOptTestProblemBase):

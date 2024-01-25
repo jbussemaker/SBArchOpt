@@ -34,6 +34,12 @@ class DesignSpaceTest(ArchDesignSpace):
     def _get_n_active_cont_mean(self):
         pass
 
+    def _get_n_correct_discrete(self):
+        pass
+
+    def _get_n_active_cont_mean_correct(self):
+        pass
+
     def _gen_all_discrete_x(self):
         pass
 
@@ -75,6 +81,9 @@ def test_init_no_vars():
     assert np.isnan(ds.discrete_imputation_ratio)
     assert ds.continuous_imputation_ratio == 1.
     assert np.isnan(ds.imputation_ratio)
+    assert np.isnan(ds.discrete_correction_ratio)
+    assert ds.continuous_correction_ratio == 1.
+    assert np.isnan(ds.correction_ratio)
 
     assert not ds.is_explicit()
 
@@ -101,8 +110,12 @@ def test_init_vars():
 
 def test_get_categorical_values():
     ds = DesignSpaceTest([Choice(options=['A', 'B', 'C'])])
+    assert ds.all_discrete_x == (None, None)
     x_all, _ = ds.all_discrete_x_by_trial_and_imputation
     assert x_all.shape == (3, 1)
+
+    x_all_, _ = ds.all_discrete_x
+    assert np.all(x_all_ == x_all)
 
     cat_values = ds.get_categorical_values(x_all, 0)
     assert len(cat_values) == 3
@@ -110,16 +123,24 @@ def test_get_categorical_values():
 
 
 def test_x_generation(problem: ArchOptProblemBase, discrete_problem: ArchOptProblemBase):
-    for prob, n_valid, cont_imp_ratio in [
-        (problem, 10*10, 1.2),
-        (discrete_problem, 10*5+5, 1.),
+    for prob, n_valid, n_correct, cont_imp_ratio in [
+        (problem, 10*10, 10*10, 1.2),
+        (discrete_problem, 10*5+5, 10*10, 1.),
     ]:
         ds = prob.design_space
         assert ds.get_n_declared_discrete() == 10*10
+
         assert ds.get_n_valid_discrete() == n_valid
         assert ds.discrete_imputation_ratio == (10 * 10) / n_valid
         assert ds.continuous_imputation_ratio == cont_imp_ratio
         assert ds.imputation_ratio == cont_imp_ratio * (10*10)/n_valid
+
+        assert ds.get_n_correct_discrete() == n_correct
+        assert ds.discrete_correction_ratio == (10 * 10) / n_correct
+        assert ds.continuous_correction_ratio == cont_imp_ratio
+        assert ds.correction_ratio == cont_imp_ratio * (10*10)/n_correct
+
+        assert ds.corrector is None
 
         assert not ds.is_explicit()
 

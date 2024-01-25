@@ -46,12 +46,12 @@ try:
     import smt.utils.design_space as ds
 
     from smt import __version__
-    IS_SMT_21 = not __version__.startswith('2.0')
+    IS_SMT_22 = not __version__.startswith('2.0') and not __version__.startswith('2.1')
 
     HAS_ARCH_SBO = True
 except ImportError:
     HAS_ARCH_SBO = False
-    IS_SMT_21 = False
+    IS_SMT_22 = False
 
     class BaseDesignSpace:
         pass
@@ -60,7 +60,7 @@ except ImportError:
         pass
 
 __all__ = ['check_dependencies', 'HAS_ARCH_SBO', 'ModelFactory', 'MixedDiscreteNormalization', 'SBArchOptDesignSpace',
-           'MultiSurrogateModel', 'IS_SMT_21']
+           'MultiSurrogateModel', 'IS_SMT_22']
 
 
 def check_dependencies():
@@ -166,11 +166,13 @@ class ModelFactory:
             surrogate = MultiSurrogateModel(surrogate)
         return surrogate
 
-    def get_md_kriging_model(self, kpls_n_comp: int = None, multi=True, **kwargs_) -> Tuple['SurrogateModel', Normalization]:
+    def get_md_kriging_model(self, kpls_n_comp: int = None, multi=True, ignore_hierarchy=False,
+                             **kwargs_) -> Tuple['SurrogateModel', Normalization]:
         check_dependencies()
         normalization = self.get_md_normalization()
         design_space = self.problem.design_space
-        norm_ds_spec = self.create_smt_design_space_spec(design_space, md_normalize=True)
+        norm_ds_spec = self.create_smt_design_space_spec(
+            design_space, md_normalize=True, ignore_hierarchy=ignore_hierarchy)
 
         kwargs = dict(
             print_global=False,
@@ -185,16 +187,17 @@ class ModelFactory:
             n_dim_apply_pls = design_space.n_var
 
             # PLS is not applied to categorical variables for EHH/HH kernels (see KrgBased._matrix_data_corr)
-            if IS_SMT_21 and kwargs['categorical_kernel'] not in [MixIntKernelType.CONT_RELAX, MixIntKernelType.GOWER]:
+            if IS_SMT_22 and kwargs['categorical_kernel'] not in [MixIntKernelType.CONT_RELAX, MixIntKernelType.GOWER]:
                 n_dim_apply_pls = design_space.n_var - np.sum(design_space.is_cat_mask)
 
             if kpls_n_comp > n_dim_apply_pls:
                 kpls_n_comp = None
 
         if kpls_n_comp is not None:
-            if not IS_SMT_21:
+            if not IS_SMT_22:
                 kwargs['categorical_kernel'] = MixIntKernelType.CONT_RELAX
 
+            # Ignore hierarchy in the design space as KPLS does not support this
             non_hier_ds_spec = self.create_smt_design_space_spec(
                 self.problem.design_space, md_normalize=True, ignore_hierarchy=True)
             kwargs['design_space'] = non_hier_ds_spec.design_space
@@ -202,6 +205,9 @@ class ModelFactory:
             surrogate = KPLS(n_comp=kpls_n_comp, **kwargs)
         else:
             surrogate = KRG(**kwargs)
+
+        if ignore_hierarchy or kpls_n_comp is not None:
+            surrogate.supports['x_hierarchy'] = False
 
         if multi:
             surrogate = MultiSurrogateModel(surrogate)
@@ -254,7 +260,7 @@ class ModelFactory:
 class SBArchOptDesignSpace(BaseDesignSpace):
     """SMT design space implementation using SBArchOpt's design space logic"""
 
-    _global_disable_hierarchical_cat_fix = IS_SMT_21
+    _global_disable_hierarchical_cat_fix = IS_SMT_22
 
     def __init__(self, arch_design_space: ArchDesignSpace, md_normalize=False, cont_relax=False,
                  ignore_hierarchy=False):
@@ -271,7 +277,7 @@ class SBArchOptDesignSpace(BaseDesignSpace):
     def _get_design_variables(self) -> List['ds.DesignVariable']:
         """Return the design variables defined in this design space if not provided upon initialization of the class"""
         smt_des_vars = []
-        is_conditional = self._ds.is_conditionally_active
+        is_dv_cond = ([False]*len(self._ds.des_vars)) if self._ignore_hierarchy else self._ds.is_conditionally_active
         normalize = self.normalize is not None
         cont_relax = self._cont_relax
         for i, dv in enumerate(self._ds.des_vars):
@@ -297,7 +303,7 @@ class SBArchOptDesignSpace(BaseDesignSpace):
                     smt_des_vars.append(ds.FloatVariable(0, len(dv.options)-1))
                 else:
                     # Conditional categorical variables are currently not supported
-                    if is_conditional[i] and not self._global_disable_hierarchical_cat_fix:
+                    if is_dv_cond[i] and not self._global_disable_hierarchical_cat_fix:
                         smt_des_vars.append(ds.IntegerVariable(0, len(dv.options)-1))
                     else:
                         smt_des_vars.append(ds.CategoricalVariable(values=dv.options))
@@ -308,7 +314,7 @@ class SBArchOptDesignSpace(BaseDesignSpace):
 
     def _is_conditionally_acting(self) -> np.ndarray:
         if self._ignore_hierarchy:
-            return np.zeros((len(self._ds.is_conditionally_active),), dtype=bool)
+            return np.zeros((len(self._ds.des_vars),), dtype=bool)
 
         return self._ds.is_conditionally_active
 
@@ -325,8 +331,8 @@ class SBArchOptDesignSpace(BaseDesignSpace):
             is_active = np.ones(is_active.shape, dtype=bool)
         return x, is_active
 
-    def _sample_valid_x(self, n: int) -> Tuple[np.ndarray, np.ndarray]:
-        sampler = HierarchicalSampling()
+    def _sample_valid_x(self, n: int, random_state=None) -> Tuple[np.ndarray, np.ndarray]:
+        sampler = HierarchicalSampling(seed=random_state)
         stub_problem = ArchOptProblemBase(self._ds)
         x, is_active = sampler.sample_get_x(stub_problem, n)
 
@@ -356,6 +362,9 @@ class MultiSurrogateModel(SurrogateModel):
         self.supports = self._surrogate.supports
         self.options["print_global"] = False
 
+        self.xt = None
+        self.yt = None
+
     @property
     def name(self):
         return f'Multi{self._surrogate.name}'
@@ -364,6 +373,9 @@ class MultiSurrogateModel(SurrogateModel):
         self.supports["derivatives"] = False
 
     def set_training_values(self, xt: np.ndarray, yt: np.ndarray, name=None, is_acting=None) -> None:
+        self.xt = xt
+        self.yt = yt
+
         self._models = models = []
         for iy in range(yt.shape[1]):
             model: Union['KrgBased', 'SurrogateModel'] = self._copy_underlying()
@@ -397,6 +409,9 @@ class MultiSurrogateModel(SurrogateModel):
                 model.options['theta0'] = theta0
 
             model.train()
+
+            # rmse = np.linalg.norm(self.yt[:, i] - model.predict_values(self.xt)[:, 0], 2)
+            # print(f'TRAINED {i}: {rmse:.3g}')
 
             if i == 0 and isinstance(model, KrgBased):
                 try:

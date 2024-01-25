@@ -23,9 +23,10 @@ import logging
 import numpy as np
 from typing import *
 import concurrent.futures
+from cached_property import cached_property
 from pymoo.core.variable import Real, Integer, Choice
 from sb_arch_opt.problems.hierarchical import HierarchyProblemBase
-from sb_arch_opt.util import capture_log
+from sb_arch_opt.util import capture_log, get_cache_path
 
 import os
 os.environ['OPENMDAO_REQUIRE_MPI'] = 'false'  # Suppress OpenMDAO MPI import warnings
@@ -38,7 +39,7 @@ try:
 except ImportError:
     HAS_OPEN_TURB_ARCH = False
 
-__all__ = ['HAS_OPEN_TURB_ARCH', 'SimpleTurbofanArch', 'RealisticTurbofanArch']
+__all__ = ['HAS_OPEN_TURB_ARCH', 'SimpleTurbofanArch', 'RealisticTurbofanArch', 'SimpleTurbofanArchModel']
 
 log = logging.getLogger('sb_arch_opt.turb')
 
@@ -105,6 +106,8 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
                                       for con in open_turb_arch_problem.opt_constraints])
         self._con_offsets = np.array([con.limit_value for con in open_turb_arch_problem.opt_constraints])
 
+        self.exclude_from_serialization = {'_models'}
+
     def set_max_iter(self, max_iter: int):
         self._problem.max_iter = max_iter
 
@@ -113,6 +116,15 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
 
     def _get_n_valid_discrete(self) -> int:
         raise NotImplementedError
+
+    def _get_n_active_cont_mean(self) -> Optional[float]:
+        return
+
+    def _get_n_correct_discrete(self) -> Optional[int]:
+        return
+
+    def _get_n_active_cont_mean_correct(self) -> Optional[float]:
+        return
 
     def get_failure_rate(self) -> float:
         raise NotImplementedError
@@ -168,6 +180,14 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
             assert self._g_pf.shape[1] == self.n_ieq_constr
             assert self._x_pf.shape[0] == self._f_pf.shape[0]
             assert self._x_pf.shape[0] == self._g_pf.shape[0]
+
+            # Sort by first objective dimension to ensure Pareto front and set points match
+            # (because pymoo sorts the Pareto front but not the Pareto set)
+            i_sorted = np.argsort(self._f_pf[:, 0])
+            self._x_pf = self._x_pf[i_sorted, :]
+            self._f_pf = self._f_pf[i_sorted, :]
+            self._g_pf = self._g_pf[i_sorted, :]
+
         return self._x_pf, self._f_pf, self._g_pf
 
     def _calc_pareto_front(self):
@@ -204,17 +224,58 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
         assert x.shape[0] == g.shape[0]
         return x, f, g
 
+    @cached_property
+    def _g_from_x(self):
+        # Get nr of constraints defined from metrics
+        n_eval_g = len([con for metric in self._problem.constraints
+                        for con in metric.get_opt_constraints(self._problem.choices)])
+
+        # Determine which constraints are defined by choices
+        g_is_from_x = np.zeros((self.n_ieq_constr,), dtype=bool)
+        g_is_from_x[n_eval_g:] = True
+        return g_is_from_x, n_eval_g
+
+    @cached_property
+    def _choice_g_props(self):
+        return [(choice, choice.get_constraints() is not None, len(choice.get_design_variables()))
+                for choice in self._problem.choices]
+
+    def _ensure_models_trained(self):
+        if self._models is None:
+            self._train_models()
+
     def _train_models(self):
-        from sklearn import svm
+        import joblib
+        from sklearn import ensemble
         model_data_dir = self._get_data_path('model_data')
         os.makedirs(model_data_dir, exist_ok=True)
+        model_cache_dir = self._get_cache_path('model_data')
+        os.makedirs(model_cache_dir, exist_ok=True)
 
-        capture_log()
         self._models = models = {}
+        models_from_cache = set()
 
         def _get_model(name, x_, y_):
-            model = svm.SVR(kernel='rbf')
-            log.info(f'Training: {self.__class__.__name__}.{name}')
+            cache_path = f'{model_cache_dir}/{name}.pkl'
+            if os.path.exists(cache_path):
+                with open(cache_path, 'rb') as fp_:
+                    model = pickle.load(fp_)
+                models_from_cache.add(name)
+                return model
+
+            data_path = f'{model_data_dir}/{name}.pkl'
+            if os.path.exists(data_path):
+                with open(data_path, 'rb') as fp_:
+                    model = joblib.load(fp_)
+                models_from_cache.add(name)
+
+                with open(cache_path, 'wb') as fp_:
+                    pickle.dump(model, fp_)
+                return model
+
+            capture_log()
+            model = ensemble.RandomForestRegressor(n_estimators=400)
+            log.info(f'Training: {self.__class__.__name__}.{name} (xt = {x_.shape})')
             model.fit(x_, y_)
             return model
 
@@ -227,8 +288,17 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
         g = g[~is_failed, :]
         for i in range(f.shape[1]):
             models[f'f{i}'] = _get_model(f'f{i}', x_ok, f[:, i])
+
+        g_from_x, _ = self._g_from_x
         for i in range(g.shape[1]):
-            models[f'g{i}'] = _get_model(f'g{i}', x_ok, g[:, i])
+            if not g_from_x[i]:
+                models[f'g{i}'] = _get_model(f'g{i}', x_ok, g[:, i])
+
+        for key, model_ in models.items():
+            if key in models_from_cache:
+                continue
+            with open(f'{model_data_dir}/{key}.pkl', 'wb') as fp:
+                joblib.dump(model_, fp, compress=9)
 
     def _check_pf_models(self):
         from sb_arch_opt.algo.pymoo_interface import get_nsga2
@@ -239,15 +309,44 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
         x_pf_surrogate = res.X
         f_pf_surrogate = res.F
 
+        import matplotlib.pyplot as plt
+        x, f, g = self._load_evaluated()
+        n = x.shape[0]
+        is_failed = self.get_failed_points({'F': f, 'G': g})
+        is_failed_pred = self._models['fails'].predict(x) > .5
+        false_pos = np.where(is_failed_pred & ~is_failed)[0]
+        false_neg = np.where(~is_failed_pred & is_failed)[0]
+        print(f'Failure prediction (n = {n}): false pos {len(false_pos)} ({100*len(false_pos)/n:.1f}%); '
+              f'false neg {len(false_neg)} ({100*len(false_neg)/n:.1f}%)')
+
+        for key, model in self._models.items():
+            if key == 'fails':
+                continue
+            if key.startswith('f'):
+                y = f[~is_failed, int(key[1:])]
+            elif key.startswith('g'):
+                y = g[~is_failed, int(key[1:])]
+            else:
+                continue
+            y_pred = model.predict(x[~is_failed, :])
+            plt.figure(), plt.title(f'Comparison: {key}')
+            plt.plot([np.min(y), np.max(y)], [np.min(y), np.max(y)], '-r', linewidth=1)
+            plt.scatter(y, y_pred, s=5, c='k')
+            plt.xlabel('$y$'), plt.ylabel('$y_{predicted}$')
+
         if f_pf.shape[1] == 1:
-            print(f'Best: {f_pf[0, 0]:.3g} @ {x_pf}; surrogate model best: {f_pf_surrogate[0]:.3g} @ {x_pf_surrogate}')
+            print(f'Best:\n{f_pf[0, 0]:.3g} @ {x_pf}')
+            try:
+                print(f'Surrogate model best:\n{f_pf_surrogate[0]:.3g} @ {x_pf_surrogate}')
+                print(f'Diff:\n{f_pf_surrogate[0]-f_pf[0, 0]:.3g} @ {x_pf_surrogate-x_pf}')
+            except TypeError:
+                print(f'Surrogate model best (fail): {f_pf_surrogate[0]} @ {x_pf_surrogate}')
         else:
-            import matplotlib.pyplot as plt
             plt.figure(), plt.title(f'Pareto Front comparison: {self.__class__.__name__}')
             plt.scatter(f_pf[:, 0], f_pf[:, 1], s=5, c='k', label='Original')
             plt.scatter(f_pf_surrogate[:, 0], f_pf_surrogate[:, 1], s=5, c='r', label='Predicted')
             plt.legend()
-            plt.show()
+        plt.show()
 
     def _arch_evaluate_x_surrogate(self, x: np.ndarray):
         x_imp, is_active = self.correct_x(x)
@@ -255,16 +354,41 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
         g = np.zeros((x.shape[0], self.n_ieq_constr))
 
         fails = self._models['fails'].predict(x_imp)
-        is_failed = fails > .5
+        is_failed: np.ndarray = fails > .5
         f[is_failed, :] = np.nan
         g[is_failed, :] = np.nan
 
         is_ok = ~is_failed
         x_ok = x_imp[is_ok, :]
-        for i in range(f.shape[1]):
-            f[is_ok, :] = self._models[f'f{i}'].predict(x_ok)[:, None]
-        for i in range(g.shape[1]):
-            g[is_ok, :] = self._models[f'g{i}'].predict(x_ok)[:, None]
+        if x_ok.shape[0] > 0:
+            for i in range(f.shape[1]):
+                f[is_ok, i] = self._models[f'f{i}'].predict(x_ok)
+
+        g_from_x, n_eval_g = self._g_from_x
+        if np.any(g_from_x):
+            for i in range(x.shape[0]):
+                if is_ok[i]:
+                    architecture, x_imp_ = self._problem.generate_architecture(self._convert_x(x_imp[i, :]))
+                    _, x_full = self._problem.get_full_design_vector(x_imp_)
+
+                    xii, i_g = 0, n_eval_g
+                    for choice, has_g, n_dv in self._choice_g_props:
+                        choice_dv = x_full[xii:xii+n_dv]
+
+                        if has_g:
+                            choice_g = choice.evaluate_constraints(
+                                architecture, choice_dv, self._problem.analysis_problem, {})
+                            g[i, i_g:i_g+len(choice_g)] = choice_g
+                            i_g += len(choice_g)
+
+                        xii += n_dv
+
+            g[:, g_from_x] = (g[:, g_from_x]-self._con_offsets[g_from_x])*self._con_factors[g_from_x]
+
+        if x_ok.shape[0] > 0:
+            for i in range(g.shape[1]):
+                if not g_from_x[i]:
+                    g[is_ok, i] = self._models[f'g{i}'].predict(x_ok)
 
         return x_imp, f, g, is_active
 
@@ -275,6 +399,20 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
         if sub_path is not None:
             path = os.path.join(path, sub_path)
         return path
+
+    @classmethod
+    def _get_cache_path(cls, sub_path: str = None) -> str:
+        path = get_cache_path(os.path.join('turbofan_cache', cls._sub_folder))
+        os.makedirs(path, exist_ok=True)
+        if sub_path is not None:
+            path = os.path.join(path, sub_path)
+        return path
+
+    @classmethod
+    def _get_models_cache_dir(cls):
+        models_cache_dir = cls._get_data_path('model_data')
+        os.makedirs(models_cache_dir, exist_ok=True)
+        return models_cache_dir
 
 
 class SimpleTurbofanArch(OpenTurbArchProblemWrapper):
@@ -340,14 +478,61 @@ class RealisticTurbofanArch(OpenTurbArchProblemWrapper):
     """
     _sub_folder = 'realistic'
 
-    def __init__(self, n_parallel=None):
+    def __init__(self, n_parallel=None, noise_obj=True):
         check_dependency()
-        super().__init__(get_architecting_problem(), n_parallel=n_parallel)
+        self.noise_obj = noise_obj
+
+        arch_prob = get_architecting_problem()
+        if not noise_obj:
+            arch_prob._objectives = arch_prob._objectives[:2]
+            arch_prob._opt_obj = None
+
+        super().__init__(arch_prob, n_parallel=n_parallel)
+
+        if not noise_obj:
+            assert self.n_obj == 2
+            assert len(self._obj_factors) == 2
 
     def get_original_pf(self):
         x_pf, f_pf, g_pf = load_pareto_front()
         x_pf, _ = self.correct_x(x_pf)
+        x_pf, f_pf, g_pf = self._correct_pf(x_pf, f_pf, g_pf)
         return x_pf, f_pf, g_pf
+
+    def _correct_pf(self, x_pf, f_pf, g_pf):
+        if not self.noise_obj:
+            from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
+            f_pf = f_pf[:, :2]
+            i_pf = NonDominatedSorting().do(f_pf, only_non_dominated_front=True)
+            x_pf, f_pf, g_pf = x_pf[i_pf, :], f_pf[i_pf, :], g_pf[i_pf, :]
+
+        return x_pf, f_pf, g_pf
+
+    def load_pareto_front(self):
+        if self._f_pf is None:
+            n_obj = self.n_obj
+            self.n_obj = 3
+
+            self._x_pf, self._f_pf, self._g_pf = self._correct_pf(*super().load_pareto_front())
+
+            self.n_obj = n_obj
+
+        return self._x_pf, self._f_pf, self._g_pf
+
+    def _load_evaluated(self):
+        n_obj = self.n_obj
+        self.n_obj = 3
+        x, f, g = super()._load_evaluated()
+        self.n_obj = n_obj
+        return x, f, g
+
+    def _arch_evaluate_x(self, x: np.ndarray):
+        x_imp, f, g, is_active = super()._arch_evaluate_x(x)
+
+        if not self.noise_obj:
+            f = f[:2]
+
+        return x_imp, f, g, is_active
 
     def _get_n_valid_discrete(self) -> int:
         n_valid_no_fan = 1
@@ -392,15 +577,21 @@ class RealisticTurbofanArch(OpenTurbArchProblemWrapper):
 
         return is_cond_active
 
+    def __repr__(self):
+        noise_obj = 'noise_obj=False' if not self.noise_obj else ''
+        return f'{self.__class__.__name__}({noise_obj})'
+
 
 class SimpleTurbofanArchModel(SimpleTurbofanArch):
 
-    def __init__(self):
+    def __init__(self, train=True):
         super().__init__()
-        self._train_models()
+        if train:
+            self._train_models()
 
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
+        self._ensure_models_trained()
         x[:, :], f_out[:, :], g_out[:, :], is_active_out[:, :] = self._arch_evaluate_x_surrogate(x)
 
     def _arch_evaluate_x(self, x: np.ndarray):
@@ -422,7 +613,7 @@ class SimpleTurbofanArchModel(SimpleTurbofanArch):
 
 
 if __name__ == '__main__':
-    SimpleTurbofanArch().print_stats()
+    # SimpleTurbofanArch().print_stats()
     # RealisticTurbofanArch().print_stats()
 
     # import pandas as pd
@@ -445,4 +636,4 @@ if __name__ == '__main__':
     # print(result.pop.get('G'))
 
     # SimpleTurbofanArchModel().print_stats()
-    # SimpleTurbofanArchModel()._check_pf_models()
+    SimpleTurbofanArchModel()._check_pf_models()

@@ -1,5 +1,7 @@
 import os
+import copy
 import pytest
+import pickle
 import tempfile
 import numpy as np
 import contextlib
@@ -13,7 +15,7 @@ from sb_arch_opt.problems.continuous import *
 from sb_arch_opt.problems.constrained import *
 from sb_arch_opt.problems.hierarchical import *
 from sb_arch_opt.problems.hidden_constraints import *
-from sb_arch_opt.tests.algo.test_pymoo import CrashingProblem
+from sb_arch_opt.tests.algo.test_pymoo import CrashingProblem, CrashError
 from sb_arch_opt.algo.pymoo_interface import load_from_previous_results
 from pymoo.optimize import minimize
 from pymoo.core.population import Population
@@ -85,6 +87,20 @@ def test_arch_sbo_y(problem: ArchOptProblemBase):
 @check_dependency()
 def test_arch_sbo_ei(problem: ArchOptProblemBase):
     assert HAS_ARCH_SBO
+
+    model = ModelFactory.get_kriging_model()
+    infill = ExpectedImprovementInfill()
+    sbo = get_sbo(model, infill, init_size=10)
+    result = minimize(problem, sbo, termination=('n_eval', 12))
+    assert len(result.pop) == 12
+
+
+@check_dependency()
+def test_arch_sbo_ei_explicit():
+    assert HAS_ARCH_SBO
+
+    problem = Jenatton()
+    assert problem.design_space.is_explicit()
 
     model = ModelFactory.get_kriging_model()
     infill = ExpectedImprovementInfill()
@@ -193,6 +209,20 @@ def test_arch_sbo_gp_high_dim():
 
 
 @check_dependency()
+def test_arch_sbo_gp_copy():
+    assert HAS_ARCH_SBO
+
+    problem = Branin()
+    sbo = get_arch_sbo_gp(problem, init_size=10)
+
+    problem, sbo = pickle.loads(pickle.dumps((problem, sbo)))
+    sbo = copy.deepcopy(sbo)
+
+    result = minimize(problem, sbo, termination=('n_eval', 12))
+    assert len(result.pop) == 12
+
+
+@check_dependency()
 def test_store_results_restart(problem: ArchOptProblemBase):
     assert HAS_ARCH_SBO
 
@@ -238,7 +268,7 @@ def test_partial_restart():
                 assert len(result.pop) == 40
                 break
 
-            except RuntimeError:
+            except CrashError:
                 pass
 
 
@@ -431,9 +461,9 @@ def test_smt_krg_features():
 
         # Hierarchical (categorical conditional vars)
         _try_model(Jenatton(), cont_relax=True)
-        _try_model(Jenatton(), throws_error=not IS_SMT_21)
+        _try_model(Jenatton(), throws_error=not IS_SMT_22)
         _try_model(Jenatton(), pls=True, cont_relax=True)
         _try_model(Jenatton(), pls=True, ignore_hierarchy=True)
-        _try_model(Jenatton(), pls=True, throws_error=not IS_SMT_21)
+        _try_model(Jenatton(), pls=True, throws_error=not IS_SMT_22)
         _try_model(Jenatton(), pls=True, ignore_hierarchy=True, pls_cont=False)
-        _try_model(Jenatton(), pls=True, pls_cont=False, throws_error=not IS_SMT_21)
+        _try_model(Jenatton(), pls=True, pls_cont=False, throws_error=not IS_SMT_22)

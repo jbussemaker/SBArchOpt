@@ -28,7 +28,7 @@ from typing import *
 from sb_arch_opt.problems.hierarchical import HierarchyProblemBase
 
 try:
-    from assign_pymoo.problem import AssignmentProblemBase, AssignmentProblem
+    from assign_pymoo.problem import AssignmentProblemBase, AssignmentProblem, MultiAssignmentProblem
     from assign_experiments.problems.gnc import *
     from assign_experiments.problems.analytical import *
     HAS_ASSIGN_ENC = True
@@ -68,14 +68,26 @@ class AssignmentProblemWrapper(HierarchyProblemBase):
             n_con -= 1
         super().__init__(problem.vars, n_obj=problem.n_obj, n_ieq_constr=n_con)
 
+        self.design_space.use_auto_corrector = False
+
     def _get_n_valid_discrete(self) -> int:
         return self._problem.get_n_valid_design_points(n_cont=1)
 
+    def _get_n_correct_discrete(self) -> int:
+        pass
+
     def _is_conditionally_active(self) -> List[bool]:
         _, is_act_all = self.all_discrete_x
-        if is_act_all is None:
-            raise RuntimeError(f'_is_conditionally_active not implemented for {self.__class__.__name__}')
-        return list(np.any(~is_act_all, axis=0))
+        if is_act_all is not None:
+            return list(np.any(~is_act_all, axis=0))
+
+        if isinstance(self._problem, MultiAssignmentProblem):
+            dv_cond = []
+            for assignment_manager in self._problem.assignment_managers:
+                dv_cond += [dv.conditionally_active for dv in assignment_manager.design_vars]
+            return dv_cond
+
+        return [dv.conditionally_active for dv in self._problem.assignment_manager.design_vars]
 
     def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
         if isinstance(self._problem, AnalyticalProblemBase):
@@ -99,6 +111,14 @@ class AssignmentProblemWrapper(HierarchyProblemBase):
             dist_corr = self._problem.assignment_manager.encoder.get_distance_correlation()
             if dist_corr is not None:
                 print(f'dist_corr    : {dist_corr*100:.0f}%')
+
+        elif isinstance(self._problem, MultiAssignmentProblem):
+            for i, assignment_manager in enumerate(self._problem.assignment_managers):
+                dist_corr = assignment_manager.encoder.get_distance_correlation()
+                if dist_corr is not None:
+                    imp_ratio = assignment_manager.encoder.get_imputation_ratio()
+                    print(f'dist_corr {i: 2d} : {dist_corr*100:.0f}%; '
+                          f'imp_ratio : {imp_ratio:.2f}; {assignment_manager.encoder!s}')
 
         super()._print_extra_stats()
 

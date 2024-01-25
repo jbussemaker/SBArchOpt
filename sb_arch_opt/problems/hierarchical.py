@@ -47,6 +47,18 @@ class HierarchyProblemBase(ArchOptTestProblemBase):
     def _get_n_valid_discrete(self) -> int:
         raise NotImplementedError
 
+    def _get_n_active_cont_mean(self) -> Optional[float]:
+        if np.all(~self.is_conditionally_active[self.is_cont_mask]):
+            return float(np.sum(self.is_cont_mask))
+
+    def _get_n_correct_discrete(self) -> int:
+        # True if only imputation is ever applied (no correction)
+        return self.get_n_declared_discrete()
+
+    def _get_n_active_cont_mean_correct(self) -> Optional[float]:
+        # True if only imputation is ever applied (no correction)
+        return float(np.sum(self.is_cont_mask))
+
     def _is_conditionally_active(self) -> List[bool]:
         _, is_act_all = self.all_discrete_x
         if is_act_all is None:
@@ -371,6 +383,9 @@ class HierarchicalRosenbrock(HierarchyProblemBase):
         if show:
             plt.show()
 
+    def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
+        return self.design_space.all_discrete_x_by_trial_and_imputation
+
 
 class MOHierarchicalRosenbrock(HierarchicalRosenbrock):
     """
@@ -422,8 +437,19 @@ class ZaeffererHierarchical(HierarchyProblemBase):
         des_vars = [Real(bounds=(0, 1)), Real(bounds=(0, 1))]
         super().__init__(des_vars, n_obj=1)
 
+        self.design_space.needs_cont_correction = True
+
     def _get_n_valid_discrete(self) -> int:
         return 1
+
+    def _get_n_active_cont_mean(self) -> float:
+        return 2-self.c
+
+    def _get_n_correct_discrete(self) -> int:
+        return 1
+
+    def _get_n_active_cont_mean_correct(self) -> Optional[float]:
+        return 2
 
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
@@ -917,11 +943,24 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
         super().__init__(des_vars, n_obj=problem.n_obj, n_ieq_constr=problem.n_ieq_constr,
                          n_eq_constr=problem.n_eq_constr)
 
-        self.__correct_output = {}
+        self.design_space.use_auto_corrector = False
+        self._correct_output = {}
 
     def _get_n_valid_discrete(self) -> int:
         n_discrete_underlying = self._problem.get_n_valid_discrete()
         return n_discrete_underlying*self._x_sub.shape[0]
+
+    def _get_n_correct_discrete(self) -> int:
+        n_correct_underlying = self._problem.get_n_correct_discrete()
+
+        n_sub = self._x_sub.shape[1]
+        n_opts_sub = self.xu[:n_sub]-self.xl[:n_sub]+1
+        n_correct = np.ones(self._x_sub.shape)
+        for j in range(n_sub):
+            n_correct[~self._is_act_sub[:, j], j] = n_opts_sub[j]
+
+        n_correct_sub = np.sum(np.prod(n_correct, axis=1))
+        return int(n_correct_underlying*n_correct_sub)
 
     def might_have_hidden_constraints(self):
         return self._problem.might_have_hidden_constraints()
@@ -953,7 +992,7 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
                        h_out: np.ndarray, *args, **kwargs):
         # Correct and impute
         self._correct_x_impute(x, is_active_out)
-        i_sub_selected = self.__correct_output['i_sub_sel']
+        i_sub_selected = self._correct_output['i_sub_sel']
         n_sub = self._x_sub.shape[1]
 
         # Evaluate underlying problem
@@ -985,20 +1024,13 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
         return f_norm*(pf_max-pf_min) + pf_min
 
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
-        # Match sub-problem selection design variables
+        # Match/correct sub-problem selection design variables
+        i_sub_selected = self._get_corrected_sub_sel_idx(x)
+
         x_sub, is_act_sub = self._x_sub, self._is_act_sub
         n_sub = x_sub.shape[1]
-        x_dist = distance.cdist(x[:, :n_sub], x_sub, metric='cityblock')
-        i_sub_selected = np.zeros((x.shape[0],), dtype=int)
-        for i in range(x.shape[0]):
-            # Get minimum distance
-            i_min_dist = np.argmin(x_dist[i, :])
-            i_sub_selected[i] = i_min_dist
-
-            # Impute if the design vector didn't match exactly
-            if x_dist[i, i_min_dist] > 0:
-                x[i, :n_sub] = x_sub[i_min_dist, :]
-                is_active[i, :n_sub] = is_act_sub[i_min_dist, :]
+        x[:, :n_sub] = x_sub[i_sub_selected, :].copy()
+        is_active[:, :n_sub] = is_act_sub[i_sub_selected, :].copy()
 
         # Correct design vectors of underlying problem
         n_cont = self._n_cont
@@ -1007,7 +1039,39 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
         x[:, n_sub:] = x_problem[:, :n_cont]
         is_active[:, n_sub:] = is_act_problem[:, :n_cont]
 
-        self.__correct_output = {'i_sub_sel': i_sub_selected}
+        self._correct_output = {'i_sub_sel': i_sub_selected}
+
+    def _get_corrected_sub_sel_idx(self, x: np.ndarray):
+        x_sub, is_active_sub = self._x_sub, self._is_act_sub
+
+        corrected_sub_sel_idx = np.zeros((x.shape[0],), dtype=int)
+        for j, xi in enumerate(x):
+            matched_dv_idx = np.arange(x_sub.shape[0])
+            x_valid_matched, is_active_valid_matched = x_sub, is_active_sub
+            for i, is_discrete in enumerate(self.is_discrete_mask):
+                # Ignore continuous vars
+                if not is_discrete:
+                    continue
+
+                # Match active valid x to value or inactive valid x
+                is_active_valid_i = is_active_valid_matched[:, i]
+                matched = (is_active_valid_i & (x_valid_matched[:, i] == xi[i])) | (~is_active_valid_i)
+
+                # If there are no matches, match the closest value
+                if not np.any(matched):
+                    x_val_dist = np.abs(x_valid_matched[:, i] - xi[i])
+                    matched = x_val_dist == np.min(x_val_dist)
+
+                # Select vectors and check if there are any vectors left to choose from
+                matched_dv_idx = matched_dv_idx[matched]
+                x_valid_matched = x_valid_matched[matched, :]
+                is_active_valid_matched = is_active_valid_matched[matched, :]
+
+                # If there is only one matched vector left, there is no need to continue checking
+                if len(matched_dv_idx) == 1:
+                    break
+            corrected_sub_sel_idx[j] = matched_dv_idx[0]
+        return corrected_sub_sel_idx
 
     def _get_x_underlying(self, x_underlying):
         if self._n_cont == 0:
@@ -1020,7 +1084,7 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
             x = self.pareto_set()
         x, _ = self.correct_x(x)
         f = self.evaluate(x, return_as_dictionary=True)['F']
-        i_sub_selected = self.__correct_output['i_sub_sel']
+        i_sub_selected = self._correct_output['i_sub_sel']
 
         plt.figure()
         f0 = f[:, 0]
@@ -1143,9 +1207,6 @@ class NeuralNetwork(HierarchyProblemBase):
             n_base*6**3,  # x0 == 2
         ])
 
-    def _get_n_active_cont_mean(self) -> int:
-        return 2
-
     def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
                        h_out: np.ndarray, *args, **kwargs):
         self._correct_x_impute(x, is_active_out)
@@ -1198,7 +1259,7 @@ if __name__ == '__main__':
     # # HierarchicalRosenbrock().plot_pf()
     # MOHierarchicalRosenbrock().plot_pf()
 
-    # ZaeffererHierarchical.from_mode(ZaeffererProblemMode.A_OPT_INACT_IMP_PROF_UNI).print_stats()
+    ZaeffererHierarchical.from_mode(ZaeffererProblemMode.A_OPT_INACT_IMP_PROF_UNI).print_stats()
     # ZaeffererHierarchical.from_mode(ZaeffererProblemMode.A_OPT_INACT_IMP_PROF_UNI).plot_pf()
     # ZaeffererHierarchical.from_mode(ZaeffererProblemMode.A_OPT_INACT_IMP_PROF_UNI).plot_design_space()
 

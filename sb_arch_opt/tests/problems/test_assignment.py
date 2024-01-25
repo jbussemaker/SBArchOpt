@@ -27,26 +27,30 @@ def test_assignment():
 @check_dependency()
 def test_partitioning():
     Partitioning().print_stats()
-    run_test_hierarchy(PartitioningCovering(), 1.71)
+    run_test_hierarchy(PartitioningCovering(), 1.71, corr_ratio=1.71)
+
+    _ = PartitioningCovering().is_conditionally_active
 
 
 @check_dependency()
 def test_unordered():
-    run_test_hierarchy(UnordNonReplComb(), 2.55)
+    run_test_hierarchy(UnordNonReplComb(), 2.55, corr_ratio=2.55)
     UnordNonReplCombLarge().print_stats()
     UnorderedComb().print_stats()
+
+    _ = UnorderedComb().is_conditionally_active
 
 
 @check_dependency()
 def test_assign_enc_gnc():
-    for problem, n_valid, imp_ratio in [
-        (AssignmentGNCNoActType(), 327, 14.1),
-        (AssignmentGNCNoAct(), 29857, 39.5),
-        (AssignmentGNCNoType(), 85779, 82.5),
-        (AssignmentGNC(), 79091323, 367),
+    for problem, n_valid, imp_ratio, corr_ratio in [
+        (AssignmentGNCNoActType(), 327, 14.1, 3.01),
+        (AssignmentGNCNoAct(), 29857, 39.5, np.nan),
+        (AssignmentGNCNoType(), 85779, 82.5, np.nan),
+        (AssignmentGNC(), 79091323, 367, np.nan),
     ]:
-        run_test_hierarchy(problem, imp_ratio, check_n_valid=False)
+        run_test_hierarchy(problem, imp_ratio, check_n_valid=n_valid < 400, corr_ratio=corr_ratio)
         assert problem.get_n_valid_discrete() == n_valid
 
-        with pytest.raises(RuntimeError):
-            _ = problem.is_conditionally_active
+        x_all, _ = problem.all_discrete_x
+        _ = problem.is_conditionally_active

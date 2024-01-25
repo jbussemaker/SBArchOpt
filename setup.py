@@ -59,10 +59,11 @@ if __name__ == '__main__':
             'cached-property~=1.5',
             'ConfigSpace~=0.6.1',
             'more-itertools~=9.1',
+            'appdirs',
         ],
         extras_require={
             'arch_sbo': [
-                'smt~=2.0',
+                'smt~=2.2',
                 'numba',
                 'scikit-learn',
             ],
@@ -87,10 +88,16 @@ if __name__ == '__main__':
             # 'hebo': [  # pip install -r requirements-hebo.txt
             #     'HEBO',  # Disabled until commit f050865fd2f554b5ca94642667257b365c753f29 has been released on PyPI
             # ],
+            'rocket': [
+                'ambiance',
+            ],
+            'egor': [
+                'egobox~=0.14.0',
+            ],
         },
         python_requires='>=3.7',
         packages=find_packages(include='sb_arch_opt*'),
         package_data={
-            'sb_arch_opt.problems': ['turbofan_data/*'],
+            'sb_arch_opt.problems': ['turbofan_data/*', 'turbofan_data/**/*'],
         },
     )
