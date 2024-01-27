@@ -2,7 +2,7 @@
 
 [Installation and usage](../algo/egor.md)
 
-::: sb_arch_opt.algo.egor_interface.EgorArchOptInterface
+::: sb_arch_opt.algo.egor_interface.algo.EgorArchOptInterface
     handler: python
     options:
         members:
