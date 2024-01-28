@@ -466,6 +466,10 @@ class ArchDesignSpace:
     @staticmethod
     def calculate_discrete_rates_raw(x: np.ndarray, is_active: np.ndarray, is_discrete_mask: np.ndarray) \
             -> Tuple[np.ndarray, np.ndarray, np.ndarray, set]:
+        # Ignore All-Nan slice warning
+        import warnings
+        warnings.filterwarnings('ignore', 'All-NaN.*', RuntimeWarning)
+
         # x should be moved to 0!
         x_merged = x.astype(int)+1
         x_merged[~is_active] = 0
