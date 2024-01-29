@@ -1,0 +1,11 @@
+name: sbarchopt
+channels:
+  - conda-forge
+dependencies:
+  - python=3.9
+  - numpy
+  - scipy
+  - pip
+  - pip:
+    - sb-arch-opt[arch_sbo]
+    - matplotlib
