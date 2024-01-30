@@ -613,6 +613,7 @@ class SimpleTurbofanArchModel(SimpleTurbofanArch):
 
 
 if __name__ == '__main__':
+    print(SimpleTurbofanArch().pareto_front())
     # SimpleTurbofanArch().print_stats()
     # RealisticTurbofanArch().print_stats()
 
