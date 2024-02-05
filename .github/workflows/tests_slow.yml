@@ -34,6 +34,7 @@ jobs:
         pip install -r requirements-tests.txt
         pip install -r requirements-assignment.txt
         pip install -r requirements-hebo.txt
+        pip install -r requirements-ota.txt
         pip install -e .[arch_sbo,botorch,trieste,tpe,rocket,egor]
         pip install jupyter ipython ipykernel
         ipython kernel install --name "python3" --user
