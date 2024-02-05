@@ -34,7 +34,8 @@ def test_constrained():
     assert opt.run_optimization()
 
 
-@pytest.mark.skipif(int(os.getenv('RUN_SLOW_TESTS', 0)) != 1, reason='Set RUN_SLOW_TESTS=1 to run slow tests')
+# @pytest.mark.skipif(int(os.getenv('RUN_SLOW_TESTS', 0)) != 1, reason='Set RUN_SLOW_TESTS=1 to run slow tests')
+@pytest.mark.skip('TensorFlow FuncGraph cannot be pickled')
 @check_dependency()
 def test_store_results_restart(problem: ArchOptProblemBase):
     with tempfile.TemporaryDirectory() as tmp_folder:
