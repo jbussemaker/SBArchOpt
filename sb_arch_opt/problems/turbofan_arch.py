@@ -256,28 +256,40 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
         models_from_cache = set()
 
         def _get_model(name, x_, y_):
-            cache_path = f'{model_cache_dir}/{name}.pkl'
-            if os.path.exists(cache_path):
-                with open(cache_path, 'rb') as fp_:
-                    model = pickle.load(fp_)
-                models_from_cache.add(name)
+            def _inner():
+                cache_path = f'{model_cache_dir}/{name}.pkl'
+                if os.path.exists(cache_path):
+                    with open(cache_path, 'rb') as fp_:
+                        model = pickle.load(fp_)
+                    models_from_cache.add(name)
+                    return model
+
+                data_path = f'{model_data_dir}/{name}.pkl'
+                if os.path.exists(data_path):
+                    with open(data_path, 'rb') as fp_:
+                        model = joblib.load(fp_)
+                    models_from_cache.add(name)
+
+                    with open(cache_path, 'wb') as fp_:
+                        pickle.dump(model, fp_)
+                    return model
+
+                capture_log()
+                model = ensemble.RandomForestRegressor(n_estimators=400)
+                log.info(f'Training: {self.__class__.__name__}.{name} (xt = {x_.shape})')
+                model.fit(x_, y_)
                 return model
 
-            data_path = f'{model_data_dir}/{name}.pkl'
-            if os.path.exists(data_path):
-                with open(data_path, 'rb') as fp_:
-                    model = joblib.load(fp_)
-                models_from_cache.add(name)
+            mdl = _inner()
 
-                with open(cache_path, 'wb') as fp_:
-                    pickle.dump(model, fp_)
-                return model
+            # Fix old model version
+            try:
+                repr(mdl)
+            except AttributeError:
+                for est in mdl.estimators_:
+                    est.monotonic_cst = None
 
-            capture_log()
-            model = ensemble.RandomForestRegressor(n_estimators=400)
-            log.info(f'Training: {self.__class__.__name__}.{name} (xt = {x_.shape})')
-            model.fit(x_, y_)
-            return model
+            return mdl
 
         x, f, g = self._load_evaluated()
         is_failed = self.get_failed_points({'F': f, 'G': g})
