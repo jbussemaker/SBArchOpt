@@ -76,7 +76,7 @@ class ArchDesignSpace:
     def __init__(self):
         self._choice_value_map = None
         self._is_initialized = False
-        self.use_auto_corrector = True
+        self.use_auto_corrector = False
         self.needs_cont_correction = False
 
     @cached_property
@@ -234,8 +234,8 @@ class ArchDesignSpace:
 
     def _get_corrector(self) -> Optional[CorrectorInterface]:
         """Get the default corrector algorithm"""
-        # from sb_arch_opt.correction import ClosestEagerCorrector
-        # return ClosestEagerCorrector(self)
+        from sb_arch_opt.correction import ClosestEagerCorrector
+        return ClosestEagerCorrector(self)
 
     def round_x_discrete(self, x: np.ndarray):
         """
@@ -466,6 +466,10 @@ class ArchDesignSpace:
     @staticmethod
     def calculate_discrete_rates_raw(x: np.ndarray, is_active: np.ndarray, is_discrete_mask: np.ndarray) \
             -> Tuple[np.ndarray, np.ndarray, np.ndarray, set]:
+        # Ignore All-Nan slice warning
+        import warnings
+        warnings.filterwarnings('ignore', 'All-NaN.*', RuntimeWarning)
+
         # x should be moved to 0!
         x_merged = x.astype(int)+1
         x_merged[~is_active] = 0

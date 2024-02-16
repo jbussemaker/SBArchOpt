@@ -34,10 +34,9 @@ Bussemaker, J.H., (2023). SBArchOpt: Surrogate-Based Architecture Optimization. 
 
 ## Usage
 
-See also the tutorials:
+See also the tutorial(s):
 
 - [SBArchOpt Tutorial](tutorial.ipynb): optimization, implementing new problems
-- [Tunable Hierarchical Meta Problem Tutorial](tutorial_tunable_meta_problem.ipynb)
 
 ### Connecting to Optimization Frameworks
 

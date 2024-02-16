@@ -19,7 +19,6 @@ nav:
     - 'SMARTy': 'algo/smarty.md'
   - Tutorials:
       - SBArchOpt: tutorial.ipynb
-      - 'Tunable Hierarchical Meta Problem': tutorial_tunable_meta_problem.ipynb
   - 'Test Problems': 'test_problems.md'
   - API Reference:
     - Problem Definition: 'api/problem.md'

@@ -191,13 +191,14 @@ class HierarchicalSampling(FloatRandomSampling):
 
     _n_comb_gen_all_max = 100e3
 
-    def __init__(self, repair: Repair = None, sobol=True, seed=None, min_rd_split=.8):
+    def __init__(self, repair: Repair = None, sobol=True, seed=None):
         if repair is None:
             repair = ArchOptRepair()
         self._repair = repair
         self.sobol = sobol
         self.n_iter = 10
-        self.min_rd_split = min_rd_split
+        # self.high_rd_split = .8
+        # self.low_rd_split = None
         super().__init__()
 
         # Simply set the seed on the global numpy instance
@@ -399,43 +400,62 @@ class HierarchicalSampling(FloatRandomSampling):
         return np.concatenate([i_x_selected, i_x_tries[i_best]])
 
     def group_design_vectors(self, x_all: np.ndarray, is_act_all: np.ndarray, is_cont_mask) -> List[np.ndarray]:
-        # # Group by active design variables
-        # is_active_unique, unique_indices = np.unique(is_act_all, axis=0, return_inverse=True)
-        # return [np.where(unique_indices == i)[0] for i in range(len(is_active_unique))]
+        # Group by active design variables
+        is_active_unique, unique_indices = np.unique(is_act_all, axis=0, return_inverse=True)
+        return [np.where(unique_indices == i)[0] for i in range(len(is_active_unique))]
 
-        # Group by rate diversity (difference between discrete value occurrences)
-        is_discrete_mask = ~is_cont_mask
-        min_rd_split = self.min_rd_split
-
-        def recursive_get_groups(group_i: np.ndarray) -> List[np.ndarray]:
-            if len(group_i) == 0:
-                return []
-
-            # For current group, get rate diversity information
-            x_grp = x_all[group_i, :]
-            x_min = np.min(x_grp, axis=0).astype(int)
-            is_act_grp = is_act_all[group_i, :]
-            counts, diversity, active_diversity, i_opts = \
-                ArchDesignSpace.calculate_discrete_rates_raw(x_grp - x_min, is_act_grp, is_discrete_mask)
-
-            # Get discrete variables above minimum rate diversity
-            rd_split_rates, = np.where(active_diversity >= min_rd_split)
-            if len(rd_split_rates) == 0:
-                return [group_i]
-
-            # Split on first matched variable
-            xi_split = rd_split_rates[0]
-            opt_rates = counts[1:, xi_split]
-            i_opt_min = np.nanargmin(opt_rates) + x_min[xi_split]
-
-            min_rate_group = x_grp[:, xi_split] == i_opt_min
-            group_i_min = group_i[min_rate_group]
-            group_i_other = group_i[~min_rate_group]
-
-            # Recursively define groups within split groups
-            return recursive_get_groups(group_i_min) + recursive_get_groups(group_i_other)
-
-        return recursive_get_groups(np.arange(x_all.shape[0]))
+        # # Group by rate diversity (difference between discrete value occurrences)
+        # is_discrete_mask = ~is_cont_mask
+        # high_rd_split = self.high_rd_split
+        # low_rd_split = self.low_rd_split
+        # i_low_rd_split = None
+        #
+        # def recursive_get_groups(group_i: np.ndarray) -> List[np.ndarray]:
+        #     nonlocal i_low_rd_split
+        #     if len(group_i) == 0:
+        #         return []
+        #
+        #     # For current group, get rate diversity information
+        #     x_grp = x_all[group_i, :]
+        #     x_min = np.min(x_grp, axis=0).astype(int)
+        #     is_act_grp = is_act_all[group_i, :]
+        #     counts, diversity, active_diversity, i_opts = \
+        #         ArchDesignSpace.calculate_discrete_rates_raw(x_grp - x_min, is_act_grp, is_discrete_mask)
+        #
+        #     # Split on low split rate
+        #     xi_split = None
+        #     if low_rd_split is not None:
+        #         rd_split_rates, = np.where(active_diversity >= low_rd_split)
+        #         if i_low_rd_split is None:  # If no low-split variable has been set
+        #             if len(rd_split_rates) == 0:
+        #                 i_low_rd_split = -1  # Set to "no low-split var"
+        #             else:
+        #                 i_low_rd_split = rd_split_rates[0]  # Choose first var
+        #                 xi_split = rd_split_rates[0]
+        #
+        #         elif i_low_rd_split != -1 and len(rd_split_rates) > 0 and rd_split_rates[0] == i_low_rd_split:
+        #             # Split on same low-split variable
+        #             xi_split = rd_split_rates[0]
+        #
+        #     # Check high split rate
+        #     if xi_split is None:
+        #         rd_split_rates, = np.where(active_diversity >= high_rd_split)
+        #         if len(rd_split_rates) == 0:
+        #             return [group_i]
+        #         # Split on first variable
+        #         xi_split = rd_split_rates[0]
+        #
+        #     opt_rates = counts[1:, xi_split]
+        #     i_opt_min = np.nanargmin(opt_rates) + x_min[xi_split]
+        #
+        #     min_rate_group = x_grp[:, xi_split] == i_opt_min
+        #     group_i_min = group_i[min_rate_group]
+        #     group_i_other = group_i[~min_rate_group]
+        #
+        #     # Recursively define groups within split groups
+        #     return recursive_get_groups(group_i_min) + recursive_get_groups(group_i_other)
+        #
+        # return recursive_get_groups(np.arange(x_all.shape[0]))
 
     def _get_group_weights(self, groups: List[np.ndarray], is_act_all: np.ndarray) -> List[float]:
         # Uniform sampling

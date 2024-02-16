@@ -57,8 +57,11 @@ def get_hc_strategy(kpls_n_dim: Optional[int] = 10, min_pov: float = .25):
     towards exploration over exploitation. Values between 10% and 50% are shown to give good optimization results.
     """
 
-    # Get the predictor: MD-GP works best
-    predictor = MDGPRegressor(kpls_n_dim=kpls_n_dim)
+    # Get the predictor: RF works best but requires scikit-learn
+    try:
+        predictor = RandomForestClassifier(n=100, n_dim=10)
+    except ImportError:
+        predictor = MDGPRegressor(kpls_n_dim=kpls_n_dim)
 
     # Create the strategy: use as additional constraint at Probability of Validity >= 50%
     return PredictionHCStrategy(predictor, constraint=True, min_pov=min_pov)
