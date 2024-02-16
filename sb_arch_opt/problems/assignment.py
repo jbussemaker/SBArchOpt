@@ -33,7 +33,6 @@ try:
     from assign_experiments.problems.analytical import *
     HAS_ASSIGN_ENC = True
 except ImportError:
-    raise
     HAS_ASSIGN_ENC = False
 
 __all__ = ['HAS_ASSIGN_ENC', 'AssignmentProblemWrapper',
