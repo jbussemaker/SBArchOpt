@@ -1,3 +1,4 @@
+import os
 import pytest
 from sb_arch_opt.problem import *
 from sb_arch_opt.algo.hebo_interface import *
@@ -6,6 +7,11 @@ from sb_arch_opt.problems.constrained import ArchCantileveredBeam
 from sb_arch_opt.algo.hebo_interface.algo import HEBOArchOptInterface
 
 check_dependency = lambda: pytest.mark.skipif(not HAS_HEBO, reason='HEBO dependencies not installed')
+
+
+@pytest.mark.skipif(int(os.getenv('RUN_SLOW_TESTS', 0)) != 1, reason='Set RUN_SLOW_TESTS=1 to run slow tests')
+def test_slow_tests():
+    assert HAS_HEBO
 
 
 @check_dependency()

@@ -12,6 +12,11 @@ from pymoo.core.initialization import Initialization
 check_dependency = lambda: pytest.mark.skipif(not HAS_OPEN_TURB_ARCH, reason='Turbofan arch dependencies not installed')
 
 
+@pytest.mark.skipif(int(os.getenv('RUN_SLOW_TESTS', 0)) != 1, reason='Set RUN_SLOW_TESTS=1 to run slow tests')
+def test_slow_tests():
+    assert HAS_OPEN_TURB_ARCH
+
+
 @check_dependency()
 def test_simple_problem():
     problem = SimpleTurbofanArch()
