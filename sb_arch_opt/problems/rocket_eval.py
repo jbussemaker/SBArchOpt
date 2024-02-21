@@ -28,7 +28,6 @@ from dataclasses import dataclass
 
 import scipy.optimize as opt
 from scipy.integrate import solve_ivp
-from scipy.interpolate import interp1d
 
 try:
     import ambiance

@@ -31,7 +31,9 @@ from sb_arch_opt.algo.arch_sbo.metrics import *
 from sb_arch_opt.algo.arch_sbo.hc_strategy import *
 
 if not HAS_ARCH_SBO:
-    get_sbo_termination = lambda *_, **__: None
+
+    def get_sbo_termination(*_, **__):
+        return None
 
 
 __all__ = [

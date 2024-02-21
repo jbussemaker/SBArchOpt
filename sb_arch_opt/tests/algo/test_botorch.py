@@ -9,9 +9,17 @@ try:
 except ImportError:
     pass
 
+<<<<<<< Updated upstream
 check_dependency = lambda: pytest.mark.skipif(
     not HAS_BOTORCH, reason="BoTorch/Ax dependencies not installed"
 )
+=======
+
+def check_dependency():
+    return pytest.mark.skipif(
+        not HAS_BOTORCH, reason="BoTorch/Ax dependencies not installed"
+    )
+>>>>>>> Stashed changes
 
 
 @check_dependency()

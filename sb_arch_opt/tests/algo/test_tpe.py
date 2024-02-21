@@ -5,9 +5,15 @@ from sb_arch_opt.algo.tpe_interface import *
 from sb_arch_opt.problems.discrete import MDBranin
 from sb_arch_opt.problems.hidden_constraints import Alimo
 
+<<<<<<< Updated upstream
 check_dependency = lambda: pytest.mark.skipif(
     not HAS_TPE, reason="TPE dependencies not installed"
 )
+=======
+
+def check_dependency():
+    return pytest.mark.skipif(not HAS_TPE, reason="TPE dependencies not installed")
+>>>>>>> Stashed changes
 
 
 @check_dependency()

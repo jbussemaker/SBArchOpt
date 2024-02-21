@@ -9,9 +9,17 @@ from pymoo.optimize import minimize
 from pymoo.core.population import Population
 from pymoo.core.initialization import Initialization
 
+<<<<<<< Updated upstream
 check_dependency = lambda: pytest.mark.skipif(
     not HAS_OPEN_TURB_ARCH, reason="Turbofan arch dependencies not installed"
 )
+=======
+
+def check_dependency():
+    return pytest.mark.skipif(
+        not HAS_OPEN_TURB_ARCH, reason="Turbofan arch dependencies not installed"
+    )
+>>>>>>> Stashed changes
 
 
 @check_dependency()

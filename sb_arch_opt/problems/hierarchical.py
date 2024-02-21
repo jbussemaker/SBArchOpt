@@ -21,7 +21,6 @@ import enum
 import numpy as np
 from typing import *
 from deprecated import deprecated
-from scipy.spatial import distance
 from sb_arch_opt.sampling import *
 from pymoo.problems.multi.zdt import ZDT1
 from sb_arch_opt.problems.discrete import *
@@ -1302,7 +1301,13 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
 class HierBranin(TunableHierarchicalMetaProblem):
 
     def __init__(self):
+<<<<<<< Updated upstream
         factory = lambda n: MDBranin()
+=======
+        def factory(n):
+            return MDBranin()
+
+>>>>>>> Stashed changes
         super().__init__(
             factory, imp_ratio=5.0, n_subproblem=50, diversity_range=0.5, n_opts=3
         )
@@ -1318,7 +1323,13 @@ class TunableZDT1(TunableHierarchicalMetaProblem):
         n_opts=3,
         cont_ratio=1.0,
     ):
+<<<<<<< Updated upstream
         factory = lambda n: NoHierarchyWrappedProblem(ZDT1(n_var=n))
+=======
+        def factory(n):
+            return NoHierarchyWrappedProblem(ZDT1(n_var=n))
+
+>>>>>>> Stashed changes
         super().__init__(
             factory,
             imp_ratio=imp_ratio,
@@ -1358,14 +1369,26 @@ class HierDiscreteZDT1(TunableZDT1):
 class HierCantileveredBeam(TunableHierarchicalMetaProblem):
 
     def __init__(self):
+<<<<<<< Updated upstream
         factory = lambda n: ArchCantileveredBeam()
+=======
+        def factory(n):
+            return ArchCantileveredBeam()
+
+>>>>>>> Stashed changes
         super().__init__(factory, imp_ratio=6.0, n_subproblem=20, diversity_range=0.5)
 
 
 class HierCarside(TunableHierarchicalMetaProblem):
 
     def __init__(self):
+<<<<<<< Updated upstream
         factory = lambda n: ArchCarside()
+=======
+        def factory(n):
+            return ArchCarside()
+
+>>>>>>> Stashed changes
         super().__init__(factory, imp_ratio=7.0, n_subproblem=50, diversity_range=0.5)
 
 

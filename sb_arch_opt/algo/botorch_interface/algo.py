@@ -58,7 +58,11 @@ __all__ = ["AxInterface", "check_dependencies"]
 def check_dependencies():
     if not HAS_BOTORCH:
         raise ImportError(
+<<<<<<< Updated upstream
             f"BoTorch/Ax dependencies not installed: python setup.py install[botorch]"
+=======
+            "BoTorch/Ax dependencies not installed: python setup.py install[botorch]"
+>>>>>>> Stashed changes
         )
 
 

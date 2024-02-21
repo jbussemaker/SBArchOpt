@@ -33,9 +33,17 @@ try:
 except ImportError:
     pass
 
+<<<<<<< Updated upstream
 check_dependency = lambda: pytest.mark.skipif(
     not HAS_ARCH_SBO, reason="ArchSBO dependencies not installed"
 )
+=======
+
+def check_dependency():
+    return pytest.mark.skipif(
+        not HAS_ARCH_SBO, reason="ArchSBO dependencies not installed"
+    )
+>>>>>>> Stashed changes
 
 
 @check_dependency()

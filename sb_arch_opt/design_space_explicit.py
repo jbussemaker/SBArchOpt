@@ -244,7 +244,11 @@ class ExplicitArchDesignSpace(ArchDesignSpace):
 
     def _block_after_init(self):
         if self._is_initialized:
+<<<<<<< Updated upstream
             raise RuntimeError(f"Cannot change variables or constraints after usage!")
+=======
+            raise RuntimeError("Cannot change variables or constraints after usage!")
+>>>>>>> Stashed changes
 
     def add_param(self, param: ParamType):
         self.add_params([param])

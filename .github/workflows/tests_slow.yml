@@ -35,6 +35,7 @@ jobs:
         pip install -r requirements-assignment.txt
         pip install -r requirements-hebo.txt
         pip install -e .[arch_sbo,botorch,trieste,tpe,rocket,egor]
+        python -m  pip install --upgrade --force-reinstall git+https://github.com/Paul-Saves/smt
         pip install jupyter ipython ipykernel
         ipython kernel install --name "python3" --user
 

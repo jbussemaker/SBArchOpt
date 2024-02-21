@@ -5,9 +5,15 @@ from sb_arch_opt.problems.md_mo import MOZDT1
 from sb_arch_opt.problems.constrained import ArchCantileveredBeam
 from sb_arch_opt.algo.hebo_interface.algo import HEBOArchOptInterface
 
+<<<<<<< Updated upstream
 check_dependency = lambda: pytest.mark.skipif(
     not HAS_HEBO, reason="HEBO dependencies not installed"
 )
+=======
+
+def check_dependency():
+    return pytest.mark.skipif(not HAS_HEBO, reason="HEBO dependencies not installed")
+>>>>>>> Stashed changes
 
 
 @check_dependency()

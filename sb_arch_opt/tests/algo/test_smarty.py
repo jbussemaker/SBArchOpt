@@ -5,9 +5,17 @@ from sb_arch_opt.problems.continuous import Branin
 from sb_arch_opt.problems.constrained import ArchCantileveredBeam
 from sb_arch_opt.algo.smarty_interface.algo import SMARTyArchOptInterface
 
+<<<<<<< Updated upstream
 check_dependency = lambda: pytest.mark.skipif(
     not HAS_SMARTY, reason="SMARTy dependencies not installed"
 )
+=======
+
+def check_dependency():
+    return pytest.mark.skipif(
+        not HAS_SMARTY, reason="SMARTy dependencies not installed"
+    )
+>>>>>>> Stashed changes
 
 
 @check_dependency()

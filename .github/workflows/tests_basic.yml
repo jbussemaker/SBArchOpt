@@ -33,6 +33,7 @@ jobs:
         python -m pip install --upgrade pip setuptools
         pip install -r requirements-tests.txt
         pip install -e .
+        python -m  pip install --upgrade --force-reinstall git+https://github.com/Paul-Saves/smt
 
     - name: Test with pytest
       run: pytest sb_arch_opt --durations=0

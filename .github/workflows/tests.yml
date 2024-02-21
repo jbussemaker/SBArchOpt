@@ -38,6 +38,12 @@ jobs:
         pip install -r requirements-assignment.txt
         pip install -r requirements-hebo.txt
         pip install -e .[arch_sbo,botorch,trieste,tpe,rocket,egor]
-
+        python -m  pip install --upgrade --force-reinstall git+https://github.com/Paul-Saves/smt
+    - name: Check format with black
+      run: |
+        black --version sb_arch_opt
+        black --diff sb_arch_opt
+        black --check sb_arch_opt
+        
     - name: Test with pytest
       run: pytest sb_arch_opt --durations=0
