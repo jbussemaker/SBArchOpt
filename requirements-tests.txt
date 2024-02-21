@@ -1,3 +1,5 @@
 pytest
 testbook~=0.4.2
 matplotlib
+smt
+numba~=0.57

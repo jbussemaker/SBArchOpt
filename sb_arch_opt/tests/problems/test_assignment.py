@@ -3,7 +3,8 @@ import numpy as np
 from sb_arch_opt.problems.assignment import *
 from sb_arch_opt.tests.problems.test_hierarchical import run_test_hierarchy
 
-check_dependency = lambda: pytest.mark.skipif(not HAS_ASSIGN_ENC, reason='assign_enc dependencies not installed')
+def check_dependency():
+    return pytest.mark.skipif(not HAS_ASSIGN_ENC, reason='assign_enc dependencies not installed')
 
 
 @check_dependency()

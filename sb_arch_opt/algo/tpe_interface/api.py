@@ -51,7 +51,7 @@ log = logging.getLogger('sb_arch_opt.tpe')
 
 def check_dependencies():
     if not HAS_TPE:
-        raise RuntimeError(f'TPE dependencies not installed: pip install -e .[tpe]')
+        raise RuntimeError('TPE dependencies not installed: pip install -e .[tpe]')
 
 
 class ArchTPEInterface:
@@ -69,9 +69,9 @@ class ArchTPEInterface:
         capture_log()
 
         if problem.n_obj != 1:
-            raise ValueError(f'Currently only single-objective problems are supported!')
+            raise ValueError('Currently only single-objective problems are supported!')
         if problem.n_ieq_constr != 0 or problem.n_eq_constr != 0:
-            raise ValueError(f'Currently only unconstrained problems are supported!')
+            raise ValueError('Currently only unconstrained problems are supported!')
 
         self._problem = problem
         self._optimizer: Optional['TPEOptimizer'] = None
@@ -194,7 +194,7 @@ class TPEAlgorithm(Algorithm):
 
     def _setup(self, problem, **kwargs):
         if not isinstance(problem, ArchOptProblemBase):
-            raise RuntimeError(f'The TPE algorithm only works with SBArchOpt problem definitions!')
+            raise RuntimeError('The TPE algorithm only works with SBArchOpt problem definitions!')
 
         self._interface = interface = ArchTPEInterface(problem)
         interface.initialize()

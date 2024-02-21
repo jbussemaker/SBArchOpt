@@ -8,7 +8,8 @@ from sb_arch_opt.problems.md_mo import MOHimmelblau, MDMOHimmelblau
 from sb_arch_opt.problems.constrained import ArchCantileveredBeam, MDCantileveredBeam, ArchWeldedBeam, MDWeldedBeam
 from sb_arch_opt.problems.hidden_constraints import Mueller01, MOHierarchicalRosenbrockHC
 
-check_dependency = lambda: pytest.mark.skipif(not HAS_SEGOMOE, reason='SEGOMOE dependencies not installed')
+def check_dependency():
+    return pytest.mark.skipif(not HAS_SEGOMOE, reason='SEGOMOE dependencies not installed')
 
 
 @pytest.fixture

@@ -49,7 +49,7 @@ log = logging.getLogger('sb_arch_opt.segomoe')
 
 def check_dependencies():
     if not HAS_SEGOMOE:
-        raise ImportError(f'SEGOMOE not installed!')
+        raise ImportError('SEGOMOE not installed!')
 
 
 class SEGOMOEInterface:

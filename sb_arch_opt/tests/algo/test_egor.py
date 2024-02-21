@@ -6,9 +6,8 @@ from sb_arch_opt.problems.discrete import MDBranin
 from sb_arch_opt.problems.constrained import ArchCantileveredBeam, MDCantileveredBeam
 from sb_arch_opt.algo.egor_interface.algo import EgorArchOptInterface
 
-check_dependency = lambda: pytest.mark.skipif(
-    not HAS_EGOBOX, reason="Egor dependencies not installed"
-)
+def check_dependency():
+    return pytest.mark.skipif(not HAS_EGOBOX, reason="Egor dependencies not installed")
 
 
 @check_dependency()
