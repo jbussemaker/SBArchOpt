@@ -22,6 +22,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+
 import timeit
 import numpy as np
 from typing import *
@@ -39,11 +40,25 @@ from pymoo.util.normalization import Normalization
 from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
 from pymoo.algorithms.moo.nsga2 import RankAndCrowdingSurvival, calc_crowding_distance
 
-__all__ = ['SurrogateInfill', 'FunctionEstimateInfill', 'ConstrainedInfill', 'FunctionEstimateConstrainedInfill',
-           'ExpectedImprovementInfill', 'MinVariancePFInfill', 'ConstraintStrategy', 'MeanConstraintPrediction',
-           'ProbabilityOfFeasibility', 'ProbabilityOfImprovementInfill', 'LowerConfidenceBoundInfill',
-           'MinimumPoIInfill', 'EnsembleInfill', 'IgnoreConstraints', 'get_default_infill', 'HCInfill',
-           'ConstraintAggregation']
+__all__ = [
+    "SurrogateInfill",
+    "FunctionEstimateInfill",
+    "ConstrainedInfill",
+    "FunctionEstimateConstrainedInfill",
+    "ExpectedImprovementInfill",
+    "MinVariancePFInfill",
+    "ConstraintStrategy",
+    "MeanConstraintPrediction",
+    "ProbabilityOfFeasibility",
+    "ProbabilityOfImprovementInfill",
+    "LowerConfidenceBoundInfill",
+    "MinimumPoIInfill",
+    "EnsembleInfill",
+    "IgnoreConstraints",
+    "get_default_infill",
+    "HCInfill",
+    "ConstraintAggregation",
+]
 
 try:
     from smt.surrogate_models.surrogate_model import SurrogateModel
@@ -52,8 +67,12 @@ except ImportError:
     pass
 
 
-def get_default_infill(problem: ArchOptProblemBase, n_parallel: int = None, min_pof: float = None,
-                       g_aggregation: 'ConstraintAggregation' = None) -> Tuple['ConstrainedInfill', int]:
+def get_default_infill(
+    problem: ArchOptProblemBase,
+    n_parallel: int = None,
+    min_pof: float = None,
+    g_aggregation: "ConstraintAggregation" = None,
+) -> Tuple["ConstrainedInfill", int]:
     """
     Get the default infill criterion according to the following logic:
     - Single-objective: Ensemble of EI, LCB, PoI with n_batch = n_parallel
@@ -70,7 +89,11 @@ def get_default_infill(problem: ArchOptProblemBase, n_parallel: int = None, min_
         if n_parallel is None:
             n_parallel = 1
 
-    so_ensemble = [ExpectedImprovementInfill(), LowerConfidenceBoundInfill(), ProbabilityOfImprovementInfill()]
+    so_ensemble = [
+        ExpectedImprovementInfill(),
+        LowerConfidenceBoundInfill(),
+        ProbabilityOfImprovementInfill(),
+    ]
     mo_ensemble = [MinimumPoIInfill(), MinimumPoIInfill(euclidean=True)]
 
     def _get_infill():
@@ -84,8 +107,10 @@ def get_default_infill(problem: ArchOptProblemBase, n_parallel: int = None, min_
     # Get infill and set constraint handling technique
     infill, n_batch = _get_infill()
 
-    if min_pof is not None and min_pof != .5:
-        infill.constraint_strategy = ProbabilityOfFeasibility(min_pof=min_pof, aggregation=g_aggregation)
+    if min_pof is not None and min_pof != 0.5:
+        infill.constraint_strategy = ProbabilityOfFeasibility(
+            min_pof=min_pof, aggregation=g_aggregation
+        )
     else:
         infill.constraint_strategy = MeanConstraintPrediction(aggregation=g_aggregation)
 
@@ -95,11 +120,11 @@ def get_default_infill(problem: ArchOptProblemBase, n_parallel: int = None, min_
 class SurrogateInfill:
     """Base class for surrogate infill criteria"""
 
-    _exclude = ['surrogate_model']
+    _exclude = ["surrogate_model"]
 
     def __init__(self):
         self.problem: Optional[Problem] = None
-        self.surrogate_model: Optional[Union['SurrogateModel', 'KrgBased']] = None
+        self.surrogate_model: Optional[Union["SurrogateModel", "KrgBased"]] = None
         self.normalization: Optional[Normalization] = None
         self.n_obj = 0
         self.n_constr = 0
@@ -112,7 +137,7 @@ class SurrogateInfill:
         self.f_infill_log = []
         self.g_infill_log = []
         self.n_eval_infill = 0
-        self.time_eval_infill = 0.
+        self.time_eval_infill = 0.0
         self.select_improve_infills = True
 
     def __getstate__(self):
@@ -128,35 +153,58 @@ class SurrogateInfill:
     def get_g_training_set(self, g: np.ndarray) -> np.ndarray:
         return g
 
-    def set_samples(self, x_train: np.ndarray, is_active_train: np.ndarray, y_train: np.ndarray):
+    def set_samples(
+        self, x_train: np.ndarray, is_active_train: np.ndarray, y_train: np.ndarray
+    ):
         self.x_train = x_train
         self.is_active_train = is_active_train
         self.y_train = y_train
 
-    def predict(self, x: np.ndarray, is_active: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def predict(
+        self, x: np.ndarray, is_active: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray]:
         try:
-            kwargs = {'is_acting': is_active.astype(bool)} if self.surrogate_model.supports['x_hierarchy'] else {}
-            y = self.surrogate_model.predict_values(self.normalization.forward(x), **kwargs)
+            kwargs = (
+                {"is_acting": is_active.astype(bool)}
+                if self.surrogate_model.supports["x_hierarchy"]
+                else {}
+            )
+            y = self.surrogate_model.predict_values(
+                self.normalization.forward(x), **kwargs
+            )
         except FloatingPointError:
-            y = np.zeros((x.shape[0], self.surrogate_model.ny))*np.nan
+            y = np.zeros((x.shape[0], self.surrogate_model.ny)) * np.nan
 
         return self._split_f_g(y)
 
-    def predict_variance(self, x: np.ndarray, is_active: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def predict_variance(
+        self, x: np.ndarray, is_active: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray]:
         try:
-            kwargs = {'is_acting': is_active.astype(bool)} if self.surrogate_model.supports['x_hierarchy'] else {}
-            y_var = self.surrogate_model.predict_variances(self.normalization.forward(x), **kwargs)
+            kwargs = (
+                {"is_acting": is_active.astype(bool)}
+                if self.surrogate_model.supports["x_hierarchy"]
+                else {}
+            )
+            y_var = self.surrogate_model.predict_variances(
+                self.normalization.forward(x), **kwargs
+            )
         except FloatingPointError:
-            y_var = np.zeros((x.shape[0], self.surrogate_model.ny))*np.nan
+            y_var = np.zeros((x.shape[0], self.surrogate_model.ny)) * np.nan
 
         return self._split_f_g(y_var)
 
     def _split_f_g(self, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         if self.n_constr > 0:
-            return y[:, :self.n_obj], y[:, self.n_obj:]
-        return y[:, :self.n_obj], np.zeros((y.shape[0], 0))
+            return y[:, : self.n_obj], y[:, self.n_obj :]
+        return y[:, : self.n_obj], np.zeros((y.shape[0], 0))
 
-    def initialize(self, problem: Problem, surrogate_model: 'SurrogateModel', normalization: Normalization):
+    def initialize(
+        self,
+        problem: Problem,
+        surrogate_model: "SurrogateModel",
+        normalization: Normalization,
+    ):
         self.problem = problem
         self.n_obj = problem.n_obj
         self.n_constr = problem.n_constr
@@ -168,7 +216,9 @@ class SurrogateInfill:
 
         self.n_f_ic = self.get_n_infill_objectives()
 
-    def select_infill_solutions(self, population: Population, infill_problem: Problem, n_infill) -> Population:
+    def select_infill_solutions(
+        self, population: Population, infill_problem: Problem, n_infill
+    ) -> Population:
         """Select infill solutions from resulting population using rank and crowding selection (from NSGA2) algorithm.
         This method can be overwritten to implement a custom selection strategy."""
 
@@ -179,7 +229,9 @@ class SurrogateInfill:
         survival = RankAndCrowdingSurvival()
         return survival.do(infill_problem, population, n_survive=n_infill)
 
-    def select_infill(self, population: Population, infill_problem: Problem, n_infill) -> Population:
+    def select_infill(
+        self, population: Population, infill_problem: Problem, n_infill
+    ) -> Population:
         """Select infill points and improve the precision using a gradient-based algorithm."""
 
         sel_pop = self.select_infill_solutions(population, infill_problem, n_infill)
@@ -208,7 +260,9 @@ class SurrogateInfill:
         if not np.any(is_cont_mask):
             return pop
 
-        def get_y_precision_funcs(x_ref: np.ndarray, is_act_ref: np.ndarray, f_ref: np.ndarray, i_opt):
+        def get_y_precision_funcs(
+            x_ref: np.ndarray, is_act_ref: np.ndarray, f_ref: np.ndarray, i_opt
+        ):
             last_g: Optional[np.ndarray] = None
             x_norm_opt = x_norm[i_opt]
             xl_opt = xl[i_opt]
@@ -216,17 +270,17 @@ class SurrogateInfill:
             def y_precision(x_norm_):
                 nonlocal last_g
                 x_eval = x_ref.copy()
-                x_eval[0, i_opt] = x_norm_*x_norm_opt + xl_opt
+                x_eval[0, i_opt] = x_norm_ * x_norm_opt + xl_opt
 
                 f, g = self.evaluate(x_eval, is_active=is_act_ref)
 
                 # Objective is the improvement in the direction of the negative unit vector
-                f_diff = f-f_ref
+                f_diff = f - f_ref
                 f_abs_diff = np.sum(f_diff)
 
                 # Penalize deviation from unit vector to ensure that the design point stays in the same area of the PF
                 f_deviation = np.ptp(f_diff)
-                f_so = f_abs_diff + 100*f_deviation**2
+                f_so = f_abs_diff + 100 * f_deviation**2
 
                 # print(f'EVAL {x_norm_}: {f} --> {f_so}, {g}')
                 last_g = g[0, :] if g is not None else None
@@ -236,42 +290,53 @@ class SurrogateInfill:
                 def _g(_):
                     if last_g is None:
                         return 0
-                    return -last_g[i_g]  # Scipy's minimize formulates ineq constraints as: g(x) >= 0
+                    return -last_g[
+                        i_g
+                    ]  # Scipy's minimize formulates ineq constraints as: g(x) >= 0
+
                 return _g
 
-            constraints = [{
-                'type': 'ineq',
-                'fun': get_i_con_fun(i_g)
-            } for i_g in range(self.get_n_infill_constraints())]
+            constraints = [
+                {"type": "ineq", "fun": get_i_con_fun(i_g)}
+                for i_g in range(self.get_n_infill_constraints())
+            ]
 
             return y_precision, constraints, x_norm_opt, xl_opt
 
         # Improve selected points
         xl, xu = problem.xl, problem.xu
-        x_norm = xu-xl
+        x_norm = xu - xl
         x_norm[x_norm < 1e-6] = 1e-6
 
-        x, is_active = problem.correct_x(pop.get('X'))
-        f_pop = pop.get('F')
+        x, is_active = problem.correct_x(pop.get("X"))
+        f_pop = pop.get("F")
         x_optimized = []
         for i in range(len(pop)):
             # Only optimize active continuous variables
             is_act_i = is_active[i, :]
-            i_optimize, = np.where(is_cont_mask & is_act_i)
+            (i_optimize,) = np.where(is_cont_mask & is_act_i)
             x_ref_i = x[i, :]
             if len(i_optimize) == 0:
                 x_optimized.append(x_ref_i)
                 continue
 
             # Run optimization
-            f_opt, con, xn_, xl_ = get_y_precision_funcs(x[[i], :], is_active[[i], :], f_pop[[i], :], i_optimize)
-            bounds = [(0., 1.) for _ in i_optimize]
-            x_start_norm = (x_ref_i[i_optimize]-xl_)/xn_
-            res = minimize(f_opt, x_start_norm, method='slsqp', bounds=bounds,
-                           constraints=con, options={'maxiter': 20, 'eps': 1e-5, 'ftol': 1e-4})
+            f_opt, con, xn_, xl_ = get_y_precision_funcs(
+                x[[i], :], is_active[[i], :], f_pop[[i], :], i_optimize
+            )
+            bounds = [(0.0, 1.0) for _ in i_optimize]
+            x_start_norm = (x_ref_i[i_optimize] - xl_) / xn_
+            res = minimize(
+                f_opt,
+                x_start_norm,
+                method="slsqp",
+                bounds=bounds,
+                constraints=con,
+                options={"maxiter": 20, "eps": 1e-5, "ftol": 1e-4},
+            )
             if res.success:
                 x_opt = x_ref_i.copy()
-                x_opt[i_optimize] = res.x*xn_ + xl_
+                x_opt[i_optimize] = res.x * xn_ + xl_
                 x_optimized.append(x_opt)
             else:
                 x_optimized.append(x_ref_i)
@@ -288,15 +353,17 @@ class SurrogateInfill:
         self.f_infill_log = []
         self.g_infill_log = []
         self.n_eval_infill = 0
-        self.time_eval_infill = 0.
+        self.time_eval_infill = 0.0
 
-    def evaluate(self, x: np.ndarray, is_active: np.ndarray) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+    def evaluate(
+        self, x: np.ndarray, is_active: np.ndarray
+    ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
         """Evaluate the surrogate infill objectives (and optionally constraints). Use the predict and predict_variance
         methods to query the surrogate model on its objectives and constraints."""
 
         s = timeit.default_timer()
         f_infill, g_infill = self._evaluate(x, is_active)
-        self.time_eval_infill += timeit.default_timer()-s
+        self.time_eval_infill += timeit.default_timer() - s
 
         self.f_infill_log.append(f_infill)
         self.g_infill_log.append(g_infill)
@@ -312,7 +379,9 @@ class SurrogateInfill:
     def get_n_infill_constraints(self) -> int:
         raise NotImplementedError
 
-    def _evaluate(self, x: np.ndarray, is_active: np.ndarray) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+    def _evaluate(
+        self, x: np.ndarray, is_active: np.ndarray
+    ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
         """Evaluate the surrogate infill objectives (and optionally constraints). Use the predict and predict_variance
         methods to query the surrogate model on its objectives and constraints."""
         raise NotImplementedError
@@ -327,7 +396,9 @@ class FunctionEstimateInfill(SurrogateInfill):
     def get_n_infill_constraints(self) -> int:
         return self.problem.n_constr
 
-    def _evaluate(self, x: np.ndarray, is_active: np.ndarray) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+    def _evaluate(
+        self, x: np.ndarray, is_active: np.ndarray
+    ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
         f, g = self.predict(x, is_active)
         return f, g
 
@@ -348,7 +419,9 @@ class ConstraintStrategy:
     def __init__(self, aggregation: ConstraintAggregation = None):
         self.problem: Optional[Problem] = None
         self.n_trained_g = None
-        self.aggregation = ConstraintAggregation.NONE if aggregation is None else aggregation
+        self.aggregation = (
+            ConstraintAggregation.NONE if aggregation is None else aggregation
+        )
 
     def initialize(self, problem: Problem):
         self.problem = problem
@@ -382,13 +455,17 @@ class ConstraintStrategy:
         return g
 
     def set_samples(self, x_train: np.ndarray, y_train: np.ndarray):
-        self.n_trained_g = n_trained_g = y_train.shape[1]-self.problem.n_obj
+        self.n_trained_g = n_trained_g = y_train.shape[1] - self.problem.n_obj
 
         n_constr = self.problem.n_ieq_constr
         if n_trained_g == 0 and n_constr != 0:
-            raise RuntimeError(f'Expecting at least one trained constraint model ({n_constr}), received 0')
+            raise RuntimeError(
+                f"Expecting at least one trained constraint model ({n_constr}), received 0"
+            )
         elif n_constr > 0 and (n_trained_g == 0 or n_trained_g > n_constr):
-            raise RuntimeError(f'Expecting between 1 and {n_constr} constraint models, received {n_trained_g}')
+            raise RuntimeError(
+                f"Expecting between 1 and {n_constr} constraint models, received {n_trained_g}"
+            )
 
         self._set_samples(x_train, y_train)
 
@@ -425,9 +502,11 @@ class ProbabilityOfFeasibility(ConstraintStrategy):
         10.1214/lnms/1215456182
     """
 
-    def __init__(self, min_pof: float = None, aggregation: ConstraintAggregation = None):
+    def __init__(
+        self, min_pof: float = None, aggregation: ConstraintAggregation = None
+    ):
         if min_pof is None:
-            min_pof = .5
+            min_pof = 0.5
         self.min_pof = min_pof
         super().__init__(aggregation=aggregation)
 
@@ -437,17 +516,19 @@ class ProbabilityOfFeasibility(ConstraintStrategy):
 
     @staticmethod
     def _pof(g: np.ndarray, g_var: np.ndarray) -> np.ndarray:
-        pof = norm.cdf(-g/np.sqrt(g_var))
+        pof = norm.cdf(-g / np.sqrt(g_var))
         is_nan_mask = np.isnan(pof)
-        pof[is_nan_mask & (g <= 0.)] = 1.
-        pof[is_nan_mask & (g > 0.)] = 0.
+        pof[is_nan_mask & (g <= 0.0)] = 1.0
+        pof[is_nan_mask & (g > 0.0)] = 0.0
         return pof
 
 
 class ConstrainedInfill(SurrogateInfill):
     """Base class for an infill criterion with a constraint handling strategy"""
 
-    def __init__(self, constraint_strategy: ConstraintStrategy = None, min_pof: float = None):
+    def __init__(
+        self, constraint_strategy: ConstraintStrategy = None, min_pof: float = None
+    ):
         if constraint_strategy is None:
             if min_pof is not None:
                 constraint_strategy = ProbabilityOfFeasibility(min_pof=min_pof)
@@ -463,7 +544,9 @@ class ConstrainedInfill(SurrogateInfill):
     def get_g_training_set(self, g: np.ndarray) -> np.ndarray:
         return self.constraint_strategy.get_g_training_set(g)
 
-    def set_samples(self, x_train: np.ndarray, is_active_train: np.ndarray, y_train: np.ndarray):
+    def set_samples(
+        self, x_train: np.ndarray, is_active_train: np.ndarray, y_train: np.ndarray
+    ):
         super().set_samples(x_train, is_active_train, y_train)
         self.constraint_strategy.set_samples(x_train, y_train)
 
@@ -474,7 +557,9 @@ class ConstrainedInfill(SurrogateInfill):
     def get_n_infill_constraints(self) -> int:
         return self.constraint_strategy.get_n_infill_constraints()
 
-    def _evaluate(self, x: np.ndarray, is_active: np.ndarray) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+    def _evaluate(
+        self, x: np.ndarray, is_active: np.ndarray
+    ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
         f, g = self.predict(x, is_active)
         f_var, g_var = self.predict_variance(x, is_active)
 
@@ -489,7 +574,9 @@ class ConstrainedInfill(SurrogateInfill):
     def get_n_infill_objectives(self) -> int:
         raise NotImplementedError
 
-    def evaluate_f(self, f_predict: np.ndarray, f_var_predict: np.ndarray) -> np.ndarray:
+    def evaluate_f(
+        self, f_predict: np.ndarray, f_var_predict: np.ndarray
+    ) -> np.ndarray:
         raise NotImplementedError
 
 
@@ -499,7 +586,9 @@ class FunctionEstimateConstrainedInfill(ConstrainedInfill):
     def get_n_infill_objectives(self) -> int:
         return self.problem.n_obj
 
-    def evaluate_f(self, f_predict: np.ndarray, f_var_predict: np.ndarray) -> np.ndarray:
+    def evaluate_f(
+        self, f_predict: np.ndarray, f_var_predict: np.ndarray
+    ) -> np.ndarray:
         return f_predict
 
 
@@ -523,43 +612,51 @@ class ExpectedImprovementInfill(ConstrainedInfill):
     def get_n_infill_objectives(self) -> int:
         return self.problem.n_obj
 
-    def evaluate_f(self, f_predict: np.ndarray, f_var_predict: np.ndarray) -> np.ndarray:
-        return self._evaluate_f_ei(f_predict, f_var_predict, self.y_train[:, :f_predict.shape[1]])
+    def evaluate_f(
+        self, f_predict: np.ndarray, f_var_predict: np.ndarray
+    ) -> np.ndarray:
+        return self._evaluate_f_ei(
+            f_predict, f_var_predict, self.y_train[:, : f_predict.shape[1]]
+        )
 
     @classmethod
-    def _evaluate_f_ei(cls, f: np.ndarray, f_var: np.ndarray, f_current: np.ndarray) -> np.ndarray:
+    def _evaluate_f_ei(
+        cls, f: np.ndarray, f_var: np.ndarray, f_current: np.ndarray
+    ) -> np.ndarray:
         # Normalize current and predicted objectives
         f_pareto = cls.get_pareto_front(f_current)
         nadir_point, ideal_point = np.max(f_pareto, axis=0), np.min(f_pareto, axis=0)
-        nadir_point[nadir_point == ideal_point] = 1.
-        f_pareto_norm = (f_pareto-ideal_point)/(nadir_point-ideal_point)
+        nadir_point[nadir_point == ideal_point] = 1.0
+        f_pareto_norm = (f_pareto - ideal_point) / (nadir_point - ideal_point)
         f_norm, f_var_norm = cls._normalize_f_var(f, f_var, nadir_point, ideal_point)
 
         # Get EI for each point using closest point in the Pareto front
         f_ei = np.empty(f.shape)
         for i in range(f.shape[0]):
-            i_par_closest = np.argmin(np.sum((f_pareto_norm-f_norm[i, :])**2, axis=1))
+            i_par_closest = np.argmin(
+                np.sum((f_pareto_norm - f_norm[i, :]) ** 2, axis=1)
+            )
             f_par_min = f_pareto_norm[i_par_closest, :]
             ei = cls._ei(f_par_min, f_norm[i, :], f_var_norm[i, :])
-            ei[ei < 0.] = 0.
-            f_ei[i, :] = 1.-ei
+            ei[ei < 0.0] = 0.0
+            f_ei[i, :] = 1.0 - ei
 
         return f_ei
 
     @staticmethod
     def _normalize_f_var(f: np.ndarray, f_var: np.ndarray, nadir_point, ideal_point):
-        f_norm = (f-ideal_point)/(nadir_point-ideal_point)
-        f_var_norm = f_var/((nadir_point-ideal_point+1e-30)**2)
+        f_norm = (f - ideal_point) / (nadir_point - ideal_point)
+        f_var_norm = f_var / ((nadir_point - ideal_point + 1e-30) ** 2)
         return f_norm, f_var_norm
 
     @staticmethod
     def _ei(f_min: np.ndarray, f: np.ndarray, f_var: np.ndarray) -> np.ndarray:
-        dy = f_min-f
-        ei = dy*norm.cdf(dy/np.sqrt(f_var)) + f_var*norm.pdf(dy/np.sqrt(f_var))
+        dy = f_min - f
+        ei = dy * norm.cdf(dy / np.sqrt(f_var)) + f_var * norm.pdf(dy / np.sqrt(f_var))
 
         is_nan_mask = np.isnan(ei)
-        ei[is_nan_mask & (dy > 0.)] = 1.
-        ei[is_nan_mask & (dy <= 0.)] = 0.
+        ei[is_nan_mask & (dy > 0.0)] = 1.0
+        ei[is_nan_mask & (dy <= 0.0)] = 0.0
 
         return ei
 
@@ -576,23 +673,27 @@ class MinVariancePFInfill(FunctionEstimateConstrainedInfill):
     dos Passos, A.G., "Multi-Objective Optimization with Kriging Surrogates Using 'moko'", 2018, 10.1590/1679-78254324
     """
 
-    def select_infill_solutions(self, population: Population, infill_problem: Problem, n_infill) -> Population:
+    def select_infill_solutions(
+        self, population: Population, infill_problem: Problem, n_infill
+    ) -> Population:
         # Get Pareto front and associated design points
-        f = population.get('F')
+        f = population.get("F")
         i_pf = self.get_i_pareto_front(f)
         pop_pf = population[i_pf]
-        x_pf = pop_pf.get('X')
-        is_active_pf = pop_pf.get('is_active').astype(bool)
-        g_pf = pop_pf.get('G')
+        x_pf = pop_pf.get("X")
+        is_active_pf = pop_pf.get("is_active").astype(bool)
+        g_pf = pop_pf.get("G")
 
         # Get variances
         f_var, _ = self.predict_variance(x_pf, is_active_pf)
 
         # Select points with highest variances
-        f_std_obj = 1.-np.sqrt(f_var)
+        f_std_obj = 1.0 - np.sqrt(f_var)
         survival = RankAndCrowdingSurvival()
         pop_var = Population.new(X=x_pf, F=f_std_obj, G=g_pf)
-        i_select = survival.do(infill_problem, pop_var, n_survive=n_infill, return_indices=True)
+        i_select = survival.do(
+            infill_problem, pop_var, n_survive=n_infill, return_indices=True
+        )
 
         return pop_pf[i_select]
 
@@ -622,44 +723,55 @@ class ProbabilityOfImprovementInfill(ConstrainedInfill):
     Hawe, G.I., "An Enhanced Probability of Improvement Utility Function for Locating Pareto Optimal Solutions", 2007
     """
 
-    def __init__(self, f_min_offset: float = 0., **kwargs):
+    def __init__(self, f_min_offset: float = 0.0, **kwargs):
         self.f_min_offset = f_min_offset
         super().__init__(**kwargs)
 
     def get_n_infill_objectives(self) -> int:
         return self.problem.n_obj
 
-    def evaluate_f(self, f_predict: np.ndarray, f_var_predict: np.ndarray) -> np.ndarray:
-        return self._evaluate_f_poi(f_predict, f_var_predict, self.y_train[:, :f_predict.shape[1]], self.f_min_offset)
+    def evaluate_f(
+        self, f_predict: np.ndarray, f_var_predict: np.ndarray
+    ) -> np.ndarray:
+        return self._evaluate_f_poi(
+            f_predict,
+            f_var_predict,
+            self.y_train[:, : f_predict.shape[1]],
+            self.f_min_offset,
+        )
 
     @classmethod
-    def _evaluate_f_poi(cls, f: np.ndarray, f_var: np.ndarray, f_current: np.ndarray, f_min_offset=0.) -> np.ndarray:
+    def _evaluate_f_poi(
+        cls, f: np.ndarray, f_var: np.ndarray, f_current: np.ndarray, f_min_offset=0.0
+    ) -> np.ndarray:
         # Normalize current and predicted objectives
         f_pareto = cls.get_pareto_front(f_current)
         nadir_point, ideal_point = np.max(f_pareto, axis=0), np.min(f_pareto, axis=0)
-        nadir_point[nadir_point == ideal_point] = 1.
-        f_pareto_norm = (f_pareto-ideal_point)/(nadir_point-ideal_point)
+        nadir_point[nadir_point == ideal_point] = 1.0
+        f_pareto_norm = (f_pareto - ideal_point) / (nadir_point - ideal_point)
         f_norm, f_var_norm = cls._normalize_f_var(f, f_var, nadir_point, ideal_point)
 
         # Get PoI for each point using closest point in the Pareto front
         f_poi = np.empty(f.shape)
         for i in range(f.shape[0]):
-            i_par_closest = np.argmin(np.sum((f_pareto_norm-f_norm[i, :])**2, axis=1))
-            f_par_targets = f_pareto_norm[i_par_closest, :]-f_min_offset
+            i_par_closest = np.argmin(
+                np.sum((f_pareto_norm - f_norm[i, :]) ** 2, axis=1)
+            )
+            f_par_targets = f_pareto_norm[i_par_closest, :] - f_min_offset
             poi = cls._poi(f_par_targets, f_norm[i, :], f_var_norm[i, :])
-            f_poi[i, :] = 1.-poi
+            f_poi[i, :] = 1.0 - poi
 
         return f_poi
 
     @staticmethod
     def _normalize_f_var(f: np.ndarray, f_var: np.ndarray, nadir_point, ideal_point):
-        f_norm = (f-ideal_point)/(nadir_point-ideal_point)
-        f_var_norm = f_var/((nadir_point-ideal_point+1e-30)**2)
+        f_norm = (f - ideal_point) / (nadir_point - ideal_point)
+        f_var_norm = f_var / ((nadir_point - ideal_point + 1e-30) ** 2)
         return f_norm, f_var_norm
 
     @staticmethod
     def _poi(f_targets: np.ndarray, f: np.ndarray, f_var: np.ndarray) -> np.ndarray:
-        return norm.cdf((f_targets-f) / np.sqrt(f_var+1e-8))
+        return norm.cdf((f_targets - f) / np.sqrt(f_var + 1e-8))
 
 
 class LowerConfidenceBoundInfill(ConstrainedInfill):
@@ -677,15 +789,17 @@ class LowerConfidenceBoundInfill(ConstrainedInfill):
     Cox, D., "A Statistical Method for Global Optimization", 1992, 10.1109/icsmc.1992.271617
     """
 
-    def __init__(self, alpha: float = 2., **kwargs):
+    def __init__(self, alpha: float = 2.0, **kwargs):
         self.alpha = alpha
         super().__init__(**kwargs)
 
     def get_n_infill_objectives(self) -> int:
         return self.problem.n_obj
 
-    def evaluate_f(self, f_predict: np.ndarray, f_var_predict: np.ndarray) -> np.ndarray:
-        lcb = f_predict - self.alpha*np.sqrt(f_var_predict)
+    def evaluate_f(
+        self, f_predict: np.ndarray, f_var_predict: np.ndarray
+    ) -> np.ndarray:
+        lcb = f_predict - self.alpha * np.sqrt(f_var_predict)
         return lcb
 
 
@@ -712,42 +826,61 @@ class MinimumPoIInfill(ConstrainedInfill):
     def get_n_infill_objectives(self) -> int:
         return 1
 
-    def set_samples(self, x_train: np.ndarray, is_active_train: np.ndarray, y_train: np.ndarray):
+    def set_samples(
+        self, x_train: np.ndarray, is_active_train: np.ndarray, y_train: np.ndarray
+    ):
         super().set_samples(x_train, is_active_train, y_train)
-        self.f_pareto = self.get_pareto_front(y_train[:, :self.problem.n_obj])
+        self.f_pareto = self.get_pareto_front(y_train[:, : self.problem.n_obj])
 
-    def evaluate_f(self, f_predict: np.ndarray, f_var_predict: np.ndarray) -> np.ndarray:
+    def evaluate_f(
+        self, f_predict: np.ndarray, f_var_predict: np.ndarray
+    ) -> np.ndarray:
         return self.get_mpoi_f(f_predict, f_var_predict, self.f_pareto, self.euclidean)
 
     @classmethod
-    def get_mpoi_f(cls, f_predict: np.ndarray, f_var_predict: np.ndarray, f_pareto: np.ndarray, euclidean: bool) \
-            -> np.ndarray:
+    def get_mpoi_f(
+        cls,
+        f_predict: np.ndarray,
+        f_var_predict: np.ndarray,
+        f_pareto: np.ndarray,
+        euclidean: bool,
+    ) -> np.ndarray:
 
         mpoi = np.empty((f_predict.shape[0], 1))
         for i in range(f_predict.shape[0]):
-            mpoi[i, 0] = cls._mpoi(f_pareto, f_predict[i, :], f_var_predict[i, :], euclidean=euclidean)
+            mpoi[i, 0] = cls._mpoi(
+                f_pareto, f_predict[i, :], f_var_predict[i, :], euclidean=euclidean
+            )
 
-        mpoi[mpoi < 1e-6] = 0.
-        return 1.-mpoi
+        mpoi[mpoi < 1e-6] = 0.0
+        return 1.0 - mpoi
 
     @classmethod
-    def _mpoi(cls, f_pareto: np.ndarray, f_predict: np.ndarray, var_predict: np.ndarray, euclidean: bool) -> float:
+    def _mpoi(
+        cls,
+        f_pareto: np.ndarray,
+        f_predict: np.ndarray,
+        var_predict: np.ndarray,
+        euclidean: bool,
+    ) -> float:
 
         n, n_f = f_pareto.shape
 
         # Probability of being dominated for each point in the Pareto front along each objective dimension
         def cdf_not_better(f, f_pred, var_pred):  # Rahat 2017, Eq. 11, 12
-            return ndtr((f_pred-f)/np.sqrt(var_pred))
+            return ndtr((f_pred - f) / np.sqrt(var_pred))
 
         p_is_dom_dim = np.empty((n, n_f))
         for i_f in range(n_f):
-            p_is_dom_dim[:, i_f] = cdf_not_better(f_pareto[:, i_f], f_predict[i_f], var_predict[i_f])
+            p_is_dom_dim[:, i_f] = cdf_not_better(
+                f_pareto[:, i_f], f_predict[i_f], var_predict[i_f]
+            )
 
         # Probability of being dominated for each point along all dimensions: Rahat 2017, Eq. 10
         p_is_dom = np.prod(p_is_dom_dim, axis=1)
 
         # Probability of domination for each point: Rahat 2017, Eq. 13
-        p_dom = 1-p_is_dom
+        p_dom = 1 - p_is_dom
 
         # Minimum probability of domination: Rahat 2017, Eq. 14
         min_poi = np.min(p_dom)
@@ -759,13 +892,17 @@ class MinimumPoIInfill(ConstrainedInfill):
         return min_poi
 
     @classmethod
-    def _get_euclidean_moment(cls, p_dominate: float, f_pareto: np.ndarray, f_predict: np.ndarray) -> float:
+    def _get_euclidean_moment(
+        cls, p_dominate: float, f_pareto: np.ndarray, f_predict: np.ndarray
+    ) -> float:
 
         # If the probability of domination is less than 50%, it means we are on the wrong side of the Pareto front
-        if p_dominate < .5:
-            return 0.
+        if p_dominate < 0.5:
+            return 0.0
 
-        return np.min(np.sqrt(np.sum((f_predict-f_pareto) ** 2, axis=1)))  # Parr Eq. 6.9
+        return np.min(
+            np.sqrt(np.sum((f_predict - f_pareto) ** 2, axis=1))
+        )  # Parr Eq. 6.9
 
 
 class EnsembleInfill(ConstrainedInfill):
@@ -782,7 +919,11 @@ class EnsembleInfill(ConstrainedInfill):
     of Artificial Intelligence Research, 74, pp.1269-1349.
     """
 
-    def __init__(self, infills: List[ConstrainedInfill] = None, constraint_strategy: ConstraintStrategy = None):
+    def __init__(
+        self,
+        infills: List[ConstrainedInfill] = None,
+        constraint_strategy: ConstraintStrategy = None,
+    ):
         self.infills = infills
         super().__init__(constraint_strategy=constraint_strategy)
 
@@ -790,10 +931,17 @@ class EnsembleInfill(ConstrainedInfill):
         # Get set of default infills if none given
         if self.infills is None:
             if self.problem.n_obj == 1:
-                self.infills = [FunctionEstimateConstrainedInfill(), LowerConfidenceBoundInfill(),
-                                ExpectedImprovementInfill(), ProbabilityOfImprovementInfill()]
+                self.infills = [
+                    FunctionEstimateConstrainedInfill(),
+                    LowerConfidenceBoundInfill(),
+                    ExpectedImprovementInfill(),
+                    ProbabilityOfImprovementInfill(),
+                ]
             else:
-                self.infills = [FunctionEstimateConstrainedInfill(), LowerConfidenceBoundInfill()]
+                self.infills = [
+                    FunctionEstimateConstrainedInfill(),
+                    LowerConfidenceBoundInfill(),
+                ]
 
         # Reset the constraint handling strategies of the underlying infills and initialize them
         for infill in self.infills:
@@ -803,7 +951,9 @@ class EnsembleInfill(ConstrainedInfill):
 
         super()._initialize()
 
-    def set_samples(self, x_train: np.ndarray, is_active_train: np.ndarray, y_train: np.ndarray):
+    def set_samples(
+        self, x_train: np.ndarray, is_active_train: np.ndarray, y_train: np.ndarray
+    ):
         super().set_samples(x_train, is_active_train, y_train)
         for infill in self.infills:
             infill.set_samples(x_train, is_active_train, y_train)
@@ -811,12 +961,18 @@ class EnsembleInfill(ConstrainedInfill):
     def get_n_infill_objectives(self) -> int:
         return sum([infill.get_n_infill_objectives() for infill in self.infills])
 
-    def evaluate_f(self, f_predict: np.ndarray, f_var_predict: np.ndarray) -> np.ndarray:
+    def evaluate_f(
+        self, f_predict: np.ndarray, f_var_predict: np.ndarray
+    ) -> np.ndarray:
         # Merge underlying infill criteria
-        f_underlying = [infill.evaluate_f(f_predict, f_var_predict) for infill in self.infills]
+        f_underlying = [
+            infill.evaluate_f(f_predict, f_var_predict) for infill in self.infills
+        ]
         return np.column_stack(f_underlying)
 
-    def select_infill_solutions(self, population: Population, infill_problem: Problem, n_infill) -> Population:
+    def select_infill_solutions(
+        self, population: Population, infill_problem: Problem, n_infill
+    ) -> Population:
         # Get the Pareto front
         opt_pop = filter_optimum(population, least_infeasible=True)
 
@@ -830,12 +986,16 @@ class EnsembleInfill(ConstrainedInfill):
             return opt_pop[i_select]
 
         # Select by repeatedly eliminating crowded points from the Pareto front
-        for _ in range(len(opt_pop)-n_infill):
-            crowding_of_front = calc_crowding_distance(opt_pop.get('F'))
+        for _ in range(len(opt_pop) - n_infill):
+            crowding_of_front = calc_crowding_distance(opt_pop.get("F"))
 
             min_crowding = np.min(crowding_of_front)
             i_min_crowding = np.where(crowding_of_front == min_crowding)[0]
-            i_remove = np.random.choice(i_min_crowding) if len(i_min_crowding) > 1 else i_min_crowding[0]
+            i_remove = (
+                np.random.choice(i_min_crowding)
+                if len(i_min_crowding) > 1
+                else i_min_crowding[0]
+            )
 
             i_keep = np.ones((len(opt_pop),), dtype=bool)
             i_keep[i_remove] = False
@@ -869,27 +1029,37 @@ class HCInfill(SurrogateInfill):
     def _initialize(self):
         self._infill.initialize(self.problem, self.surrogate_model, self.normalization)
 
-    def set_samples(self, x_train: np.ndarray, is_active_train: np.ndarray, y_train: np.ndarray):
+    def set_samples(
+        self, x_train: np.ndarray, is_active_train: np.ndarray, y_train: np.ndarray
+    ):
         self._infill.set_samples(x_train, is_active_train, y_train)
 
     def _initialize_from_underlying(self, infill: SurrogateInfill):
         if infill.problem is not None:
-            self.initialize(infill.problem, infill.surrogate_model, infill.normalization)
+            self.initialize(
+                infill.problem, infill.surrogate_model, infill.normalization
+            )
 
             if infill.x_train is not None:
                 self.set_samples(infill.x_train, infill.is_active_train, infill.y_train)
 
-    def predict(self, x: np.ndarray, is_active: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def predict(
+        self, x: np.ndarray, is_active: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray]:
         return self._infill.predict(x, is_active)
 
     def select_infill_solutions(self, population, infill_problem, n_infill):
-        return self._infill.select_infill_solutions(population, infill_problem, n_infill)
+        return self._infill.select_infill_solutions(
+            population, infill_problem, n_infill
+        )
 
     def reset_infill_log(self):
         super().reset_infill_log()
         self._infill.reset_infill_log()
 
-    def predict_variance(self, x: np.ndarray, is_active: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def predict_variance(
+        self, x: np.ndarray, is_active: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray]:
         return self._infill.predict_variance(x, is_active)
 
     def get_n_infill_objectives(self) -> int:
@@ -901,12 +1071,18 @@ class HCInfill(SurrogateInfill):
             n_constr += 1
         return n_constr
 
-    def _evaluate(self, x: np.ndarray, is_active: np.ndarray) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+    def _evaluate(
+        self, x: np.ndarray, is_active: np.ndarray
+    ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
         f_infill, g_infill = self._infill.evaluate(x, is_active)
         f_infill = self._hc_strategy.mod_infill_objectives(x, f_infill)
 
         if self._hc_strategy.adds_infill_constraint():
             g_hc = self._hc_strategy.evaluate_infill_constraint(x)
-            g_infill = np.column_stack([g_infill, g_hc]) if g_infill is not None else np.array([g_hc]).T
+            g_infill = (
+                np.column_stack([g_infill, g_hc])
+                if g_infill is not None
+                else np.array([g_hc]).T
+            )
 
         return f_infill, g_infill

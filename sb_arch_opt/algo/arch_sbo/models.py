@@ -22,6 +22,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+
 import os
 import copy
 import numpy as np
@@ -35,7 +36,7 @@ from sb_arch_opt.sampling import HierarchicalSampling
 from pymoo.util.normalization import Normalization, SimpleZeroToOneNormalization
 
 try:
-    os.environ['USE_NUMBA_JIT'] = '1'
+    os.environ["USE_NUMBA_JIT"] = "1"
     from smt.surrogate_models.surrogate_model import SurrogateModel
 
     from smt.surrogate_models.krg import KRG, KrgBased
@@ -46,7 +47,8 @@ try:
     import smt.utils.design_space as ds
 
     from smt import __version__
-    IS_SMT_22 = not __version__.startswith('2.0') and not __version__.startswith('2.1')
+
+    IS_SMT_22 = not __version__.startswith("2.0") and not __version__.startswith("2.1")
 
     HAS_ARCH_SBO = True
 except ImportError:
@@ -59,19 +61,29 @@ except ImportError:
     class SurrogateModel:
         pass
 
-__all__ = ['check_dependencies', 'HAS_ARCH_SBO', 'ModelFactory', 'MixedDiscreteNormalization', 'SBArchOptDesignSpace',
-           'MultiSurrogateModel', 'IS_SMT_22']
+
+__all__ = [
+    "check_dependencies",
+    "HAS_ARCH_SBO",
+    "ModelFactory",
+    "MixedDiscreteNormalization",
+    "SBArchOptDesignSpace",
+    "MultiSurrogateModel",
+    "IS_SMT_22",
+]
 
 
 def check_dependencies():
     if not HAS_ARCH_SBO:
-        raise ImportError(f'ArchSBO dependencies not installed: pip install sb-arch-opt[arch_sbo]')
+        raise ImportError(
+            f"ArchSBO dependencies not installed: pip install sb-arch-opt[arch_sbo]"
+        )
 
 
 @dataclass
 class SMTDesignSpaceSpec:
     var_defs: List[dict]  # [{'name': name, 'lb': lb, 'ub', ub}, ...]
-    design_space: 'SBArchOptDesignSpace'
+    design_space: "SBArchOptDesignSpace"
     is_mixed_discrete: bool
 
 
@@ -104,7 +116,9 @@ class MixedDiscreteNormalization(Normalization):
         xl, xu = self._design_space.xl, self._design_space.xu
 
         cont_mask = self._is_cont_mask
-        x_abs[:, cont_mask] = x[:, cont_mask]*(xu[cont_mask]-xl[cont_mask]) + xl[cont_mask]
+        x_abs[:, cont_mask] = (
+            x[:, cont_mask] * (xu[cont_mask] - xl[cont_mask]) + xl[cont_mask]
+        )
 
         int_mask = self._is_int_mask
         x_abs[:, int_mask] = x[:, int_mask] + xl[int_mask]
@@ -123,16 +137,26 @@ class ModelFactory:
         return self.create_smt_design_space_spec(self.problem.design_space)
 
     @staticmethod
-    def create_smt_design_space_spec(arch_design_space: ArchDesignSpace, md_normalize=False, cont_relax=False,
-                                     ignore_hierarchy=False):
+    def create_smt_design_space_spec(
+        arch_design_space: ArchDesignSpace,
+        md_normalize=False,
+        cont_relax=False,
+        ignore_hierarchy=False,
+    ):
         check_dependencies()
 
-        design_space = SBArchOptDesignSpace(arch_design_space, md_normalize=md_normalize, cont_relax=cont_relax,
-                                            ignore_hierarchy=ignore_hierarchy)
+        design_space = SBArchOptDesignSpace(
+            arch_design_space,
+            md_normalize=md_normalize,
+            cont_relax=cont_relax,
+            ignore_hierarchy=ignore_hierarchy,
+        )
         is_mixed_discrete = not np.all(arch_design_space.is_cont_mask)
 
-        var_defs = [{'name': f'x{i}', 'lb': bounds[0], 'ub': bounds[1]}
-                    for i, bounds in enumerate(design_space.get_num_bounds())]
+        var_defs = [
+            {"name": f"x{i}", "lb": bounds[0], "ub": bounds[1]}
+            for i, bounds in enumerate(design_space.get_num_bounds())
+        ]
 
         return SMTDesignSpaceSpec(
             var_defs=var_defs,
@@ -142,7 +166,9 @@ class ModelFactory:
 
     @staticmethod
     def get_continuous_normalization(problem: Problem):
-        return SimpleZeroToOneNormalization(xl=problem.xl, xu=problem.xu, estimate_bounds=False)
+        return SimpleZeroToOneNormalization(
+            xl=problem.xl, xu=problem.xu, estimate_bounds=False
+        )
 
     def get_md_normalization(self):
         return MixedDiscreteNormalization(self.problem.design_space)
@@ -151,7 +177,8 @@ class ModelFactory:
     def get_rbf_model():
         check_dependencies()
         from smt.surrogate_models.rbf import RBF
-        return RBF(print_global=False, d0=1., poly_degree=-1, reg=1e-10)
+
+        return RBF(print_global=False, d0=1.0, poly_degree=-1, reg=1e-10)
 
     @staticmethod
     def get_kriging_model(multi=True, kpls_n_comp: int = None, **kwargs):
@@ -166,13 +193,15 @@ class ModelFactory:
             surrogate = MultiSurrogateModel(surrogate)
         return surrogate
 
-    def get_md_kriging_model(self, kpls_n_comp: int = None, multi=True, ignore_hierarchy=False,
-                             **kwargs_) -> Tuple['SurrogateModel', Normalization]:
+    def get_md_kriging_model(
+        self, kpls_n_comp: int = None, multi=True, ignore_hierarchy=False, **kwargs_
+    ) -> Tuple["SurrogateModel", Normalization]:
         check_dependencies()
         normalization = self.get_md_normalization()
         design_space = self.problem.design_space
         norm_ds_spec = self.create_smt_design_space_spec(
-            design_space, md_normalize=True, ignore_hierarchy=ignore_hierarchy)
+            design_space, md_normalize=True, ignore_hierarchy=ignore_hierarchy
+        )
 
         kwargs = dict(
             print_global=False,
@@ -187,7 +216,10 @@ class ModelFactory:
             n_dim_apply_pls = design_space.n_var
 
             # PLS is not applied to categorical variables for EHH/HH kernels (see KrgBased._matrix_data_corr)
-            if IS_SMT_22 and kwargs['categorical_kernel'] not in [MixIntKernelType.CONT_RELAX, MixIntKernelType.GOWER]:
+            if IS_SMT_22 and kwargs["categorical_kernel"] not in [
+                MixIntKernelType.CONT_RELAX,
+                MixIntKernelType.GOWER,
+            ]:
                 n_dim_apply_pls = design_space.n_var - np.sum(design_space.is_cat_mask)
 
             if kpls_n_comp > n_dim_apply_pls:
@@ -195,19 +227,20 @@ class ModelFactory:
 
         if kpls_n_comp is not None:
             if not IS_SMT_22:
-                kwargs['categorical_kernel'] = MixIntKernelType.CONT_RELAX
+                kwargs["categorical_kernel"] = MixIntKernelType.CONT_RELAX
 
             # Ignore hierarchy in the design space as KPLS does not support this
             non_hier_ds_spec = self.create_smt_design_space_spec(
-                self.problem.design_space, md_normalize=True, ignore_hierarchy=True)
-            kwargs['design_space'] = non_hier_ds_spec.design_space
+                self.problem.design_space, md_normalize=True, ignore_hierarchy=True
+            )
+            kwargs["design_space"] = non_hier_ds_spec.design_space
 
             surrogate = KPLS(n_comp=kpls_n_comp, **kwargs)
         else:
             surrogate = KRG(**kwargs)
 
         if ignore_hierarchy or kpls_n_comp is not None:
-            surrogate.supports['x_hierarchy'] = False
+            surrogate.supports["x_hierarchy"] = False
 
         if multi:
             surrogate = MultiSurrogateModel(surrogate)
@@ -215,16 +248,16 @@ class ModelFactory:
         return surrogate, normalization
 
     @staticmethod
-    def get_n_theta(problem: ArchOptProblemBase, surrogate: 'SurrogateModel') -> int:
+    def get_n_theta(problem: ArchOptProblemBase, surrogate: "SurrogateModel") -> int:
 
-        def _get_n_theta(model: 'SurrogateModel') -> int:
+        def _get_n_theta(model: "SurrogateModel") -> int:
             if isinstance(model, KrgBased):
-                if hasattr(model, 'optimal_theta') and len(model.optimal_theta):
+                if hasattr(model, "optimal_theta") and len(model.optimal_theta):
                     return len(model.optimal_theta)
 
                 n_train = 2
                 if isinstance(model, KPLS):
-                    n_train = model.options['n_comp']+1
+                    n_train = model.options["n_comp"] + 1
                 n_theta = 0
 
                 def _override(theta):
@@ -234,8 +267,10 @@ class ModelFactory:
                     raise RuntimeError
 
                 model = copy.deepcopy(model)
-                model.options['n_start'] = 1
-                model.set_training_values(np.zeros((n_train, problem.n_var)), np.zeros((n_train, 1)))
+                model.options["n_start"] = 1
+                model.set_training_values(
+                    np.zeros((n_train, problem.n_var)), np.zeros((n_train, 1))
+                )
                 model._reduced_likelihood_function = _override
                 try:
                     model.train()
@@ -243,7 +278,7 @@ class ModelFactory:
                     pass
                 return n_theta
 
-            raise RuntimeError(f'Not a Kriging model: {surrogate!r}')
+            raise RuntimeError(f"Not a Kriging model: {surrogate!r}")
 
         if isinstance(surrogate, MultiSurrogateModel):
             if len(surrogate._models) == 0:
@@ -262,10 +297,17 @@ class SBArchOptDesignSpace(BaseDesignSpace):
 
     _global_disable_hierarchical_cat_fix = IS_SMT_22
 
-    def __init__(self, arch_design_space: ArchDesignSpace, md_normalize=False, cont_relax=False,
-                 ignore_hierarchy=False):
+    def __init__(
+        self,
+        arch_design_space: ArchDesignSpace,
+        md_normalize=False,
+        cont_relax=False,
+        ignore_hierarchy=False,
+    ):
         self._ds = arch_design_space
-        self.normalize = MixedDiscreteNormalization(arch_design_space) if md_normalize else None
+        self.normalize = (
+            MixedDiscreteNormalization(arch_design_space) if md_normalize else None
+        )
         self._cont_relax = cont_relax
         self._ignore_hierarchy = ignore_hierarchy
         super().__init__()
@@ -274,10 +316,14 @@ class SBArchOptDesignSpace(BaseDesignSpace):
     def arch_design_space(self) -> ArchDesignSpace:
         return self._ds
 
-    def _get_design_variables(self) -> List['ds.DesignVariable']:
+    def _get_design_variables(self) -> List["ds.DesignVariable"]:
         """Return the design variables defined in this design space if not provided upon initialization of the class"""
         smt_des_vars = []
-        is_dv_cond = ([False]*len(self._ds.des_vars)) if self._ignore_hierarchy else self._ds.is_conditionally_active
+        is_dv_cond = (
+            ([False] * len(self._ds.des_vars))
+            if self._ignore_hierarchy
+            else self._ds.is_conditionally_active
+        )
         normalize = self.normalize is not None
         cont_relax = self._cont_relax
         for i, dv in enumerate(self._ds.des_vars):
@@ -286,7 +332,7 @@ class SBArchOptDesignSpace(BaseDesignSpace):
                 smt_des_vars.append(ds.FloatVariable(bounds[0], bounds[1]))
 
             elif isinstance(dv, var.Integer):
-                bounds = (0, dv.bounds[1]-dv.bounds[0]) if normalize else dv.bounds
+                bounds = (0, dv.bounds[1] - dv.bounds[0]) if normalize else dv.bounds
                 if cont_relax:
                     smt_des_vars.append(ds.FloatVariable(bounds[0], bounds[1]))
                 else:
@@ -300,16 +346,16 @@ class SBArchOptDesignSpace(BaseDesignSpace):
 
             elif isinstance(dv, var.Choice):
                 if cont_relax:
-                    smt_des_vars.append(ds.FloatVariable(0, len(dv.options)-1))
+                    smt_des_vars.append(ds.FloatVariable(0, len(dv.options) - 1))
                 else:
                     # Conditional categorical variables are currently not supported
                     if is_dv_cond[i] and not self._global_disable_hierarchical_cat_fix:
-                        smt_des_vars.append(ds.IntegerVariable(0, len(dv.options)-1))
+                        smt_des_vars.append(ds.IntegerVariable(0, len(dv.options) - 1))
                     else:
                         smt_des_vars.append(ds.CategoricalVariable(values=dv.options))
 
             else:
-                raise ValueError(f'Unexpected variable type: {dv!r}')
+                raise ValueError(f"Unexpected variable type: {dv!r}")
         return smt_des_vars
 
     def _is_conditionally_acting(self) -> np.ndarray:
@@ -331,7 +377,9 @@ class SBArchOptDesignSpace(BaseDesignSpace):
             is_active = np.ones(is_active.shape, dtype=bool)
         return x, is_active
 
-    def _sample_valid_x(self, n: int, random_state=None) -> Tuple[np.ndarray, np.ndarray]:
+    def _sample_valid_x(
+        self, n: int, random_state=None
+    ) -> Tuple[np.ndarray, np.ndarray]:
         sampler = HierarchicalSampling(seed=random_state)
         stub_problem = ArchOptProblemBase(self._ds)
         x, is_active = sampler.sample_get_x(stub_problem, n)
@@ -344,21 +392,21 @@ class SBArchOptDesignSpace(BaseDesignSpace):
         return x, is_active
 
     def __str__(self):
-        return 'SBArchOpt Design Space'
+        return "SBArchOpt Design Space"
 
     def __repr__(self):
-        return f'{self.__class__.__name__}({self._ds!r})'
+        return f"{self.__class__.__name__}({self._ds!r})"
 
 
 class MultiSurrogateModel(SurrogateModel):
     """SMT surrogate model wrapper that trains independent models for each provided output"""
 
-    def __init__(self, surrogate: 'SurrogateModel', **kwargs):
+    def __init__(self, surrogate: "SurrogateModel", **kwargs):
         super().__init__(**kwargs)
 
         self._surrogate = surrogate
         self._is_krg = isinstance(surrogate, KrgBased)
-        self._models: List['SurrogateModel'] = []
+        self._models: List["SurrogateModel"] = []
         self.supports = self._surrogate.supports
         self.options["print_global"] = False
 
@@ -367,46 +415,48 @@ class MultiSurrogateModel(SurrogateModel):
 
     @property
     def name(self):
-        return f'Multi{self._surrogate.name}'
+        return f"Multi{self._surrogate.name}"
 
     def _initialize(self):
         self.supports["derivatives"] = False
 
-    def set_training_values(self, xt: np.ndarray, yt: np.ndarray, name=None, is_acting=None) -> None:
+    def set_training_values(
+        self, xt: np.ndarray, yt: np.ndarray, name=None, is_acting=None
+    ) -> None:
         self.xt = xt
         self.yt = yt
 
         self._models = models = []
         for iy in range(yt.shape[1]):
-            model: Union['KrgBased', 'SurrogateModel'] = self._copy_underlying()
+            model: Union["KrgBased", "SurrogateModel"] = self._copy_underlying()
             if self._is_krg:
                 model.set_training_values(xt, yt[:, [iy]], is_acting=is_acting)
             else:
                 model.set_training_values(xt, yt[:, [iy]])
             models.append(model)
 
-    def _copy_underlying(self) -> 'SurrogateModel':
+    def _copy_underlying(self) -> "SurrogateModel":
         model = self._surrogate
 
         design_space = None
-        has_ds = 'design_space' in model.options
+        has_ds = "design_space" in model.options
         if has_ds:
-            design_space = model.options['design_space']
+            design_space = model.options["design_space"]
             if design_space is not None:
-                model.options['design_space'] = []
+                model.options["design_space"] = []
 
         model_copy = copy.deepcopy(model)
 
         if has_ds and design_space is not None:
-            model.options['design_space'] = design_space
-            model_copy.options['design_space'] = design_space
+            model.options["design_space"] = design_space
+            model_copy.options["design_space"] = design_space
         return model_copy
 
     def train(self) -> None:
         theta0 = None
         for i, model in enumerate(self._models):
             if i > 0 and isinstance(model, KrgBased) and theta0 is not None:
-                model.options['theta0'] = theta0
+                model.options["theta0"] = theta0
 
             model.train()
 
@@ -420,17 +470,22 @@ class MultiSurrogateModel(SurrogateModel):
                     pass
 
     def predict_values(self, x: np.ndarray, is_acting=None) -> np.ndarray:
-        model: Union['SurrogateModel', 'KrgBased']
+        model: Union["SurrogateModel", "KrgBased"]
         if self._is_krg:
-            values = [model.predict_values(x, is_acting=is_acting) for model in self._models]
+            values = [
+                model.predict_values(x, is_acting=is_acting) for model in self._models
+            ]
         else:
             values = [model.predict_values(x) for model in self._models]
         return np.column_stack(values)
 
     def predict_variances(self, x: np.ndarray, is_acting=None) -> np.ndarray:
-        model: Union['SurrogateModel', 'KrgBased']
+        model: Union["SurrogateModel", "KrgBased"]
         if self._is_krg:
-            values = [model.predict_variances(x, is_acting=is_acting) for model in self._models]
+            values = [
+                model.predict_variances(x, is_acting=is_acting)
+                for model in self._models
+            ]
         else:
             values = [model.predict_variances(x) for model in self._models]
         return np.column_stack(values)

@@ -22,6 +22,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+
 import numpy as np
 from pymoo.core.problem import Problem
 from pymoo.core.indicator import Indicator
@@ -38,15 +39,34 @@ from pymoo.termination.default import DefaultSingleObjectiveTermination
 
 from sb_arch_opt.problem import ArchOptProblemBase
 
-__all__ = ['get_default_termination', 'SmoothedIndicator', 'IndicatorDeltaToleranceTermination', 'EstimateHV',
-           'DeltaHVTermination', 'EHVMultiObjectiveOutput']
+__all__ = [
+    "get_default_termination",
+    "SmoothedIndicator",
+    "IndicatorDeltaToleranceTermination",
+    "EstimateHV",
+    "DeltaHVTermination",
+    "EHVMultiObjectiveOutput",
+]
 
 
-def get_default_termination(problem: Problem, xtol=5e-4, cvtol=1e-8, tol=1e-4, n_iter_check=5, n_max_gen=100,
-                            n_max_eval: int = None):
+def get_default_termination(
+    problem: Problem,
+    xtol=5e-4,
+    cvtol=1e-8,
+    tol=1e-4,
+    n_iter_check=5,
+    n_max_gen=100,
+    n_max_eval: int = None,
+):
     if problem.n_obj == 1:
         return DefaultSingleObjectiveTermination(
-            xtol=xtol, cvtol=cvtol, ftol=tol, period=n_iter_check, n_max_gen=n_max_gen, n_max_evals=n_max_eval)
+            xtol=xtol,
+            cvtol=cvtol,
+            ftol=tol,
+            period=n_iter_check,
+            n_max_gen=n_max_gen,
+            n_max_evals=n_max_eval,
+        )
 
     return DeltaHVTermination(tol=tol, n_max_gen=n_max_gen, n_max_eval=n_max_eval)
     # return DefaultMultiObjectiveTermination(
@@ -64,7 +84,7 @@ class SmoothedIndicator(Indicator):
 
     @property
     def alpha(self):
-        return 1/(1+self.n_filter)
+        return 1 / (1 + self.n_filter)
 
     def _do(self, f, *args, **kwargs):
         value = self.indicator.do(f, *args, **kwargs)
@@ -72,11 +92,11 @@ class SmoothedIndicator(Indicator):
             return np.nan
         self.data.append(value)
 
-        weight_factor = 1-self.alpha
+        weight_factor = 1 - self.alpha
         next_weight = 1
 
         ema = self.data[0]
-        weight = 1.
+        weight = 1.0
         for value in self.data[1:]:
             weight *= weight_factor
             if ema != value:
@@ -102,9 +122,9 @@ class IndicatorDeltaToleranceTermination(DeltaToleranceTermination):
         # Scale the value to improve percentage calculation
         if self.scale is None:
             # At the current value, delta-tol should be 100 (--> 1%)
-            self.scale = (100-self.tol)/(delta-self.tol)
+            self.scale = (100 - self.tol) / (delta - self.tol)
 
-        delta = (delta-self.tol)*self.scale + self.tol
+        delta = (delta - self.tol) * self.scale + self.tol
         return delta
 
     def _data(self, algorithm):
@@ -148,7 +168,9 @@ class DeltaHVTermination(TerminateIfAny):
 
     def __init__(self, tol=1e-4, n_filter=2, n_max_gen=100, n_max_eval: int = None):
         termination = [
-            IndicatorDeltaToleranceTermination(SmoothedIndicator(EstimateHV(), n_filter=n_filter), tol),
+            IndicatorDeltaToleranceTermination(
+                SmoothedIndicator(EstimateHV(), n_filter=n_filter), tol
+            ),
             MaximumGenerationTermination(n_max_gen=n_max_gen),
         ]
         if n_max_eval is not None:
@@ -163,16 +185,20 @@ class EHVMultiObjectiveOutput(MultiObjectiveOutput):
 
     def __init__(self, pop_stats=True):
         super().__init__()
-        self.ehv_col = Column('hv_est')
+        self.ehv_col = Column("hv_est")
         self.estimate_hv = EstimateHV()
 
         self.pop_stat_cols = []
         if pop_stats:
-            self.pop_stat_cols = [Column('not_failed'), Column('feasible'), Column('optimal')]
+            self.pop_stat_cols = [
+                Column("not_failed"),
+                Column("feasible"),
+                Column("optimal"),
+            ]
 
     def initialize(self, algorithm):
         super().initialize(algorithm)
-        self.columns += [self.ehv_col]+self.pop_stat_cols
+        self.columns += [self.ehv_col] + self.pop_stat_cols
 
     def update(self, algorithm):
         super().update(algorithm)
@@ -184,7 +210,8 @@ class EHVMultiObjectiveOutput(MultiObjectiveOutput):
 
         if len(self.pop_stat_cols) > 0:
             pop_stats = ArchOptProblemBase.get_population_statistics(
-                algorithm.pop if algorithm.pop is not None else Population.new())
-            stats = [f'{row[0]} ({row[1]})' for row in pop_stats.iloc[1:, 1:3].values]
+                algorithm.pop if algorithm.pop is not None else Population.new()
+            )
+            stats = [f"{row[0]} ({row[1]})" for row in pop_stats.iloc[1:, 1:3].values]
             for i, stat in enumerate(stats):
                 self.pop_stat_cols[i].set(stat)

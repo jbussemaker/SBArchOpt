@@ -2,13 +2,16 @@ import pytest
 from sb_arch_opt.problem import *
 from sb_arch_opt.algo.botorch_interface import *
 from sb_arch_opt.problems.discrete import MDBranin
+
 try:
     from ax.service.utils.best_point import get_pareto_optimal_parameters
     from botorch.exceptions.errors import InputDataError
 except ImportError:
     pass
 
-check_dependency = lambda: pytest.mark.skipif(not HAS_BOTORCH, reason='BoTorch/Ax dependencies not installed')
+check_dependency = lambda: pytest.mark.skipif(
+    not HAS_BOTORCH, reason="BoTorch/Ax dependencies not installed"
+)
 
 
 @check_dependency()

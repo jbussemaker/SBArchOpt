@@ -22,14 +22,19 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+
 import numpy as np
 from typing import Optional, Tuple
 from scipy.spatial import distance
 from cached_property import cached_property
 
-from sb_arch_opt.design_space import ArchDesignSpace, CorrectorInterface, CorrectorUnavailableError
+from sb_arch_opt.design_space import (
+    ArchDesignSpace,
+    CorrectorInterface,
+    CorrectorUnavailableError,
+)
 
-__all__ = ['CorrectorBase', 'EagerCorrectorBase', 'ClosestEagerCorrector']
+__all__ = ["CorrectorBase", "EagerCorrectorBase", "ClosestEagerCorrector"]
 
 
 class CorrectorBase(CorrectorInterface):
@@ -57,7 +62,11 @@ class CorrectorBase(CorrectorInterface):
 
     def __init__(self, design_space: ArchDesignSpace, correct_correct_x: bool = None):
         self._design_space = design_space
-        self.correct_correct_x = self.default_correct_correct_x if correct_correct_x is None else correct_correct_x
+        self.correct_correct_x = (
+            self.default_correct_correct_x
+            if correct_correct_x is None
+            else correct_correct_x
+        )
 
     @property
     def design_space(self) -> ArchDesignSpace:
@@ -126,9 +135,18 @@ class EagerCorrectorBase(CorrectorBase):
 
     default_random_if_multiple = False
 
-    def __init__(self, design_space: ArchDesignSpace, correct_correct_x: bool = None, random_if_multiple: bool = None):
+    def __init__(
+        self,
+        design_space: ArchDesignSpace,
+        correct_correct_x: bool = None,
+        random_if_multiple: bool = None,
+    ):
         self._x_valid = None
-        self._random_if_multiple = self.default_random_if_multiple if random_if_multiple is None else random_if_multiple
+        self._random_if_multiple = (
+            self.default_random_if_multiple
+            if random_if_multiple is None
+            else random_if_multiple
+        )
         super().__init__(design_space, correct_correct_x=correct_correct_x)
 
     @property
@@ -147,10 +165,16 @@ class EagerCorrectorBase(CorrectorBase):
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
         x_valid, is_active_valid = self.x_valid_active
         if x_valid is None or is_active_valid is None:
-            raise CorrectorUnavailableError(f'Eager corrector unavailable because problem does not provide x_all')
+            raise CorrectorUnavailableError(
+                f"Eager corrector unavailable because problem does not provide x_all"
+            )
 
         # Separate canonical design vectors
-        correct_idx = self.get_canonical_idx(x) if self.correct_correct_x else self.get_correct_idx(x)
+        correct_idx = (
+            self.get_canonical_idx(x)
+            if self.correct_correct_x
+            else self.get_correct_idx(x)
+        )
         is_correct = correct_idx != -1
         to_be_corrected = ~is_correct
 
@@ -164,7 +188,9 @@ class EagerCorrectorBase(CorrectorBase):
         # Get corrected design vector indices
         xi_corrected = self._get_corrected_x_idx(x[to_be_corrected, :])
         if len(xi_corrected.shape) != 1:
-            raise ValueError(f'Expecting vector of length {x[to_be_corrected].shape[0]}, got {xi_corrected.shape}')
+            raise ValueError(
+                f"Expecting vector of length {x[to_be_corrected].shape[0]}, got {xi_corrected.shape}"
+            )
 
         # Correct design vectors and return activeness information
         x[to_be_corrected, :] = x_valid[xi_corrected, :]
@@ -214,7 +240,9 @@ class EagerCorrectorBase(CorrectorBase):
 
             # Match active valid x to value or inactive valid x
             is_active_valid_i = is_active_valid_matched[:, i]
-            matched = (is_active_valid_i & (x_valid_matched[:, i] == xi[i])) | (~is_active_valid_i)
+            matched = (is_active_valid_i & (x_valid_matched[:, i] == xi[i])) | (
+                ~is_active_valid_i
+            )
 
             # Select vectors and check if there are any vectors left to choose from
             matched_dv_idx = matched_dv_idx[matched]
@@ -233,8 +261,10 @@ class EagerCorrectorBase(CorrectorBase):
         raise NotImplementedError
 
     def __repr__(self):
-        return f'{self.__class__.__name__}(correct_correct_x={self.correct_correct_x}, ' \
-               f'random_if_multiple={self._random_if_multiple})'
+        return (
+            f"{self.__class__.__name__}(correct_correct_x={self.correct_correct_x}, "
+            f"random_if_multiple={self._random_if_multiple})"
+        )
 
 
 class ClosestEagerCorrector(EagerCorrectorBase):
@@ -244,10 +274,19 @@ class ClosestEagerCorrector(EagerCorrectorBase):
     Optionally distances are weighted to prefer changes on the right side of the design vectors.
     """
 
-    def __init__(self, design_space: ArchDesignSpace, euclidean=False, correct_correct_x: bool = None,
-                 random_if_multiple: bool = None):
+    def __init__(
+        self,
+        design_space: ArchDesignSpace,
+        euclidean=False,
+        correct_correct_x: bool = None,
+        random_if_multiple: bool = None,
+    ):
         self.euclidean = euclidean
-        super().__init__(design_space, correct_correct_x=correct_correct_x, random_if_multiple=random_if_multiple)
+        super().__init__(
+            design_space,
+            correct_correct_x=correct_correct_x,
+            random_if_multiple=random_if_multiple,
+        )
 
     def _get_corrected_x_idx(self, x: np.ndarray) -> np.ndarray:
         # Calculate distances from provided design vectors to canonical design vectors
@@ -255,14 +294,16 @@ class ClosestEagerCorrector(EagerCorrectorBase):
         is_discrete_mask = self.is_discrete_mask
         x_valid_discrete = x_valid[:, is_discrete_mask]
 
-        metric = 'euclidean' if self.euclidean else 'cityblock'
+        metric = "euclidean" if self.euclidean else "cityblock"
         weights = np.linspace(1.1, 1, x_valid_discrete.shape[1])
-        x_dist = distance.cdist(x[:, is_discrete_mask], x_valid_discrete, metric=metric, w=weights)
+        x_dist = distance.cdist(
+            x[:, is_discrete_mask], x_valid_discrete, metric=metric, w=weights
+        )
 
         xi_canonical = np.zeros((x.shape[0],), dtype=int)
         for i, xi in enumerate(x):
             # Select vector with minimum distance
-            min_dist_idx, = np.where(x_dist[i, :] == np.min(x_dist[i, :]))
+            (min_dist_idx,) = np.where(x_dist[i, :] == np.min(x_dist[i, :]))
 
             if len(min_dist_idx) > 1 and self._random_if_multiple:
                 xi_canonical[i] = np.random.choice(min_dist_idx)
@@ -271,5 +312,7 @@ class ClosestEagerCorrector(EagerCorrectorBase):
         return xi_canonical
 
     def __repr__(self):
-        return f'{self.__class__.__name__}(correct_correct_x={self.correct_correct_x}, ' \
-               f'random_if_multiple={self._random_if_multiple}, euclidean={self.euclidean})'
+        return (
+            f"{self.__class__.__name__}(correct_correct_x={self.correct_correct_x}, "
+            f"random_if_multiple={self._random_if_multiple}, euclidean={self.euclidean})"
+        )

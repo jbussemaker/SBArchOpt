@@ -22,10 +22,11 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+
 from sb_arch_opt.problem import ArchOptProblemBase
 from sb_arch_opt.algo.botorch_interface.algo import HAS_BOTORCH, AxInterface
 
-__all__ = ['HAS_BOTORCH', 'get_botorch_interface']
+__all__ = ["HAS_BOTORCH", "get_botorch_interface"]
 
 
 def get_botorch_interface(problem: ArchOptProblemBase):

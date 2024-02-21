@@ -22,11 +22,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+
 from sb_arch_opt.problem import ArchOptProblemBase
 from sb_arch_opt.algo.hebo_interface.algo import *
 
 
-__all__ = ['get_hebo_optimizer', 'HAS_HEBO']
+__all__ = ["get_hebo_optimizer", "HAS_HEBO"]
 
 
 def get_hebo_optimizer(problem: ArchOptProblemBase, n_init: int, seed: int = None):

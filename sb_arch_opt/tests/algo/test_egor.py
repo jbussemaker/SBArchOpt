@@ -34,12 +34,16 @@ def test_restart():
     with tempfile.TemporaryDirectory() as temp_dir:
         n_init = 30
         n_infill = 2
-        egor = get_egor_optimizer(MDBranin(), n_init=n_init, results_folder=temp_dir, seed=42)
+        egor = get_egor_optimizer(
+            MDBranin(), n_init=n_init, results_folder=temp_dir, seed=42
+        )
         egor.minimize(n_infill=n_infill)
         pop = egor.pop
         assert len(pop) == n_init + n_infill
 
-        egor2 = get_egor_optimizer(MDBranin(), n_init=n_init, results_folder=temp_dir, seed=42)
+        egor2 = get_egor_optimizer(
+            MDBranin(), n_init=n_init, results_folder=temp_dir, seed=42
+        )
         egor2.initialize_from_previous(results_folder=temp_dir)
         pop = egor2.pop
         assert len(pop) == n_init + n_infill

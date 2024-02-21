@@ -7,7 +7,12 @@ from sb_arch_opt.correction import *
 
 class DummyArchDesignSpace(ArchDesignSpace):
 
-    def __init__(self, x_all: np.ndarray, is_act_all: np.ndarray, is_discrete_mask: np.ndarray = None):
+    def __init__(
+        self,
+        x_all: np.ndarray,
+        is_act_all: np.ndarray,
+        is_discrete_mask: np.ndarray = None,
+    ):
         self._corrector = None
         self._x_all = x_all
         self._is_act_all = is_act_all
@@ -36,9 +41,11 @@ class DummyArchDesignSpace(ArchDesignSpace):
         des_vars = []
         for i, is_discrete in enumerate(self._is_discrete_mask):
             if is_discrete:
-                des_vars.append(Choice(options=list(sorted(np.unique(self._x_all[:, i])))))
+                des_vars.append(
+                    Choice(options=list(sorted(np.unique(self._x_all[:, i]))))
+                )
             else:
-                des_vars.append(Real(bounds=(0., 1.)))
+                des_vars.append(Real(bounds=(0.0, 1.0)))
         return des_vars
 
     def _is_conditionally_active(self) -> Optional[List[bool]]:
@@ -69,10 +76,7 @@ class DummyArchDesignSpace(ArchDesignSpace):
 
 
 def test_corrector():
-    x_all = np.array([[0, 0],
-                      [1, 0],
-                      [0, 1],
-                      [1, 1]])
+    x_all = np.array([[0, 0], [1, 0], [0, 1], [1, 1]])
     is_act_all = np.ones(x_all.shape, dtype=bool)
     ds = DummyArchDesignSpace(x_all=x_all, is_act_all=is_act_all)
     assert np.all(ds.is_discrete_mask)
@@ -87,37 +91,35 @@ def test_corrector():
 
 
 def test_eager_corrector():
-    x_all = np.array([[0, 0],
-                      [0, 1],
-                      [0, 2],
-                      [1, 0],
-                      [1, 1],
-                      [2, 0]])
+    x_all = np.array([[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [2, 0]])
     is_act_all = np.ones(x_all.shape, dtype=bool)
     is_act_all[-1, 1] = False
     ds = DummyArchDesignSpace(x_all=x_all, is_act_all=is_act_all)
 
     corr = EagerCorrectorBase(ds)
-    x_try = np.array([[1, 0],  # Canonical, 3
-                      [1, 2],  # Invalid
-                      [2, 0],  # Canonical, 5
-                      [2, 1]])  # Valid, non-canonical, 5
+    x_try = np.array(
+        [[1, 0], [1, 2], [2, 0], [2, 1]]  # Canonical, 3  # Invalid  # Canonical, 5
+    )  # Valid, non-canonical, 5
 
     assert np.all(corr.get_correct_idx(x_try) == np.array([3, -1, 5, 5]))
     assert np.all(corr.get_canonical_idx(x_try) == np.array([3, -1, 5, -1]))
 
 
 def test_closest_eager_corrector():
-    x_all = np.array([[0, 0, 0],
-                      [0, 0, 1],
-                      [0, 1, 0],
-                      [0, 1, 1],
-                      [0, 1, 2],
-                      [1, 0, 0],
-                      [1, 0, 2],
-                      [1, 1, 0],
-                      [2, 0, 0],
-                      [2, 1, 3]])
+    x_all = np.array(
+        [
+            [0, 0, 0],
+            [0, 0, 1],
+            [0, 1, 0],
+            [0, 1, 1],
+            [0, 1, 2],
+            [1, 0, 0],
+            [1, 0, 2],
+            [1, 1, 0],
+            [2, 0, 0],
+            [2, 1, 3],
+        ]
+    )
     is_act_all = np.ones(x_all.shape, dtype=bool)
     is_act_all[-3, 2] = False
     is_act_all[-2, 1:] = False
@@ -128,27 +130,40 @@ def test_closest_eager_corrector():
             for _ in range(10 if random_if_multiple else 1):
                 for euclidean in [False, True]:
                     ds.corrector = corr = ClosestEagerCorrector(
-                        ds, euclidean=euclidean, correct_correct_x=correct_correct_x,
-                        random_if_multiple=random_if_multiple)
+                        ds,
+                        euclidean=euclidean,
+                        correct_correct_x=correct_correct_x,
+                        random_if_multiple=random_if_multiple,
+                    )
                     assert repr(corr)
 
-                    x_corr, is_act_corr = ds.correct_x(np.array([[0, 0, 0],
-                                                                 [0, 0, 3],
-                                                                 [1, 0, 1],
-                                                                 [1, 1, 1],
-                                                                 [1, 1, 2],
-                                                                 [2, 0, 2]]))
+                    x_corr, is_act_corr = ds.correct_x(
+                        np.array(
+                            [
+                                [0, 0, 0],
+                                [0, 0, 3],
+                                [1, 0, 1],
+                                [1, 1, 1],
+                                [1, 1, 2],
+                                [2, 0, 2],
+                            ]
+                        )
+                    )
 
                     x_corr_, is_act_corr_ = ds.correct_x(x_corr)
                     assert np.all(x_corr == x_corr_)
                     assert np.all(is_act_corr == is_act_corr_)
 
-                    corr_first = np.array([[0, 0, 0],
-                                           [0, 0, 1],
-                                           [1, 0, 0],
-                                           [1, 1, 0],
-                                           [1, 1, 0],
-                                           [2, 0, 0]])
+                    corr_first = np.array(
+                        [
+                            [0, 0, 0],
+                            [0, 0, 1],
+                            [1, 0, 0],
+                            [1, 1, 0],
+                            [1, 1, 0],
+                            [2, 0, 0],
+                        ]
+                    )
                     if euclidean:
                         corr_first[1, :] = [0, 1, 2]
                     if correct_correct_x:
@@ -158,6 +173,8 @@ def test_closest_eager_corrector():
                     corr_second[2, :] = [1, 0, 2]
 
                     if random_if_multiple:
-                        assert np.all(x_corr == corr_first) or np.all(x_corr == corr_second)
+                        assert np.all(x_corr == corr_first) or np.all(
+                            x_corr == corr_second
+                        )
                     else:
                         assert np.all(x_corr == corr_first)

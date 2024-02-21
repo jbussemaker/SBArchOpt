@@ -11,19 +11,19 @@ def test_gnc():
         (GNCNoActType(), 327, 14.1, 3.01),
         (GNCNoActNr(), 26500, 14.1, 14.1),
         (GNCNoAct(), 29857, 112.5, 17.2),
-
         (GNCNoNrType(), 70225, 3.73, 3.73),
         (GNCNoType(), 85779, 82.5, 9.01),
         (GNCNoNr(), 70225000, 73.5, 73.5),
         (GNC(), 79091323, 1761, 123),
-
         (MDGNCNoActNr(), 265, 1.93, 1.93),
         (MDGNCNoAct(), 327, 14.1, 3.01),
         (SOMDGNCNoAct(), 327, 14.1, 3.01),
         (MDGNCNoNr(), 70225, 3.73, 3.73),
         (MDGNC(), 85779, 82.5, 9.01),
     ]:
-        run_test_hierarchy(problem, imp_ratio, check_n_valid=n_valid < 400, corr_ratio=corr_ratio)
+        run_test_hierarchy(
+            problem, imp_ratio, check_n_valid=n_valid < 400, corr_ratio=corr_ratio
+        )
         assert problem.get_n_valid_discrete() == n_valid
 
         assert np.any(~problem.is_conditionally_active)
@@ -46,9 +46,15 @@ def test_gnc():
             assert problem.get_correction_ratio() > corr_ratio
 
             if not problem.choose_type or not problem.choose_nr:
-                assert problem.get_continuous_correction_ratio() == problem.get_continuous_imputation_ratio()
+                assert (
+                    problem.get_continuous_correction_ratio()
+                    == problem.get_continuous_imputation_ratio()
+                )
             else:
-                assert problem.get_continuous_correction_ratio() != problem.get_continuous_imputation_ratio()
+                assert (
+                    problem.get_continuous_correction_ratio()
+                    != problem.get_continuous_imputation_ratio()
+                )
 
 
 def test_gnc_cont_corr():
@@ -56,7 +62,7 @@ def test_gnc_cont_corr():
     assert np.all(problem.is_cont_mask[:6])
 
     x = np.array([problem.xl.copy()])
-    x[0, :3] = [.5, .25, .75]
+    x[0, :3] = [0.5, 0.25, 0.75]
     x, is_active = problem.correct_x(x)
-    assert np.all(x[0, :3] == [.5, .5, .75])
+    assert np.all(x[0, :3] == [0.5, 0.5, 0.75])
     assert np.all(is_active[0, :3])

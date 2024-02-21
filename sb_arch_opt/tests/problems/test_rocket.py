@@ -3,7 +3,9 @@ from sb_arch_opt.problems.rocket import *
 from sb_arch_opt.problems.rocket_eval import *
 from sb_arch_opt.tests.problems.test_hierarchical import run_test_hierarchy
 
-check_dependency = lambda: pytest.mark.skipif(not HAS_ROCKET, reason='Rocket dependencies not installed')
+check_dependency = lambda: pytest.mark.skipif(
+    not HAS_ROCKET, reason="Rocket dependencies not installed"
+)
 
 
 @check_dependency()
@@ -18,11 +20,11 @@ def test_1_stage():
         head_shape=HeadShape.SPHERE,
         length_diameter_ratio=10.83,
         max_q=50e3,
-        payload_density=2810.
+        payload_density=2810.0,
     )
 
     performance = RocketEvaluator.evaluate(rocket)
-    assert performance.cost == pytest.approx(53845830.)
+    assert performance.cost == pytest.approx(53845830.0)
     assert performance.payload_mass == pytest.approx(2783, abs=1)
     assert performance.delta_structural == pytest.approx(-23532, abs=1)
     assert performance.delta_payload == pytest.approx(-2.832, abs=1e-3)
@@ -44,12 +46,12 @@ def test_2_stages():
         head_shape=HeadShape.SPHERE,
         length_diameter_ratio=11.32,
         max_q=50e3,
-        payload_density=2810.
+        payload_density=2810.0,
     )
 
     performance = RocketEvaluator.evaluate(rocket)
-    assert performance.cost == pytest.approx(87563960.)
-    assert performance.payload_mass == pytest.approx(7578, abs=1.)
+    assert performance.cost == pytest.approx(87563960.0)
+    assert performance.payload_mass == pytest.approx(7578, abs=1.0)
     assert performance.delta_structural == pytest.approx(-27686, abs=1)
     assert performance.delta_payload == pytest.approx(-0.923, abs=1e-3)
 
@@ -72,17 +74,17 @@ def test_3_stages():
             ),
         ],
         head_shape=HeadShape.ELLIPTICAL,
-        ellipse_l_ratio=.175,
+        ellipse_l_ratio=0.175,
         length_diameter_ratio=17.55,
         max_q=50e3,
-        payload_density=2810.
+        payload_density=2810.0,
     )
 
     performance = RocketEvaluator.evaluate(rocket)
-    assert performance.cost == pytest.approx(337894901.)
+    assert performance.cost == pytest.approx(337894901.0)
     assert performance.payload_mass == pytest.approx(57777, abs=1)
     assert performance.delta_structural == pytest.approx(-27031, abs=1)
-    assert performance.delta_payload == pytest.approx(-118.9, abs=.1)
+    assert performance.delta_payload == pytest.approx(-118.9, abs=0.1)
 
 
 @check_dependency()

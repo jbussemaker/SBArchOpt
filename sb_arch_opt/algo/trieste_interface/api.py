@@ -22,14 +22,21 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+
 from sb_arch_opt.problem import ArchOptProblemBase
 from sb_arch_opt.algo.trieste_interface.algo import *
 
 
-__all__ = ['get_trieste_optimizer', 'HAS_TRIESTE']
+__all__ = ["get_trieste_optimizer", "HAS_TRIESTE"]
 
 
-def get_trieste_optimizer(problem: ArchOptProblemBase, n_init: int, n_infill: int, pof: float = .5, seed: int = None):
+def get_trieste_optimizer(
+    problem: ArchOptProblemBase,
+    n_init: int,
+    n_infill: int,
+    pof: float = 0.5,
+    seed: int = None,
+):
     """
     Gets the main interface to Trieste. Use the `run_optimization` method to run the DOE and infill loops.
     """

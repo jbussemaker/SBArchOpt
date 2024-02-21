@@ -22,6 +22,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+
 import logging
 import numpy as np
 from pymoo.core.population import Population
@@ -37,14 +38,14 @@ try:
 except ImportError:
     HAS_SMARTY = False
 
-__all__ = ['HAS_SMARTY', 'check_dependencies', 'SMARTyArchOptInterface']
+__all__ = ["HAS_SMARTY", "check_dependencies", "SMARTyArchOptInterface"]
 
-log = logging.getLogger('sb_arch_opt.smarty')
+log = logging.getLogger("sb_arch_opt.smarty")
 
 
 def check_dependencies():
     if not HAS_SMARTY:
-        raise ImportError(f'SMARTy not installed!')
+        raise ImportError(f"SMARTy not installed!")
 
 
 class SMARTyArchOptInterface:
@@ -73,22 +74,30 @@ class SMARTyArchOptInterface:
         if self._opt_prob is None:
             bounds = np.column_stack([self._problem.xl, self._problem.xu])
 
-            problem_structure = {'objFuncs': {f'f{i}': 'F' for i in range(self._problem.n_obj)}}
+            problem_structure = {
+                "objFuncs": {f"f{i}": "F" for i in range(self._problem.n_obj)}
+            }
             if self._has_g:
-                problem_structure['constrFuncs'] = {f'g{i}': 'F' for i in range(self._problem.n_ieq_constr)}
+                problem_structure["constrFuncs"] = {
+                    f"g{i}": "F" for i in range(self._problem.n_ieq_constr)
+                }
 
-            self._opt_prob = CustomOptProb(bounds=bounds, problemStructure=problem_structure,
-                                           customFunctionHandler=self._evaluate, vectorized=True,
-                                           problemName=repr(self._problem))
+            self._opt_prob = CustomOptProb(
+                bounds=bounds,
+                problemStructure=problem_structure,
+                customFunctionHandler=self._evaluate,
+                vectorized=True,
+                problemName=repr(self._problem),
+            )
         return self._opt_prob
 
     @property
-    def optimizer(self) -> 'SBO':
+    def optimizer(self) -> "SBO":
         if self._optimizer is None:
             self._optimizer = sbo = SBO(self.opt_prob)
 
             for key, settings in sbo._settingsDOE.items():
-                settings['nSamples'] = self._n_init
+                settings["nSamples"] = self._n_init
 
         return self._optimizer
 
@@ -97,9 +106,9 @@ class SMARTyArchOptInterface:
 
         outputs = {}
         for i in range(self._problem.n_obj):
-            outputs[f'objFuncs/f{i}/F'] = out['F'][:, i]
+            outputs[f"objFuncs/f{i}/F"] = out["F"][:, i]
         for i in range(self._problem.n_ieq_constr):
-            outputs[f'constrFuncs/g{i}/F'] = out['G'][:, i]
+            outputs[f"constrFuncs/g{i}/F"] = out["G"][:, i]
         return outputs
 
     @property
@@ -107,18 +116,18 @@ class SMARTyArchOptInterface:
         f, g, idx = self.opt_prob.CreateObjAndConstrMatrices()
         x = self.opt_prob.inputMatrix[idx]
 
-        kwargs = {'X': x, 'F': f}
+        kwargs = {"X": x, "F": f}
         if self._problem.n_ieq_constr > 0:
-            kwargs['G'] = g
+            kwargs["G"] = g
         return Population.new(**kwargs)
 
     def _get_infill(self):
         if self._problem.n_obj == 1:
-            return 'EI'
+            return "EI"
 
         elif self._problem.n_obj == 2:
-            return 'EHVI2D'
-        return 'WFGEHVI'
+            return "EHVI2D"
+        return "WFGEHVI"
 
     def _get_convergence(self):
         if self._problem.n_obj == 1:

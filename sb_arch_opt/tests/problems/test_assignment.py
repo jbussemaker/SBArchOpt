@@ -3,7 +3,9 @@ import numpy as np
 from sb_arch_opt.problems.assignment import *
 from sb_arch_opt.tests.problems.test_hierarchical import run_test_hierarchy
 
-check_dependency = lambda: pytest.mark.skipif(not HAS_ASSIGN_ENC, reason='assign_enc dependencies not installed')
+check_dependency = lambda: pytest.mark.skipif(
+    not HAS_ASSIGN_ENC, reason="assign_enc dependencies not installed"
+)
 
 
 @check_dependency()
@@ -49,7 +51,9 @@ def test_assign_enc_gnc():
         (AssignmentGNCNoType(), 85779, 82.5, np.nan),
         (AssignmentGNC(), 79091323, 367, np.nan),
     ]:
-        run_test_hierarchy(problem, imp_ratio, check_n_valid=n_valid < 400, corr_ratio=corr_ratio)
+        run_test_hierarchy(
+            problem, imp_ratio, check_n_valid=n_valid < 400, corr_ratio=corr_ratio
+        )
         assert problem.get_n_valid_discrete() == n_valid
 
         x_all, _ = problem.all_discrete_x

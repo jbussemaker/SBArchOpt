@@ -16,6 +16,7 @@ Contact: jasper.bussemaker@dlr.de
 
 This test suite contains a set of continuous and mixed-discrete, multi-objective, constrained problems.
 """
+
 import numpy as np
 from pymoo.core.variable import Real
 from pymoo.problems.multi.osy import OSY
@@ -25,8 +26,20 @@ from pymoo.problems.multi.dascmop import DASCMOP7, DIFFICULTIES
 from pymoo.problems.single.cantilevered_beam import CantileveredBeam
 from sb_arch_opt.problems.problems_base import *
 
-__all__ = ['ArchCantileveredBeam', 'MDCantileveredBeam', 'ArchWeldedBeam', 'MDWeldedBeam', 'ArchCarside', 'MDCarside',
-           'ArchOSY', 'MDOSY', 'MODASCMOP', 'MDDASCMOP', 'ConBraninProd', 'ConBraninGomez']
+__all__ = [
+    "ArchCantileveredBeam",
+    "MDCantileveredBeam",
+    "ArchWeldedBeam",
+    "MDWeldedBeam",
+    "ArchCarside",
+    "MDCarside",
+    "ArchOSY",
+    "MDOSY",
+    "MODASCMOP",
+    "MDDASCMOP",
+    "ConBraninProd",
+    "ConBraninGomez",
+]
 
 
 class ArchCantileveredBeam(NoHierarchyWrappedProblem):
@@ -112,31 +125,41 @@ class ConBraninBase(NoHierarchyProblemBase):
         ]
         super().__init__(des_vars, n_ieq_constr=1)
 
-    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
-                       h_out: np.ndarray, *args, **kwargs):
+    def _arch_evaluate(
+        self,
+        x: np.ndarray,
+        is_active_out: np.ndarray,
+        f_out: np.ndarray,
+        g_out: np.ndarray,
+        h_out: np.ndarray,
+        *args,
+        **kwargs,
+    ):
 
-        x_norm = (x+[5, 0])/15
+        x_norm = (x + [5, 0]) / 15
         for i in range(x.shape[0]):
             f_out[i, 0] = self._h(x[i, 0], x[i, 1])
             g_out[i, 0] = self._g(x_norm[i, 0], x_norm[i, 1])
 
     @staticmethod
     def _h(x1, x2):
-        t1 = (x2 - (5.1/(4*np.pi**2))*x1**2 + (5/np.pi)*x1 - 6)**2
-        t2 = 10*(1-1/(8*np.pi))*np.cos(x1) + 10
-        return t1 + t2 + 5*x2
+        t1 = (x2 - (5.1 / (4 * np.pi**2)) * x1**2 + (5 / np.pi) * x1 - 6) ** 2
+        t2 = 10 * (1 - 1 / (8 * np.pi)) * np.cos(x1) + 10
+        return t1 + t2 + 5 * x2
 
     def plot(self, show=True):
         import matplotlib.pyplot as plt
 
         xx1, xx2 = np.meshgrid(np.linspace(-5, 10, 100), np.linspace(0, 15, 100))
-        out = self.evaluate(np.column_stack([xx1.ravel(), xx2.ravel()]), return_as_dictionary=True)
-        zz = out['F'][:, 0]
-        zz[out['G'][:, 0] > 0] = np.nan
+        out = self.evaluate(
+            np.column_stack([xx1.ravel(), xx2.ravel()]), return_as_dictionary=True
+        )
+        zz = out["F"][:, 0]
+        zz[out["G"][:, 0] > 0] = np.nan
 
-        plt.figure(), plt.title(f'{self.__class__.__name__}')
-        plt.colorbar(plt.contourf(xx1, xx2, zz.reshape(xx1.shape), 50, cmap='inferno'))
-        plt.xlabel('$x_1$'), plt.ylabel('$x_2$')
+        plt.figure(), plt.title(f"{self.__class__.__name__}")
+        plt.colorbar(plt.contourf(xx1, xx2, zz.reshape(xx1.shape), 50, cmap="inferno"))
+        plt.xlabel("$x_1$"), plt.ylabel("$x_2$")
 
         if show:
             plt.show()
@@ -149,20 +172,26 @@ class ConBraninProd(ConBraninBase):
     """Constrained Branin problem with the product constraint (Eq. 14)"""
 
     def _g(self, x1, x2):
-        return .2 - x1*x2
+        return 0.2 - x1 * x2
 
 
 class ConBraninGomez(ConBraninBase):
     """Constrained Branin problem with the Gomez#3 constraint (Eq. 15)"""
 
     def _g(self, x1, x2):
-        x1 = x1*2-1
-        x2 = x2*2-1
-        g = (4 - 2.1*x1**2 + (x1**4)/3)*x1**2 + x1*x2 + (-4 + 4*x2**2)*x2**2 + 3*np.sin(6*(1-x1)) + 3*np.sin(6*(1-x2))
-        return 6-g
+        x1 = x1 * 2 - 1
+        x2 = x2 * 2 - 1
+        g = (
+            (4 - 2.1 * x1**2 + (x1**4) / 3) * x1**2
+            + x1 * x2
+            + (-4 + 4 * x2**2) * x2**2
+            + 3 * np.sin(6 * (1 - x1))
+            + 3 * np.sin(6 * (1 - x2))
+        )
+        return 6 - g
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # ArchCantileveredBeam().print_stats()
     # ArchCantileveredBeam().plot_design_space()
     # MDCantileveredBeam().print_stats()

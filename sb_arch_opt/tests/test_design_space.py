@@ -23,7 +23,7 @@ class DesignSpaceTest(ArchDesignSpace):
         raise RuntimeError
 
     def _is_conditionally_active(self):
-        return [False]*self.n_var
+        return [False] * self.n_var
 
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
         pass
@@ -45,26 +45,34 @@ class DesignSpaceTest(ArchDesignSpace):
 
 
 def test_rounding():
-    ds = DesignSpaceTest([Integer(bounds=(0, 5)), Integer(bounds=(-1, 1)), Integer(bounds=(2, 4))])
+    ds = DesignSpaceTest(
+        [Integer(bounds=(0, 5)), Integer(bounds=(-1, 1)), Integer(bounds=(2, 4))]
+    )
 
     assert np.all(ds.is_discrete_mask)
-    x = np.array(list(itertools.product(np.linspace(0, 5, 20), np.linspace(-1, 1, 20), np.linspace(2, 4, 20))))
+    x = np.array(
+        list(
+            itertools.product(
+                np.linspace(0, 5, 20), np.linspace(-1, 1, 20), np.linspace(2, 4, 20)
+            )
+        )
+    )
     ds.round_x_discrete(x)
 
     x1, x1_counts = np.unique(x[:, 0], return_counts=True)
     assert np.all(x1 == [0, 1, 2, 3, 4, 5])
     x1_counts = x1_counts / np.sum(x1_counts)
-    assert np.all(np.abs(x1_counts - np.mean(x1_counts)) <= .05)
+    assert np.all(np.abs(x1_counts - np.mean(x1_counts)) <= 0.05)
 
     x2, x2_counts = np.unique(x[:, 1], return_counts=True)
     assert np.all(x2 == [-1, 0, 1])
     x2_counts = x2_counts / np.sum(x2_counts)
-    assert np.all(np.abs(x2_counts - np.mean(x2_counts)) <= .05)
+    assert np.all(np.abs(x2_counts - np.mean(x2_counts)) <= 0.05)
 
     x3, x3_counts = np.unique(x[:, 2], return_counts=True)
     assert np.all(x3 == [2, 3, 4])
     x3_counts = x3_counts / np.sum(x3_counts)
-    assert np.all(np.abs(x3_counts - np.mean(x3_counts)) <= .05)
+    assert np.all(np.abs(x3_counts - np.mean(x3_counts)) <= 0.05)
 
     x_out_of_bounds = np.zeros((20, 3), dtype=int)
     x_out_of_bounds[:, 0] = np.linspace(-1, 6, 20)
@@ -79,22 +87,24 @@ def test_init_no_vars():
     assert ds.des_vars == []
     assert ds.get_n_declared_discrete() == 1
     assert np.isnan(ds.discrete_imputation_ratio)
-    assert ds.continuous_imputation_ratio == 1.
+    assert ds.continuous_imputation_ratio == 1.0
     assert np.isnan(ds.imputation_ratio)
     assert np.isnan(ds.discrete_correction_ratio)
-    assert ds.continuous_correction_ratio == 1.
+    assert ds.continuous_correction_ratio == 1.0
     assert np.isnan(ds.correction_ratio)
 
     assert not ds.is_explicit()
 
 
 def test_init_vars():
-    ds = DesignSpaceTest([
-        Real(bounds=(1, 5)),
-        Integer(bounds=(1, 4)),
-        Binary(),
-        Choice(options=['A', 'B', 'C']),
-    ])
+    ds = DesignSpaceTest(
+        [
+            Real(bounds=(1, 5)),
+            Integer(bounds=(1, 4)),
+            Binary(),
+            Choice(options=["A", "B", "C"]),
+        ]
+    )
     assert ds.n_var == 4
 
     assert np.all(ds.xl == [1, 1, 0, 0])
@@ -105,11 +115,11 @@ def test_init_vars():
     assert np.all(ds.is_cont_mask == [True, False, False, False])
     assert np.all(~ds.is_conditionally_active)
 
-    assert ds.get_n_declared_discrete() == 4*2*3
+    assert ds.get_n_declared_discrete() == 4 * 2 * 3
 
 
 def test_get_categorical_values():
-    ds = DesignSpaceTest([Choice(options=['A', 'B', 'C'])])
+    ds = DesignSpaceTest([Choice(options=["A", "B", "C"])])
     assert ds.all_discrete_x == (None, None)
     x_all, _ = ds.all_discrete_x_by_trial_and_imputation
     assert x_all.shape == (3, 1)
@@ -119,26 +129,28 @@ def test_get_categorical_values():
 
     cat_values = ds.get_categorical_values(x_all, 0)
     assert len(cat_values) == 3
-    assert np.all(cat_values == ['A', 'B', 'C'])
+    assert np.all(cat_values == ["A", "B", "C"])
 
 
-def test_x_generation(problem: ArchOptProblemBase, discrete_problem: ArchOptProblemBase):
+def test_x_generation(
+    problem: ArchOptProblemBase, discrete_problem: ArchOptProblemBase
+):
     for prob, n_valid, n_correct, cont_imp_ratio in [
-        (problem, 10*10, 10*10, 1.2),
-        (discrete_problem, 10*5+5, 10*10, 1.),
+        (problem, 10 * 10, 10 * 10, 1.2),
+        (discrete_problem, 10 * 5 + 5, 10 * 10, 1.0),
     ]:
         ds = prob.design_space
-        assert ds.get_n_declared_discrete() == 10*10
+        assert ds.get_n_declared_discrete() == 10 * 10
 
         assert ds.get_n_valid_discrete() == n_valid
         assert ds.discrete_imputation_ratio == (10 * 10) / n_valid
         assert ds.continuous_imputation_ratio == cont_imp_ratio
-        assert ds.imputation_ratio == cont_imp_ratio * (10*10)/n_valid
+        assert ds.imputation_ratio == cont_imp_ratio * (10 * 10) / n_valid
 
         assert ds.get_n_correct_discrete() == n_correct
         assert ds.discrete_correction_ratio == (10 * 10) / n_correct
         assert ds.continuous_correction_ratio == cont_imp_ratio
-        assert ds.correction_ratio == cont_imp_ratio * (10*10)/n_correct
+        assert ds.correction_ratio == cont_imp_ratio * (10 * 10) / n_correct
 
         assert ds.corrector is not None
         assert not ds.use_auto_corrector

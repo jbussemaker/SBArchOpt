@@ -22,6 +22,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+
 from pymoo.core.indicator import Indicator
 from pymoo.indicators.hv import Hypervolume
 from pymoo.util.display.column import Column
@@ -29,7 +30,12 @@ from pymoo.core.termination import TerminateIfAny
 from pymoo.termination.max_gen import MaximumGenerationTermination
 from sb_arch_opt.algo.pymoo_interface.metrics import *
 
-__all__ = ['EstimatedPFDistance', 'get_sbo_termination', 'PFDistanceTermination', 'SBOMultiObjectiveOutput']
+__all__ = [
+    "EstimatedPFDistance",
+    "get_sbo_termination",
+    "PFDistanceTermination",
+    "SBOMultiObjectiveOutput",
+]
 
 
 def get_sbo_termination(n_max_infill: int, tol=1e-3, n_filter=2):
@@ -45,13 +51,15 @@ class EstimatedPFDistance(Indicator):
 
     def _do(self, f, *args, **kwargs):
         if self.algorithm is None:
-            raise RuntimeError('Algorithm not set!')
+            raise RuntimeError("Algorithm not set!")
         from sb_arch_opt.algo.arch_sbo.algo import InfillAlgorithm, SBOInfill
 
         if len(f) == 0:
             return 1
 
-        if isinstance(self.algorithm, InfillAlgorithm) and isinstance(self.algorithm.infill_obj, SBOInfill):
+        if isinstance(self.algorithm, InfillAlgorithm) and isinstance(
+            self.algorithm.infill_obj, SBOInfill
+        ):
             sbo_infill = self.algorithm.infill_obj
             pf_estimate = sbo_infill.get_pf_estimate()
             if pf_estimate is None:
@@ -75,7 +83,9 @@ class PFDistanceTermination(TerminateIfAny):
     def __init__(self, tol=1e-3, n_filter=2, n_max_infill=100):
         self._pf_dist = EstimatedPFDistance()
         termination = [
-            IndicatorDeltaToleranceTermination(SmoothedIndicator(self._pf_dist, n_filter=n_filter), tol),
+            IndicatorDeltaToleranceTermination(
+                SmoothedIndicator(self._pf_dist, n_filter=n_filter), tol
+            ),
             MaximumGenerationTermination(n_max_gen=n_max_infill),
         ]
         super().__init__(*termination)
@@ -90,7 +100,7 @@ class SBOMultiObjectiveOutput(EHVMultiObjectiveOutput):
 
     def __init__(self):
         super().__init__()
-        self.pf_dist_col = Column('pf_dist')
+        self.pf_dist_col = Column("pf_dist")
         self.pf_dist = EstimatedPFDistance()
 
     def initialize(self, algorithm):

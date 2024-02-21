@@ -5,7 +5,9 @@ from sb_arch_opt.algo.tpe_interface import *
 from sb_arch_opt.problems.discrete import MDBranin
 from sb_arch_opt.problems.hidden_constraints import Alimo
 
-check_dependency = lambda: pytest.mark.skipif(not HAS_TPE, reason='TPE dependencies not installed')
+check_dependency = lambda: pytest.mark.skipif(
+    not HAS_TPE, reason="TPE dependencies not installed"
+)
 
 
 @check_dependency()
@@ -29,14 +31,14 @@ def test_md_branin():
 @check_dependency()
 def test_algorithm():
     algo = TPEAlgorithm(n_init=20)
-    result = minimize(MDBranin(), algo, ('n_eval', 30), copy_algorithm=False)
+    result = minimize(MDBranin(), algo, ("n_eval", 30), copy_algorithm=False)
     assert len(result.pop) == 30
     assert algo.opt is not None
 
 
 @check_dependency()
 def test_failed_evaluations():
-    minimize(Alimo(), TPEAlgorithm(n_init=20), ('n_eval', 100))
+    minimize(Alimo(), TPEAlgorithm(n_init=20), ("n_eval", 100))
 
 
 @check_dependency()
@@ -47,6 +49,6 @@ def test_store_results_restart():
             tpe = TPEAlgorithm(n_init=10, results_folder=tmp_folder)
             initialize_from_previous_results(tpe, problem, tmp_folder)
 
-            n_eval = 11+i
-            result = minimize(problem, tpe, termination=('n_eval', n_eval))
-            assert len(result.pop) == 10+(i+1)
+            n_eval = 11 + i
+            result = minimize(problem, tpe, termination=("n_eval", n_eval))
+            assert len(result.pop) == 10 + (i + 1)

@@ -22,13 +22,19 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+
 import logging
 import numpy as np
 from typing import Optional
 from sb_arch_opt.problem import *
 from sb_arch_opt.util import capture_log
-from sb_arch_opt.algo.pymoo_interface.api import ResultsStorageCallback, ArchOptEvaluator
-from sb_arch_opt.algo.pymoo_interface.storage_restart import initialize_from_previous_results
+from sb_arch_opt.algo.pymoo_interface.api import (
+    ResultsStorageCallback,
+    ArchOptEvaluator,
+)
+from sb_arch_opt.algo.pymoo_interface.storage_restart import (
+    initialize_from_previous_results,
+)
 from ConfigSpace import ConfigurationSpace, Float, Integer, Categorical
 
 import pymoo.core.variable as var
@@ -40,18 +46,24 @@ from pymoo.util.display.single import SingleObjectiveOutput
 
 try:
     from tpe.optimizer import TPEOptimizer
+
     HAS_TPE = True
 except ImportError:
     HAS_TPE = False
 
-__all__ = ['HAS_TPE', 'ArchTPEInterface', 'TPEAlgorithm', 'initialize_from_previous_results']
+__all__ = [
+    "HAS_TPE",
+    "ArchTPEInterface",
+    "TPEAlgorithm",
+    "initialize_from_previous_results",
+]
 
-log = logging.getLogger('sb_arch_opt.tpe')
+log = logging.getLogger("sb_arch_opt.tpe")
 
 
 def check_dependencies():
     if not HAS_TPE:
-        raise RuntimeError(f'TPE dependencies not installed: pip install -e .[tpe]')
+        raise RuntimeError(f"TPE dependencies not installed: pip install -e .[tpe]")
 
 
 class ArchTPEInterface:
@@ -69,12 +81,12 @@ class ArchTPEInterface:
         capture_log()
 
         if problem.n_obj != 1:
-            raise ValueError(f'Currently only single-objective problems are supported!')
+            raise ValueError(f"Currently only single-objective problems are supported!")
         if problem.n_ieq_constr != 0 or problem.n_eq_constr != 0:
-            raise ValueError(f'Currently only unconstrained problems are supported!')
+            raise ValueError(f"Currently only unconstrained problems are supported!")
 
         self._problem = problem
-        self._optimizer: Optional['TPEOptimizer'] = None
+        self._optimizer: Optional["TPEOptimizer"] = None
 
     def initialize(self):
         self._optimizer = self._get_optimizer()
@@ -94,7 +106,7 @@ class ArchTPEInterface:
 
         x = []
         for ix in range(self._problem.n_var):
-            key = f'x{ix}'
+            key = f"x{ix}"
             x.append(int(config[key]) if is_cat_mask[ix] else config[key])
         return np.array([x])
 
@@ -105,20 +117,22 @@ class ArchTPEInterface:
         out_config = {}
         is_cat_mask = self._problem.is_cat_mask
         for ix in range(self._problem.n_var):
-            key = f'x{ix}'
+            key = f"x{ix}"
             out_config[key] = str(int(x[ix])) if is_cat_mask[ix] else x[ix]
 
         # Report outputs
-        results = {'f': f}
-        self._optimizer.update(out_config, results, runtime=0.)
+        results = {"f": f}
+        self._optimizer.update(out_config, results, runtime=0.0)
 
     def optimize(self, n_init: int, n_infill: int):
         self.initialize()
 
         x_results, f_results = [], []
-        for i_iter in range(n_init+n_infill):
+        for i_iter in range(n_init + n_infill):
             is_init = i_iter < n_init
-            log.info(f'Iteration {i_iter+1}/{n_init+n_infill} ({"init" if is_init else "infill"})')
+            log.info(
+                f'Iteration {i_iter+1}/{n_init+n_infill} ({"init" if is_init else "infill"})'
+            )
 
             # Get next point to evaluate
             x_eval = self.ask_init() if is_init else self.ask()
@@ -126,11 +140,11 @@ class ArchTPEInterface:
             # Evaluate
             out = self._problem.evaluate(x_eval, return_as_dictionary=True)
 
-            x_out = out['X'][0, :]
-            f = out['F'][0, 0]
+            x_out = out["X"][0, :]
+            f = out["F"][0, 0]
             self.tell(x_out, f)
 
-            log.info(f'Evaluated: {f:.3g} @ {x_out}')
+            log.info(f"Evaluated: {f:.3g} @ {x_out}")
             x_results.append(x_out)
             f_results.append(f)
 
@@ -141,14 +155,14 @@ class ArchTPEInterface:
         return TPEOptimizer(
             obj_func=lambda *args, **kwargs: None,  # We're using the ask-tell interface
             config_space=self._get_config_space(),
-            metric_name='f',
-            result_keys=['f'],
+            metric_name="f",
+            result_keys=["f"],
         )
 
     def _get_config_space(self):
         params = {}
         for i, dv in enumerate(self._problem.des_vars):
-            name = f'x{i}'
+            name = f"x{i}"
             if isinstance(dv, var.Real):
                 params[name] = Float(name, bounds=dv.bounds)
             elif isinstance(dv, var.Integer):
@@ -156,9 +170,11 @@ class ArchTPEInterface:
             elif isinstance(dv, var.Binary):
                 params[name] = Integer(name, bounds=(0, 1))
             elif isinstance(dv, var.Choice):
-                params[name] = Categorical(name, items=[str(i) for i in range(len(dv.options))])
+                params[name] = Categorical(
+                    name, items=[str(i) for i in range(len(dv.options))]
+                )
             else:
-                raise ValueError(f'Unknown variable type: {dv!r}')
+                raise ValueError(f"Unknown variable type: {dv!r}")
 
         return ConfigurationSpace(space=params)
 
@@ -182,19 +198,29 @@ class TPEAlgorithm(Algorithm):
     space hierarchy like SBArchOpt supports it.
     """
 
-    def __init__(self, n_init: int, results_folder=None, output=SingleObjectiveOutput(), **kwargs):
+    def __init__(
+        self, n_init: int, results_folder=None, output=SingleObjectiveOutput(), **kwargs
+    ):
         self._interface: Optional[ArchTPEInterface] = None
         self.n_init = n_init
         self.initialization = TPEInitialization()
 
         evaluator = ArchOptEvaluator(results_folder=results_folder)
-        callback = ResultsStorageCallback(results_folder) if results_folder is not None else None
+        callback = (
+            ResultsStorageCallback(results_folder)
+            if results_folder is not None
+            else None
+        )
 
-        super().__init__(evaluator=evaluator, callback=callback, output=output, **kwargs)
+        super().__init__(
+            evaluator=evaluator, callback=callback, output=output, **kwargs
+        )
 
     def _setup(self, problem, **kwargs):
         if not isinstance(problem, ArchOptProblemBase):
-            raise RuntimeError(f'The TPE algorithm only works with SBArchOpt problem definitions!')
+            raise RuntimeError(
+                f"The TPE algorithm only works with SBArchOpt problem definitions!"
+            )
 
         self._interface = interface = ArchTPEInterface(problem)
         interface.initialize()
@@ -214,7 +240,7 @@ class TPEAlgorithm(Algorithm):
     def _advance(self, infills=None, is_init=False, **kwargs):
         if not is_init:
             self.pop = Population.merge(self.pop, infills)
-        x, f = infills.get('X'), infills.get('F')
+        x, f = infills.get("X"), infills.get("F")
         for i in range(len(infills)):
             self._interface.tell(x[i, :], f[i, 0])
 

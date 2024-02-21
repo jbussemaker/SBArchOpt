@@ -28,12 +28,14 @@ def test_init_no_vars():
 
 
 def test_init_vars():
-    problem = ArchOptProblemBase([
-        Real(bounds=(1, 5)),
-        Integer(bounds=(1, 4)),
-        Binary(),
-        Choice(options=['A', 'B', 'C']),
-    ])
+    problem = ArchOptProblemBase(
+        [
+            Real(bounds=(1, 5)),
+            Integer(bounds=(1, 4)),
+            Binary(),
+            Choice(options=["A", "B", "C"]),
+        ]
+    )
     assert problem.n_var == 4
     assert problem.n_obj == 1
 
@@ -44,7 +46,7 @@ def test_init_vars():
     assert np.all(problem.is_discrete_mask == [False, True, True, True])
     assert np.all(problem.is_cont_mask == [True, False, False, False])
 
-    assert problem.get_n_declared_discrete() == 4*2*3
+    assert problem.get_n_declared_discrete() == 4 * 2 * 3
 
 
 def test_correct_x(problem: ArchOptProblemBase):
@@ -54,21 +56,31 @@ def test_correct_x(problem: ArchOptProblemBase):
     assert np.all(problem.is_cat_mask == [False, True, False, False, False])
     assert np.all(problem.is_cont_mask == [True, False, True, False, True])
 
-    x, is_active = problem.correct_x(np.array([
-        [0, 0.1, 0, 0, 0],
-        [0, 0, 0, 0, 1],
-        [0, 6.9, 0, 0, 1],
-    ]))
-    assert np.all(x == [
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 1],
-        [0, 7, 0, 0, .5],
-    ])
-    assert np.all(is_active == [
-        [True, True, True, True, True],
-        [True, True, True, True, True],
-        [True, True, True, True, False],
-    ])
+    x, is_active = problem.correct_x(
+        np.array(
+            [
+                [0, 0.1, 0, 0, 0],
+                [0, 0, 0, 0, 1],
+                [0, 6.9, 0, 0, 1],
+            ]
+        )
+    )
+    assert np.all(
+        x
+        == [
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1],
+            [0, 7, 0, 0, 0.5],
+        ]
+    )
+    assert np.all(
+        is_active
+        == [
+            [True, True, True, True, True],
+            [True, True, True, True, True],
+            [True, True, True, True, False],
+        ]
+    )
 
     assert np.all(problem.is_conditionally_active == [False, False, False, False, True])
 
@@ -78,29 +90,39 @@ def test_repair(problem: ArchOptProblemBase):
 
     for as_pop in [False, True]:
         repair = ArchOptRepair()
-        x = np.array([
-            [0, 0.1, 0, 0, 0],
-            [0, 0, 0, 0, 1],
-            [0, 6.9, 0, 0, 1],
-        ])
+        x = np.array(
+            [
+                [0, 0.1, 0, 0, 0],
+                [0, 0, 0, 0, 1],
+                [0, 6.9, 0, 0, 1],
+            ]
+        )
         if as_pop:
-            x = repair.do(problem, Population.new(X=x)).get('X')
+            x = repair.do(problem, Population.new(X=x)).get("X")
         else:
             x = repair.do(problem, x)
-        assert np.all(x == [
-            [0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 1],
-            [0, 7, 0, 0, .5],
-        ])
-        assert np.all(repair.latest_is_active == [
-            [True, True, True, True, True],
-            [True, True, True, True, True],
-            [True, True, True, True, False],
-        ])
+        assert np.all(
+            x
+            == [
+                [0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 1],
+                [0, 7, 0, 0, 0.5],
+            ]
+        )
+        assert np.all(
+            repair.latest_is_active
+            == [
+                [True, True, True, True, True],
+                [True, True, True, True, True],
+                [True, True, True, True, False],
+            ]
+        )
 
 
-def test_imputation_ratio(problem: ArchOptProblemBase, discrete_problem: ArchOptProblemBase):
-    assert problem.get_n_declared_discrete() == 10*10
+def test_imputation_ratio(
+    problem: ArchOptProblemBase, discrete_problem: ArchOptProblemBase
+):
+    assert problem.get_n_declared_discrete() == 10 * 10
     assert problem.get_n_valid_discrete() == 10 * 10
     assert problem.get_discrete_imputation_ratio() == 1
     assert problem.get_continuous_imputation_ratio() == 1.2
@@ -113,15 +135,17 @@ def test_imputation_ratio(problem: ArchOptProblemBase, discrete_problem: ArchOpt
     assert np.all(~LargeDuplicateElimination.eliminate(x_discrete))
     problem.get_discrete_rates(show=True)
 
-    x_discrete_trial, is_act_trail = problem.design_space.all_discrete_x_by_trial_and_imputation
+    x_discrete_trial, is_act_trail = (
+        problem.design_space.all_discrete_x_by_trial_and_imputation
+    )
     assert np.all(x_discrete_trial == x_discrete)
     assert np.all(is_active_discrete == is_act_trail)
 
-    assert discrete_problem.get_n_declared_discrete() == 10*10
+    assert discrete_problem.get_n_declared_discrete() == 10 * 10
     assert discrete_problem.get_n_valid_discrete() == 10 * 5 + 5
-    assert discrete_problem.get_discrete_imputation_ratio() == 1/.55
-    assert discrete_problem.get_continuous_imputation_ratio() == 1.
-    assert discrete_problem.get_imputation_ratio() == 1/.55
+    assert discrete_problem.get_discrete_imputation_ratio() == 1 / 0.55
+    assert discrete_problem.get_continuous_imputation_ratio() == 1.0
+    assert discrete_problem.get_imputation_ratio() == 1 / 0.55
     discrete_problem.print_stats()
 
     x_discrete, is_active_discrete = discrete_problem.all_discrete_x
@@ -130,7 +154,9 @@ def test_imputation_ratio(problem: ArchOptProblemBase, discrete_problem: ArchOpt
     assert np.all(~LargeDuplicateElimination.eliminate(x_discrete))
     discrete_problem.get_discrete_rates(show=True)
 
-    x_discrete_trial, is_act_trail = discrete_problem.design_space.all_discrete_x_by_trial_and_imputation
+    x_discrete_trial, is_act_trail = (
+        discrete_problem.design_space.all_discrete_x_by_trial_and_imputation
+    )
     assert np.all(x_discrete_trial == x_discrete)
     assert np.all(is_active_discrete == is_act_trail)
 
@@ -142,68 +168,85 @@ def test_evaluate(problem: ArchOptProblemBase):
     x = np.zeros((4, 2))
     x[:, 1] = np.array([0, 1, 2, 3])
     cat_values = problem.get_categorical_values(x, 1)
-    assert np.all(cat_values == ['9', '8', '7', '6'])
-    assert np.all((cat_values == '9') == (x[:, 1] == 0))
+    assert np.all(cat_values == ["9", "8", "7", "6"])
+    assert np.all((cat_values == "9") == (x[:, 1] == 0))
 
     for use_evaluator in [False, True]:
-        x = np.array([
-            [0, 0.1, 0, 0, 0],
-            [0, 0, 0, 0, 1],
-            [0, 6.9, 0, 0, 1],
-        ])
+        x = np.array(
+            [
+                [0, 0.1, 0, 0, 0],
+                [0, 0, 0, 0, 1],
+                [0, 6.9, 0, 0, 1],
+            ]
+        )
         if use_evaluator:
             pop = Evaluator().eval(problem, Population.new(X=x))
-            x_out, is_active, f = pop.get('X'), pop.get('is_active'), pop.get('F')
+            x_out, is_active, f = pop.get("X"), pop.get("is_active"), pop.get("F")
             problem.get_population_statistics(pop, show=True)
         else:
             out = problem.evaluate(x, return_as_dictionary=True)
-            x_out, is_active, f = out['X'], out['is_active'], out['F']
-        assert np.all(x_out == [
-            [0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 1],
-            [0, 7, 0, 0, .5],
-        ])
-        assert np.all(is_active == [
-            [True, True, True, True, True],
-            [True, True, True, True, True],
-            [True, True, True, True, False],
-        ])
-        assert np.all(f == [
-            [0, 1],
-            [0, 3.25],
-            [0, 3.875],
-        ])
+            x_out, is_active, f = out["X"], out["is_active"], out["F"]
+        assert np.all(
+            x_out
+            == [
+                [0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 1],
+                [0, 7, 0, 0, 0.5],
+            ]
+        )
+        assert np.all(
+            is_active
+            == [
+                [True, True, True, True, True],
+                [True, True, True, True, True],
+                [True, True, True, True, False],
+            ]
+        )
+        assert np.all(
+            f
+            == [
+                [0, 1],
+                [0, 3.25],
+                [0, 3.875],
+            ]
+        )
 
     problem.get_population_statistics(Population.new(), show=True)
 
 
 def test_large_duplicate_elimination():
-    x = np.array([
-        [0, 0, 0],
-        [0, 0, 1],
-        [0, 0, 0],
-        [0, 0, .1],
-        [0, 2, 0],
-        [0, 2, 0],
-        [1, 0, 0],
-        [1, 0, 0],
-    ])
+    x = np.array(
+        [
+            [0, 0, 0],
+            [0, 0, 1],
+            [0, 0, 0],
+            [0, 0, 0.1],
+            [0, 2, 0],
+            [0, 2, 0],
+            [1, 0, 0],
+            [1, 0, 0],
+        ]
+    )
     is_dup = LargeDuplicateElimination.eliminate(x)
     assert np.all(np.where(~is_dup)[0] == [0, 1, 3, 4, 6])
     pop = LargeDuplicateElimination().do(Population.new(X=x))
     assert len(pop) == 5
 
-    pop = LargeDuplicateElimination().do(Population.new(X=x[:2, :]), Population.new(X=x[2:, :]), to_itself=False)
+    pop = LargeDuplicateElimination().do(
+        Population.new(X=x[:2, :]), Population.new(X=x[2:, :]), to_itself=False
+    )
     assert len(pop) == 1
 
-    pop = LargeDuplicateElimination().do(Population.new(X=x[:5, :]), Population.new(X=x[5:, :]))
+    pop = LargeDuplicateElimination().do(
+        Population.new(X=x[:5, :]), Population.new(X=x[5:, :])
+    )
     assert len(pop) == 3
 
     n, m = 4, 7
     x = np.array(list(itertools.product(*[list(range(n)) for _ in range(m)])))
     x = np.repeat(x, 2, axis=0)
     x = x[np.random.permutation(np.arange(x.shape[0])), :]
-    assert x.shape == (2*n**m, m)
+    assert x.shape == (2 * n**m, m)
     pop = LargeDuplicateElimination().do(Population.new(X=x))
     assert len(pop) == n**m
 
@@ -212,15 +255,20 @@ def test_hierarchical_exhaustive_sampling(problem: ArchOptProblemBase):
     for has_cheap in [True, False]:
         problem.set_provide_all_x(has_cheap)
 
-        sampling_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(problem)
+        sampling_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(
+            problem
+        )
         assert len(sampling_values) == 5
         assert np.prod([len(values) for values in sampling_values]) == 12500
         assert HierarchicalExhaustiveSampling.get_n_sample_exhaustive(problem) == 12500
-        assert HierarchicalExhaustiveSampling.has_cheap_all_x_discrete(problem) == has_cheap
+        assert (
+            HierarchicalExhaustiveSampling.has_cheap_all_x_discrete(problem)
+            == has_cheap
+        )
 
         sampling = HierarchicalExhaustiveSampling()
         assert isinstance(sampling._repair, ArchOptRepair)
-        x = sampling.do(problem, 100).get('X')
+        x = sampling.do(problem, 100).get("X")
         assert x.shape == (7500, 5)
         assert np.unique(x, axis=0).shape[0] == 7500
         problem.evaluate(x)
@@ -248,16 +296,16 @@ class HierarchicalDummyProblem(ArchOptProblemBase):
             is_one = np.where(x_sel == 1)[0]
             if len(is_one) > 0:
                 j = is_one[0]
-                is_active[i, j+1:n] = False
-                is_active[i, n+j:] = False
+                is_active[i, j + 1 : n] = False
+                is_active[i, n + j :] = False
 
     def __repr__(self):
-        return f'{self.__class__.__name__}()'
+        return f"{self.__class__.__name__}()"
 
 
 def test_hierarchical_exhaustive_sampling_hierarchical():
     problem = HierarchicalDummyProblem()
-    x = HierarchicalExhaustiveSampling(n_cont=2).do(problem, 0).get('X')
+    x = HierarchicalExhaustiveSampling(n_cont=2).do(problem, 0).get("X")
     assert x.shape == (31, 8)  # 2**(n+1)-1
 
     x_imp, _ = problem.correct_x(x)
@@ -267,8 +315,8 @@ def test_hierarchical_exhaustive_sampling_hierarchical():
 def test_hierarchical_exhaustive_sampling_hierarchical_large():
     n = 12
     problem = HierarchicalDummyProblem(n=n)
-    x = HierarchicalExhaustiveSampling(n_cont=2).do(problem, 0).get('X')
-    assert x.shape == (2**(n+1)-1, n*2)
+    x = HierarchicalExhaustiveSampling(n_cont=2).do(problem, 0).get("X")
+    assert x.shape == (2 ** (n + 1) - 1, n * 2)
 
     x_imp, _ = problem.correct_x(x)
     assert np.all(x_imp == x)
@@ -314,7 +362,9 @@ def _disable_x_all(problem: ArchOptProblemBase):
 
 def test_hierarchical_random_sampling(problem: ArchOptProblemBase):
 
-    sampling_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(problem)
+    sampling_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(
+        problem
+    )
     assert len(sampling_values) == 5
     assert np.prod([len(values) for values in sampling_values]) == 12500
 
@@ -323,9 +373,11 @@ def test_hierarchical_random_sampling(problem: ArchOptProblemBase):
     for sobol in [False, True]:
         sampling = HierarchicalSampling(sobol=sobol)
         assert isinstance(sampling._repair, ArchOptRepair)
-        assert sampling.get_hierarchical_cartesian_product(problem, sampling.repair) == (None, None)
+        assert sampling.get_hierarchical_cartesian_product(
+            problem, sampling.repair
+        ) == (None, None)
 
-        x = sampling.do(problem, 1000).get('X')
+        x = sampling.do(problem, 1000).get("X")
         assert x.shape == (1000, 5)
         assert np.unique(x, axis=0).shape[0] == 1000
         problem.evaluate(x)
@@ -334,21 +386,25 @@ def test_hierarchical_random_sampling(problem: ArchOptProblemBase):
         assert np.all(x_imp == x)
 
         np.random.seed(42)
-        x1 = sampling.do(problem, 1000).get('X')
-        x2 = sampling.do(problem, 1000).get('X')
+        x1 = sampling.do(problem, 1000).get("X")
+        x2 = sampling.do(problem, 1000).get("X")
         assert np.any(x1 != x2)
 
         np.random.seed(42)
-        x3 = sampling.do(problem, 1000).get('X')
+        x3 = sampling.do(problem, 1000).get("X")
         assert np.all(x1 == x3)
 
-        x4 = HierarchicalSampling(sobol=sobol, seed=42).do(problem, 1000).get('X')
+        x4 = HierarchicalSampling(sobol=sobol, seed=42).do(problem, 1000).get("X")
         assert np.all(x1 == x4)
 
 
-def test_hierarchical_random_sampling_discrete_hierarchical(discrete_problem: ArchOptProblemBase):
+def test_hierarchical_random_sampling_discrete_hierarchical(
+    discrete_problem: ArchOptProblemBase,
+):
 
-    sampling_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(discrete_problem)
+    sampling_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(
+        discrete_problem
+    )
     assert len(sampling_values) == 2
     assert np.prod([len(values) for values in sampling_values]) == 100
 
@@ -357,9 +413,11 @@ def test_hierarchical_random_sampling_discrete_hierarchical(discrete_problem: Ar
     for sobol in [False, True]:
         sampling = HierarchicalSampling(sobol=sobol)
         assert isinstance(sampling._repair, ArchOptRepair)
-        assert sampling.get_hierarchical_cartesian_product(discrete_problem, sampling.repair) == (None, None)
+        assert sampling.get_hierarchical_cartesian_product(
+            discrete_problem, sampling.repair
+        ) == (None, None)
 
-        x = sampling.do(discrete_problem, 1000).get('X')
+        x = sampling.do(discrete_problem, 1000).get("X")
         assert x.shape == (55, 2)
         assert np.unique(x, axis=0).shape[0] == 55
         discrete_problem.evaluate(x)
@@ -370,9 +428,11 @@ def test_hierarchical_random_sampling_discrete_hierarchical(discrete_problem: Ar
     for sobol in [False, True]:
         sampling = HierarchicalSampling(sobol=sobol)
         assert isinstance(sampling._repair, ArchOptRepair)
-        assert sampling.get_hierarchical_cartesian_product(discrete_problem, sampling.repair) == (None, None)
+        assert sampling.get_hierarchical_cartesian_product(
+            discrete_problem, sampling.repair
+        ) == (None, None)
 
-        x = sampling.do(discrete_problem, 50).get('X')
+        x = sampling.do(discrete_problem, 50).get("X")
         assert x.shape[0] < 50
         assert np.unique(x, axis=0).shape[0] == x.shape[0]
         discrete_problem.evaluate(x)
@@ -383,7 +443,9 @@ def test_hierarchical_random_sampling_discrete_hierarchical(discrete_problem: Ar
 
 def test_hierarchical_random_sampling_non_exhaustive(problem: ArchOptProblemBase):
 
-    sampling_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(problem)
+    sampling_values = HierarchicalExhaustiveSampling.get_exhaustive_sample_values(
+        problem
+    )
     assert len(sampling_values) == 5
     assert np.prod([len(values) for values in sampling_values]) == 12500
 
@@ -392,9 +454,11 @@ def test_hierarchical_random_sampling_non_exhaustive(problem: ArchOptProblemBase
     for sobol in [False, True]:
         sampling = HierarchicalSampling(sobol=sobol)
         assert isinstance(sampling._repair, ArchOptRepair)
-        assert sampling.get_hierarchical_cartesian_product(problem, sampling.repair) == (None, None)
+        assert sampling.get_hierarchical_cartesian_product(
+            problem, sampling.repair
+        ) == (None, None)
 
-        x = sampling.do(problem, 1000).get('X')
+        x = sampling.do(problem, 1000).get("X")
         assert x.shape == (1000, 5)
         assert np.unique(x, axis=0).shape[0] == 1000
         problem.evaluate(x)
@@ -403,16 +467,18 @@ def test_hierarchical_random_sampling_non_exhaustive(problem: ArchOptProblemBase
         assert np.all(x_imp == x)
 
         np.random.seed(42)
-        x1 = sampling.do(problem, 1000).get('X')
-        x2 = sampling.do(problem, 1000).get('X')
+        x1 = sampling.do(problem, 1000).get("X")
+        x2 = sampling.do(problem, 1000).get("X")
         assert np.any(x1 != x2)
 
         np.random.seed(42)
-        x3 = sampling.do(problem, 1000).get('X')
+        x3 = sampling.do(problem, 1000).get("X")
         assert np.all(x1 == x3)
 
 
-def test_cached_pareto_front_mixin(problem: ArchOptTestProblemBase, discrete_problem: ArchOptTestProblemBase):
+def test_cached_pareto_front_mixin(
+    problem: ArchOptTestProblemBase, discrete_problem: ArchOptTestProblemBase
+):
     problem.reset_pf_cache()
     assert not os.path.exists(problem._pf_cache_path())
 
@@ -431,8 +497,8 @@ def test_cached_pareto_front_mixin(problem: ArchOptTestProblemBase, discrete_pro
     ps, pf = problem.pareto_set(), problem.pareto_front()
     assert ps.shape[0] == pf.shape[0]
     out = problem.evaluate(ps, return_as_dictionary=True)
-    assert np.all(np.abs(out['X']-ps) < 1e-10)
-    assert np.all(np.abs(out['F']-pf) < 1e-10)
+    assert np.all(np.abs(out["X"] - ps) < 1e-10)
+    assert np.all(np.abs(out["F"] - pf) < 1e-10)
 
     discrete_problem.reset_pf_cache()
     assert not os.path.exists(discrete_problem._pf_cache_path())
@@ -452,27 +518,39 @@ def test_failing_evaluations(failing_problem: ArchOptTestProblemBase):
 class DummyExplicitDesignSpaceProblem(ArchOptTestProblemBase):
 
     def __init__(self, write_x_out=False):
-        ds = ExplicitArchDesignSpace([
-            CategoricalParam('a', ['A', 'B', 'C']),
-            IntegerParam('b', 0, 3),
-            ContinuousParam('c', 0, 2),
-        ])
-        ds.add_conditions([
-            InCondition(ds['b'], ds['a'], ['A', 'B']),
-            InCondition(ds['c'], ds['a'], ['B', 'C']),
-        ])
-        ds.add_value_constraint(ds['b'], 3, ds['a'], 'B')
+        ds = ExplicitArchDesignSpace(
+            [
+                CategoricalParam("a", ["A", "B", "C"]),
+                IntegerParam("b", 0, 3),
+                ContinuousParam("c", 0, 2),
+            ]
+        )
+        ds.add_conditions(
+            [
+                InCondition(ds["b"], ds["a"], ["A", "B"]),
+                InCondition(ds["c"], ds["a"], ["B", "C"]),
+            ]
+        )
+        ds.add_value_constraint(ds["b"], 3, ds["a"], "B")
         self.write_x_out = write_x_out
         super().__init__(ds)
 
-    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
-                       h_out: np.ndarray, *args, **kwargs):
+    def _arch_evaluate(
+        self,
+        x: np.ndarray,
+        is_active_out: np.ndarray,
+        f_out: np.ndarray,
+        g_out: np.ndarray,
+        h_out: np.ndarray,
+        *args,
+        **kwargs,
+    ):
         for i, xi in enumerate(x):
             assert is_active_out[i, 1] == (xi[0] != 2)
             assert is_active_out[i, 2] == (xi[0] != 0)
 
             if xi[0] == 0:  # A
-                assert xi[2] == 1.  # c is inactive
+                assert xi[2] == 1.0  # c is inactive
 
             elif xi[0] == 2:  # B
                 assert xi[1] != 3  # b == 3 forbidden if a == B
@@ -484,7 +562,7 @@ class DummyExplicitDesignSpaceProblem(ArchOptTestProblemBase):
             is_active_out[:, :] = False
 
     def __repr__(self):
-        return f'{self.__class__.__name__}'
+        return f"{self.__class__.__name__}"
 
 
 def test_explicit_design_space():

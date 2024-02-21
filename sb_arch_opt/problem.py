@@ -22,6 +22,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+
 import numpy as np
 import pandas as pd
 from typing import List, Optional, Union, Tuple
@@ -32,7 +33,7 @@ from pymoo.core.population import Population
 from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
 from sb_arch_opt.design_space import ArchDesignSpace, ImplicitArchDesignSpace
 
-__all__ = ['ArchOptProblemBase', 'ArchOptRepair', 'ArchDesignSpace']
+__all__ = ["ArchOptProblemBase", "ArchOptRepair", "ArchDesignSpace"]
 
 
 class ArchOptProblemBase(Problem):
@@ -64,8 +65,14 @@ class ArchOptProblemBase(Problem):
     the mixed-variable operators have been rewritten in SBArchOpt.
     """
 
-    def __init__(self, des_vars: Union[List[Variable], ArchDesignSpace], n_obj=1, n_ieq_constr=0, n_eq_constr=0,
-                 **kwargs):
+    def __init__(
+        self,
+        des_vars: Union[List[Variable], ArchDesignSpace],
+        n_obj=1,
+        n_ieq_constr=0,
+        n_eq_constr=0,
+        **kwargs,
+    ):
 
         # Create a design space if we didn't get one
         if isinstance(des_vars, ArchDesignSpace):
@@ -86,11 +93,21 @@ class ArchOptProblemBase(Problem):
         n_var = design_space.n_var
         xl = design_space.xl
         xu = design_space.xu
-        var_types = {f'DV{i}': des_var for i, des_var in enumerate(design_space.des_vars)}
+        var_types = {
+            f"DV{i}": des_var for i, des_var in enumerate(design_space.des_vars)
+        }
         self.des_vars = design_space.des_vars
 
-        super().__init__(n_var=n_var, xl=xl, xu=xu, vars=var_types,
-                         n_obj=n_obj, n_ieq_constr=n_ieq_constr, n_eq_constr=n_eq_constr, **kwargs)
+        super().__init__(
+            n_var=n_var,
+            xl=xl,
+            xu=xu,
+            vars=var_types,
+            n_obj=n_obj,
+            n_ieq_constr=n_ieq_constr,
+            n_eq_constr=n_eq_constr,
+            **kwargs,
+        )
 
     @property
     def is_cat_mask(self):
@@ -155,7 +172,8 @@ class ArchOptProblemBase(Problem):
     @property
     def all_discrete_x(self) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
         """Generate all possible discrete design vectors, if the problem provides this function. Returns both the design
-        vectors and activeness information. Active continuous variables may have any value within their bounds."""
+        vectors and activeness information. Active continuous variables may have any value within their bounds.
+        """
         return self.design_space.all_discrete_x
 
     def _evaluate(self, x, out, *args, **kwargs):
@@ -172,9 +190,9 @@ class ArchOptProblemBase(Problem):
         self.design_space.round_x_discrete(x_out)
         is_active_out = np.ones(x.shape, dtype=bool)
 
-        f_out = np.zeros((x.shape[0], self.n_obj))*np.nan
-        g_out = np.zeros((x.shape[0], self.n_ieq_constr))*np.nan
-        h_out = np.zeros((x.shape[0], self.n_eq_constr))*np.nan
+        f_out = np.zeros((x.shape[0], self.n_obj)) * np.nan
+        g_out = np.zeros((x.shape[0], self.n_ieq_constr)) * np.nan
+        h_out = np.zeros((x.shape[0], self.n_eq_constr)) * np.nan
 
         # If the design space definition is explicit, it means that that is all we need to correct and impute, and we
         # prevent subsequent changing of the inputs
@@ -187,27 +205,27 @@ class ArchOptProblemBase(Problem):
         self._arch_evaluate(x_out, is_active_out, f_out, g_out, h_out, *args, **kwargs)
 
         # Provide outputs to pymoo
-        out['X'] = x_out
-        out['is_active'] = is_active_out
-        out['F'] = f_out
+        out["X"] = x_out
+        out["is_active"] = is_active_out
+        out["F"] = f_out
         if self.n_ieq_constr > 0:
-            out['G'] = g_out
+            out["G"] = g_out
         if self.n_eq_constr > 0:
-            out['H'] = h_out
+            out["H"] = h_out
 
     @staticmethod
     def get_failed_points(pop_or_out: Union[dict, Population]):
         if len(pop_or_out) == 0:
             return np.array([], dtype=bool)
 
-        f = pop_or_out.get('F')
+        f = pop_or_out.get("F")
         is_failed = np.any(~np.isfinite(f), axis=1)
 
-        g = pop_or_out.get('G')
+        g = pop_or_out.get("G")
         if g is not None:
             is_failed |= np.any(~np.isfinite(g), axis=1)
 
-        h = pop_or_out.get('H')
+        h = pop_or_out.get("H")
         if h is not None:
             is_failed |= np.any(~np.isfinite(h), axis=1)
 
@@ -224,33 +242,66 @@ class ArchOptProblemBase(Problem):
             i_not_met = np.delete(np.arange(len(pop_stat)), i_met)
             n_not_met = len(pop_stat[i_not_met])
 
-            rows.append([met_name, n_met, f'{100*n_met/(len(pop) or 1):.1f}%',
-                         not_met_name, n_not_met, f'{100*n_not_met/(len(pop) or 1):.1f}%'])
+            rows.append(
+                [
+                    met_name,
+                    n_met,
+                    f"{100*n_met/(len(pop) or 1):.1f}%",
+                    not_met_name,
+                    n_not_met,
+                    f"{100*n_not_met/(len(pop) or 1):.1f}%",
+                ]
+            )
             return pop_met
 
         pop_stat = pop
-        i_is_eval = np.array([i for i, ind in enumerate(pop_stat) if len(ind.evaluated or []) > 0], dtype=int)
-        pop_stat = _add_row('Evaluated', 'Unknown', i_is_eval)
-        pop_stat = _add_row('Viable', 'Failed', ~cls.get_failed_points(pop_stat))
-        pop_stat = _add_row('Feasible', 'Infeasible',
-                            pop_stat.get('feas') if len(pop_stat) > 0 else np.array([], dtype=bool))
+        i_is_eval = np.array(
+            [i for i, ind in enumerate(pop_stat) if len(ind.evaluated or []) > 0],
+            dtype=int,
+        )
+        pop_stat = _add_row("Evaluated", "Unknown", i_is_eval)
+        pop_stat = _add_row("Viable", "Failed", ~cls.get_failed_points(pop_stat))
+        pop_stat = _add_row(
+            "Feasible",
+            "Infeasible",
+            pop_stat.get("feas") if len(pop_stat) > 0 else np.array([], dtype=bool),
+        )
 
         i_nds = np.array([], dtype=int)
         if 0 < len(pop_stat) < 2000:
             try:
-                i_nds = NonDominatedSorting().do(pop_stat.get('F'), only_non_dominated_front=True)
+                i_nds = NonDominatedSorting().do(
+                    pop_stat.get("F"), only_non_dominated_front=True
+                )
             except IndexError:
                 pass
-        _add_row('Optimal', 'Dominated', i_nds)
+        _add_row("Optimal", "Dominated", i_nds)
 
-        pop_stats = pd.DataFrame(data=rows, columns=pd.MultiIndex.from_tuples([
-            ('condition', 'name'), ('condition', 'n'), ('condition', '%'),
-            ('not met', 'name'), ('not met', 'n'), ('not met', '%'),
-        ]))
+        pop_stats = pd.DataFrame(
+            data=rows,
+            columns=pd.MultiIndex.from_tuples(
+                [
+                    ("condition", "name"),
+                    ("condition", "n"),
+                    ("condition", "%"),
+                    ("not met", "name"),
+                    ("not met", "n"),
+                    ("not met", "%"),
+                ]
+            ),
+        )
 
         if show:
-            with pd.option_context('display.max_rows', None, 'display.max_columns', None,
-                                   'display.expand_frame_repr', False, 'max_colwidth', None):
+            with pd.option_context(
+                "display.max_rows",
+                None,
+                "display.max_columns",
+                None,
+                "display.expand_frame_repr",
+                False,
+                "max_colwidth",
+                None,
+            ):
                 print(pop_stats)
 
         return pop_stats
@@ -264,24 +315,32 @@ class ArchOptProblemBase(Problem):
         n_discr = np.sum(self.is_discrete_mask)
         n_cont = np.sum(self.is_cont_mask)
         try:
-            print(f'problem: {self!r}')
+            print(f"problem: {self!r}")
         except NotImplementedError:
             pass
-        print(f'n_discr: {n_discr}')  # Number of discrete design variables
-        print(f'n_cont : {n_cont}')  # Number of continuous design variables
-        print(f'n_obj  : {self.n_obj}')  # Number of objectives
-        print(f'n_con  : {self.n_ieq_constr}')  # Number of (inequality) constraints
-        print(f'MD     : {n_discr > 0 and n_cont > 0}')  # Is it a mixed-discrete problem?
-        print(f'MO     : {self.n_obj > 1}')  # Is it a multi-objective problem?
+        print(f"n_discr: {n_discr}")  # Number of discrete design variables
+        print(f"n_cont : {n_cont}")  # Number of continuous design variables
+        print(f"n_obj  : {self.n_obj}")  # Number of objectives
+        print(f"n_con  : {self.n_ieq_constr}")  # Number of (inequality) constraints
+        print(
+            f"MD     : {n_discr > 0 and n_cont > 0}"
+        )  # Is it a mixed-discrete problem?
+        print(f"MO     : {self.n_obj > 1}")  # Is it a multi-objective problem?
 
         imp_ratio = self.get_imputation_ratio()
         discrete_imp_ratio = self.get_discrete_imputation_ratio()
         cont_imp_ratio = self.get_continuous_imputation_ratio()
         if not np.isnan(imp_ratio) or not np.isnan(discrete_imp_ratio):
-            print(f'HIER         : {imp_ratio > 1 or discrete_imp_ratio > 1}')  # Is it a hierarchical problem?
-            print(f'n_valid_discr: {self.get_n_valid_discrete()}')  # Number of valid discrete design points
-            print(f'imp_ratio    : {imp_ratio:.2f} (discr.: {discrete_imp_ratio:.2f}; '
-                  f'cont.: {cont_imp_ratio:.2f})')  # Imputation ratio: nr of declared designs / n_valid_discr
+            print(
+                f"HIER         : {imp_ratio > 1 or discrete_imp_ratio > 1}"
+            )  # Is it a hierarchical problem?
+            print(
+                f"n_valid_discr: {self.get_n_valid_discrete()}"
+            )  # Number of valid discrete design points
+            print(
+                f"imp_ratio    : {imp_ratio:.2f} (discr.: {discrete_imp_ratio:.2f}; "
+                f"cont.: {cont_imp_ratio:.2f})"
+            )  # Imputation ratio: nr of declared designs / n_valid_discr
 
         corr_ratio = self.get_correction_ratio()
         discrete_corr_ratio = self.get_discrete_correction_ratio()
@@ -290,15 +349,25 @@ class ArchOptProblemBase(Problem):
         if not np.isnan(corr_ratio) or not np.isnan(discrete_corr_ratio):
             # print(f'n_corr_discr : {self.get_n_correct_discrete()}')  # Number of correct discrete design points
             # Correction ratio: nr of declared designs / n_correct_discr
-            print(f'corr_ratio   : {corr_ratio:.2f} (discr.: {discrete_corr_ratio:.2f}; '
-                  f'cont.: {cont_corr_ratio:.2f}; fraction of imp_ratio: {corr_fraction*100:.1f}%)')
+            print(
+                f"corr_ratio   : {corr_ratio:.2f} (discr.: {discrete_corr_ratio:.2f}; "
+                f"cont.: {cont_corr_ratio:.2f}; fraction of imp_ratio: {corr_fraction*100:.1f}%)"
+            )
 
         fail_rate = self.get_failure_rate()
         if fail_rate is not None and fail_rate > 0:
-            might_have_warn = ' (CHECK DECLARATION)' if not self.might_have_hidden_constraints() else ''
+            might_have_warn = (
+                " (CHECK DECLARATION)"
+                if not self.might_have_hidden_constraints()
+                else ""
+            )
             # Problem has hidden constraints (= regions with failed evaluations)?
-            print(f'HC           : {self.might_have_hidden_constraints()}{might_have_warn}')
-            print(f'failure_rate : {fail_rate*100:.0f}%')  # Failure rate: fraction of points where evaluation fails
+            print(
+                f"HC           : {self.might_have_hidden_constraints()}{might_have_warn}"
+            )
+            print(
+                f"failure_rate : {fail_rate*100:.0f}%"
+            )  # Failure rate: fraction of points where evaluation fails
 
         self._print_extra_stats()
 
@@ -357,7 +426,8 @@ class ArchOptProblemBase(Problem):
         """Returns for each discrete value of the discrete design variables, how often the relatively occur over all
         possible design vectors. A value of -1 represents an inactive design variable. Results are returned in a
         pandas DataFrame with each column representing a design variable.
-        Also adds a measure of rate diversity: difference between lowest and highest occurring values."""
+        Also adds a measure of rate diversity: difference between lowest and highest occurring values.
+        """
         return self.design_space.get_discrete_rates(force=force, show=show)
 
     """##############################
@@ -437,8 +507,16 @@ class ArchOptProblemBase(Problem):
     def get_n_batch_evaluate(self) -> Optional[int]:
         """If the problem evaluation benefits from parallel batch process, return the appropriate batch size here"""
 
-    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
-                       h_out: np.ndarray, *args, **kwargs):
+    def _arch_evaluate(
+        self,
+        x: np.ndarray,
+        is_active_out: np.ndarray,
+        f_out: np.ndarray,
+        g_out: np.ndarray,
+        h_out: np.ndarray,
+        *args,
+        **kwargs,
+    ):
         """
         Implement evaluation and write results in the provided output matrices:
         - x (design vectors): discrete variables have integer values, imputed design vectors can be output here (except
@@ -480,7 +558,7 @@ class ArchOptRepair(Repair):
 
     def do(self, problem, pop, **kwargs):
         is_array = not isinstance(pop, Population)
-        x = pop if is_array else pop.get('X')
+        x = pop if is_array else pop.get("X")
 
         if isinstance(problem, ArchOptProblemBase):
             x, self.latest_is_active = problem.correct_x(x)
@@ -489,8 +567,8 @@ class ArchOptRepair(Repair):
 
         if is_array:
             return x
-        pop.set('X', x)
+        pop.set("X", x)
         return pop
 
     def __repr__(self):
-        return f'{self.__class__.__name__}()'
+        return f"{self.__class__.__name__}()"

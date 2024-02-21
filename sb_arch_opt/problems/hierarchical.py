@@ -16,6 +16,7 @@ Contact: jasper.bussemaker@dlr.de
 
 This test suite contains a set of mixed-discrete, constrained, hierarchical, multi-objective problems.
 """
+
 import enum
 import numpy as np
 from typing import *
@@ -30,15 +31,33 @@ from sb_arch_opt.problems.problems_base import *
 from pymoo.core.variable import Real, Integer, Choice
 from pymoo.util.ref_dirs import get_reference_directions
 
-__all__ = ['HierarchyProblemBase', 'HierarchicalGoldstein', 'HierarchicalRosenbrock', 'ZaeffererHierarchical',
-           'ZaeffererProblemMode', 'MOHierarchicalGoldstein', 'MOHierarchicalRosenbrock', 'HierarchicalMetaProblemBase',
-           'MOHierarchicalTestProblem', 'Jenatton', 'TunableHierarchicalMetaProblem', 'TunableZDT1', 'HierZDT1',
-           'HierZDT1Small', 'HierZDT1Large', 'HierDiscreteZDT1', 'HierBranin', 'HierCantileveredBeam', 'HierCarside',
-           'NeuralNetwork']
+__all__ = [
+    "HierarchyProblemBase",
+    "HierarchicalGoldstein",
+    "HierarchicalRosenbrock",
+    "ZaeffererHierarchical",
+    "ZaeffererProblemMode",
+    "MOHierarchicalGoldstein",
+    "MOHierarchicalRosenbrock",
+    "HierarchicalMetaProblemBase",
+    "MOHierarchicalTestProblem",
+    "Jenatton",
+    "TunableHierarchicalMetaProblem",
+    "TunableZDT1",
+    "HierZDT1",
+    "HierZDT1Small",
+    "HierZDT1Large",
+    "HierDiscreteZDT1",
+    "HierBranin",
+    "HierCantileveredBeam",
+    "HierCarside",
+    "NeuralNetwork",
+]
 
 
 class HierarchyProblemBase(ArchOptTestProblemBase):
     """Base class for test problems that have decision hierarchy"""
+
     _force_get_discrete_rates = True
 
     def _print_extra_stats(self):
@@ -66,7 +85,7 @@ class HierarchyProblemBase(ArchOptTestProblemBase):
         return list(np.any(~is_act_all, axis=0))
 
     def __repr__(self):
-        return f'{self.__class__.__name__}()'
+        return f"{self.__class__.__name__}()"
 
 
 class HierarchicalGoldstein(HierarchyProblemBase):
@@ -87,10 +106,17 @@ class HierarchicalGoldstein(HierarchyProblemBase):
 
     def __init__(self):
         des_vars = [
-            Real(bounds=(0, 100)), Real(bounds=(0, 100)), Real(bounds=(0, 100)), Real(bounds=(0, 100)),
             Real(bounds=(0, 100)),
-            Integer(bounds=(0, 2)), Integer(bounds=(0, 2)), Integer(bounds=(0, 2)), Integer(bounds=(0, 2)),
-            Choice(options=[0, 1, 2, 3]), Choice(options=[0, 1]),
+            Real(bounds=(0, 100)),
+            Real(bounds=(0, 100)),
+            Real(bounds=(0, 100)),
+            Real(bounds=(0, 100)),
+            Integer(bounds=(0, 2)),
+            Integer(bounds=(0, 2)),
+            Integer(bounds=(0, 2)),
+            Integer(bounds=(0, 2)),
+            Choice(options=[0, 1, 2, 3]),
+            Choice(options=[0, 1]),
         ]
 
         n_obj = 2 if self._mo else 1
@@ -107,12 +133,20 @@ class HierarchicalGoldstein(HierarchyProblemBase):
         n_valid[:2, :] *= 3
 
         # DV 7 and 8 are always valid
-        n_valid *= 3*3
+        n_valid *= 3 * 3
 
         return int(np.sum(n_valid))
 
-    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
-                       h_out: np.ndarray, *args, **kwargs):
+    def _arch_evaluate(
+        self,
+        x: np.ndarray,
+        is_active_out: np.ndarray,
+        f_out: np.ndarray,
+        g_out: np.ndarray,
+        h_out: np.ndarray,
+        *args,
+        **kwargs,
+    ):
         self._correct_x_impute(x, is_active_out)
         f_h_map = self._map_f_h()
         g_map = self._map_g()
@@ -122,10 +156,10 @@ class HierarchicalGoldstein(HierarchyProblemBase):
             z_i = np.array([int(z) for z in x[i, 5:9]])
             w_i = np.array([int(w) for w in x[i, 9:]])
 
-            f_idx = int(w_i[0]+w_i[1]*4)
+            f_idx = int(w_i[0] + w_i[1] * 4)
             f_out[i, 0] = self.h(*f_h_map[f_idx](x_i, z_i))
             if self._mo:
-                f2 = self.h(*f_h_map[f_idx](x_i+30, z_i))+(f_idx/7.)*5
+                f2 = self.h(*f_h_map[f_idx](x_i + 30, z_i)) + (f_idx / 7.0) * 5
                 f_out[i, 1] = f2
 
             g_idx = int(w_i[0])
@@ -146,7 +180,7 @@ class HierarchicalGoldstein(HierarchyProblemBase):
     def h(x1, x2, x3, x4, x5, z3, z4, cos_term: bool) -> float:
         h = MDGoldstein.h(x1, x2, x3, x4, z3, z4)
         if cos_term:
-            h += 5.*np.cos(2.*np.pi*(x5/100.))-2.
+            h += 5.0 * np.cos(2.0 * np.pi * (x5 / 100.0)) - 2.0
         return h
 
     @staticmethod
@@ -160,47 +194,47 @@ class HierarchicalGoldstein(HierarchyProblemBase):
             return x[0], x[1], _x3[z[0]], _x4[z[1]], x[4], z[2], z[3], False
 
         def _f2(x, z):
-            return x[0], x[1], x[2],      _x4[z[1]], x[4], z[2], z[3], False
+            return x[0], x[1], x[2], _x4[z[1]], x[4], z[2], z[3], False
 
         def _f3(x, z):
-            return x[0], x[1], _x3[z[0]], x[3],      x[4], z[2], z[3], False
+            return x[0], x[1], _x3[z[0]], x[3], x[4], z[2], z[3], False
 
         def _f4(x, z):
-            return x[0], x[1], x[2],      x[3],      x[4], z[2], z[3], False
+            return x[0], x[1], x[2], x[3], x[4], z[2], z[3], False
 
         def _f5(x, z):
             return x[0], x[1], _x3[z[0]], _x4[z[1]], x[4], z[2], z[3], True
 
         def _f6(x, z):
-            return x[0], x[1], x[2],      _x4[z[1]], x[4], z[2], z[3], True
+            return x[0], x[1], x[2], _x4[z[1]], x[4], z[2], z[3], True
 
         def _f7(x, z):
-            return x[0], x[1], _x3[z[0]], x[3],      x[4], z[2], z[3], True
+            return x[0], x[1], _x3[z[0]], x[3], x[4], z[2], z[3], True
 
         def _f8(x, z):
-            return x[0], x[1], x[2],      x[3],      x[4], z[2], z[3], True
+            return x[0], x[1], x[2], x[3], x[4], z[2], z[3], True
 
         return [_f1, _f2, _f3, _f4, _f5, _f6, _f7, _f8]
 
     @staticmethod
     def g(x1, x2, c1, c2):
-        return -(x1-50.)**2. - (x2-50.)**2. + (20.+c1*c2)**2.
+        return -((x1 - 50.0) ** 2.0) - (x2 - 50.0) ** 2.0 + (20.0 + c1 * c2) ** 2.0
 
     @staticmethod
     def _map_g() -> List[Callable[[np.ndarray, np.ndarray], tuple]]:
 
         # Appendix B, Table 12-15
-        _c1 = [3., 2., 1.]
-        _c2 = [.5, -1., -2.]
+        _c1 = [3.0, 2.0, 1.0]
+        _c2 = [0.5, -1.0, -2.0]
 
         def _g1(x, z):
             return x[0], x[1], _c1[z[0]], _c2[z[1]]
 
         def _g2(x, z):
-            return x[0], x[1], .5,        _c2[z[1]]
+            return x[0], x[1], 0.5, _c2[z[1]]
 
         def _g3(x, z):
-            return x[0], x[1], _c1[z[0]], .7
+            return x[0], x[1], _c1[z[0]], 0.7
 
         def _g4(x, z):
             return x[0], x[1], _c1[z[2]], _c2[z[3]]
@@ -214,22 +248,22 @@ class HierarchicalGoldstein(HierarchyProblemBase):
         from sb_arch_opt.sampling import HierarchicalSampling
 
         problem = cls()
-        x = HierarchicalSampling().do(problem, n_samples).get('X')
+        x = HierarchicalSampling().do(problem, n_samples).get("X")
 
         f, g = problem.evaluate(x)
-        i_feasible = np.max(g, axis=1) <= 0.
+        i_feasible = np.max(g, axis=1) <= 0.0
 
         x_plt, y_plt = [], []
         for i in np.where(i_feasible)[0]:
             w_i = [int(w) for w in x[i, 9:]]
-            f_idx = int(w_i[0]+w_i[1]*4)
+            f_idx = int(w_i[0] + w_i[1] * 4)
 
             x_plt.append(f_idx)
             y_plt.append(f[i])
 
         plt.figure()
         plt.scatter(x_plt, y_plt, s=1)
-        plt.xlabel('Sub-problem'), plt.ylabel('Feasible objective values')
+        plt.xlabel("Sub-problem"), plt.ylabel("Feasible objective values")
 
         if show:
             plt.show()
@@ -251,9 +285,9 @@ class MOHierarchicalGoldstein(HierarchicalGoldstein):
         from pymoo.algorithms.moo.nsga2 import NSGA2
         from pymoo.visualization.scatter import Scatter
 
-        res = minimize(cls(), NSGA2(pop_size=200), termination=('n_gen', 200))
+        res = minimize(cls(), NSGA2(pop_size=200), termination=("n_gen", 200))
         w_idx = res.X[:, 9] + res.X[:, 10] * 4
-        Scatter().add(res.F, c=w_idx, cmap='tab10', vmin=0, vmax=10, color=None).show()
+        Scatter().add(res.F, c=w_idx, cmap="tab10", vmin=0, vmax=10, color=None).show()
 
 
 class HierarchicalRosenbrock(HierarchyProblemBase):
@@ -275,24 +309,39 @@ class HierarchicalRosenbrock(HierarchyProblemBase):
 
     def __init__(self):
         des_vars = [
-            Real(bounds=(-1, .5)), Real(bounds=(0, 1.5)),
-            Real(bounds=(-1, .5)), Real(bounds=(0, 1.5)),
-            Real(bounds=(-1, .5)), Real(bounds=(0, 1.5)),
-            Real(bounds=(-1, .5)), Real(bounds=(0, 1.5)),
-            Integer(bounds=(0, 1)), Integer(bounds=(0, 1)), Integer(bounds=(0, 2)),
-            Choice(options=[0, 1]), Choice(options=[0, 1]),
+            Real(bounds=(-1, 0.5)),
+            Real(bounds=(0, 1.5)),
+            Real(bounds=(-1, 0.5)),
+            Real(bounds=(0, 1.5)),
+            Real(bounds=(-1, 0.5)),
+            Real(bounds=(0, 1.5)),
+            Real(bounds=(-1, 0.5)),
+            Real(bounds=(0, 1.5)),
+            Integer(bounds=(0, 1)),
+            Integer(bounds=(0, 1)),
+            Integer(bounds=(0, 2)),
+            Choice(options=[0, 1]),
+            Choice(options=[0, 1]),
         ]
 
         n_obj = 2 if self._mo else 1
         super().__init__(des_vars, n_obj=n_obj, n_constr=2)
 
     def _get_n_valid_discrete(self) -> int:
-        n_valid = np.ones((2, 2), dtype=int)*2*2  # w1, w2 for DV 8 and 9
+        n_valid = np.ones((2, 2), dtype=int) * 2 * 2  # w1, w2 for DV 8 and 9
         n_valid[:, 1] *= 3  # DV 10 is active when w2 == 1
         return int(np.sum(n_valid))
 
-    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
-                       h_out: np.ndarray, *args, **kwargs):
+    def _arch_evaluate(
+        self,
+        x: np.ndarray,
+        is_active_out: np.ndarray,
+        f_out: np.ndarray,
+        g_out: np.ndarray,
+        h_out: np.ndarray,
+        *args,
+        **kwargs,
+    ):
         self._correct_x_impute(x, is_active_out)
         self._eval_f_g(x, f_out, g_out)
 
@@ -309,21 +358,23 @@ class HierarchicalRosenbrock(HierarchyProblemBase):
             z_i = [int(z) for z in x[i, 8:11]]
 
             w_i = [int(w) for w in x[i, 11:]]
-            idx = int(w_i[0]*2+w_i[1])
+            idx = int(w_i[0] * 2 + w_i[1])
 
             x_fg = x_i[x_idx[idx]]
-            f_out[i, 0] = f1 = cls.f(x_fg, z_i[0], z_i[1], z_i[2], a1[idx], a2[idx], add_z3[idx])
+            f_out[i, 0] = f1 = cls.f(
+                x_fg, z_i[0], z_i[1], z_i[2], a1[idx], a2[idx], add_z3[idx]
+            )
             if cls._mo:
-                f2 = abs((400-f1)/40)**2 + np.sum((x_fg[:4]+1)**2*200)
+                f2 = abs((400 - f1) / 40) ** 2 + np.sum((x_fg[:4] + 1) ** 2 * 200)
                 f_out[i, 1] = f2
 
             g[i, 0] = cls.g1(x_fg)
-            g[i, 1] = cls.g2(x_i[x_idx_g2[idx]]) if idx < 2 else 0.
+            g[i, 1] = cls.g2(x_i[x_idx_g2[idx]]) if idx < 2 else 0.0
 
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
         w1 = x[:, 11].astype(int)
         w2 = x[:, 12].astype(int)
-        idx = w1*2+w2
+        idx = w1 * 2 + w2
 
         is_active[:, 2] = idx <= 2  # x3
         is_active[:, 3] = idx <= 2  # x4
@@ -336,25 +387,27 @@ class HierarchicalRosenbrock(HierarchyProblemBase):
 
     @staticmethod
     def f(x: np.ndarray, z1, z2, z3, a1, a2, add_z3: bool):
-        s = 1. if z2 == 0 else -1.
-        pre = 1. if z2 == 0 else .7
+        s = 1.0 if z2 == 0 else -1.0
+        pre = 1.0 if z2 == 0 else 0.7
 
         xi, xi1 = x[:-1], x[1:]
-        sum_term = np.sum(pre*a1*a2*(xi1-xi)**2 + ((a1+s*a2)/10.)*(1-xi)**2)
-        f = 100.*z1 + sum_term
+        sum_term = np.sum(
+            pre * a1 * a2 * (xi1 - xi) ** 2 + ((a1 + s * a2) / 10.0) * (1 - xi) ** 2
+        )
+        f = 100.0 * z1 + sum_term
         if add_z3:
-            f -= 35.*z3
+            f -= 35.0 * z3
         return f
 
     @staticmethod
     def g1(x: np.ndarray):
         xi, xi1 = x[:-1], x[1:]
-        return np.sum(-(xi-1)**3 + xi1 - 2.6)
+        return np.sum(-((xi - 1) ** 3) + xi1 - 2.6)
 
     @staticmethod
     def g2(x: np.ndarray):
         xi, xi1 = x[:-1], x[1:]
-        return np.sum(-xi - xi1 + .4)
+        return np.sum(-xi - xi1 + 0.4)
 
     @classmethod
     def validate_ranges(cls, n_samples=5000, show=True):
@@ -363,22 +416,22 @@ class HierarchicalRosenbrock(HierarchyProblemBase):
         from sb_arch_opt.sampling import HierarchicalSampling
 
         problem = cls()
-        x = HierarchicalSampling().do(problem, n_samples).get('X')
+        x = HierarchicalSampling().do(problem, n_samples).get("X")
 
         f, g = problem.evaluate(x)
-        i_feasible = np.max(g, axis=1) <= 0.
+        i_feasible = np.max(g, axis=1) <= 0.0
 
         x_plt, y_plt = [], []
         for i in np.where(i_feasible)[0]:
             w_i = [int(w) for w in x[i, 11:]]
-            f_idx = int(w_i[0]*2+w_i[1])
+            f_idx = int(w_i[0] * 2 + w_i[1])
 
             x_plt.append(f_idx)
             y_plt.append(f[i])
 
         plt.figure()
         plt.scatter(x_plt, y_plt, s=1)
-        plt.xlabel('Sub-problem'), plt.ylabel('Feasible objective values')
+        plt.xlabel("Sub-problem"), plt.ylabel("Feasible objective values")
 
         if show:
             plt.show()
@@ -401,17 +454,17 @@ class MOHierarchicalRosenbrock(HierarchicalRosenbrock):
         from pymoo.optimize import minimize
         from pymoo.algorithms.moo.nsga2 import NSGA2
 
-        res = minimize(cls(), NSGA2(pop_size=200), termination=('n_gen', 200))
-        w_idx = res.X[:, 11]*2 + res.X[:, 12]
+        res = minimize(cls(), NSGA2(pop_size=200), termination=("n_gen", 200))
+        w_idx = res.X[:, 11] * 2 + res.X[:, 12]
         HierarchicalMetaProblemBase.plot_sub_problems(w_idx, res.F, show=show)
 
 
 class ZaeffererProblemMode(enum.Enum):
-    A_OPT_INACT_IMP_PROF_UNI = 'A'
-    B_OPT_INACT_IMP_UNPR_UNI = 'B'
-    C_OPT_ACT_IMP_PROF_BI = 'C'
-    D_OPT_ACT_IMP_UNPR_BI = 'D'
-    E_OPT_DIS_IMP_UNPR_BI = 'E'
+    A_OPT_INACT_IMP_PROF_UNI = "A"
+    B_OPT_INACT_IMP_UNPR_UNI = "B"
+    C_OPT_ACT_IMP_PROF_BI = "C"
+    D_OPT_ACT_IMP_UNPR_BI = "D"
+    E_OPT_DIS_IMP_UNPR_BI = "E"
 
 
 class ZaeffererHierarchical(HierarchyProblemBase):
@@ -422,14 +475,14 @@ class ZaeffererHierarchical(HierarchyProblemBase):
     """
 
     _mode_map = {
-        ZaeffererProblemMode.A_OPT_INACT_IMP_PROF_UNI: (.0, .6, .1),
-        ZaeffererProblemMode.B_OPT_INACT_IMP_UNPR_UNI: (.1, .6, .1),
-        ZaeffererProblemMode.C_OPT_ACT_IMP_PROF_BI: (.0, .4, .7),
-        ZaeffererProblemMode.D_OPT_ACT_IMP_UNPR_BI: (.1, .4, .9),
-        ZaeffererProblemMode.E_OPT_DIS_IMP_UNPR_BI: (.1, .4, .7),
+        ZaeffererProblemMode.A_OPT_INACT_IMP_PROF_UNI: (0.0, 0.6, 0.1),
+        ZaeffererProblemMode.B_OPT_INACT_IMP_UNPR_UNI: (0.1, 0.6, 0.1),
+        ZaeffererProblemMode.C_OPT_ACT_IMP_PROF_BI: (0.0, 0.4, 0.7),
+        ZaeffererProblemMode.D_OPT_ACT_IMP_UNPR_BI: (0.1, 0.4, 0.9),
+        ZaeffererProblemMode.E_OPT_DIS_IMP_UNPR_BI: (0.1, 0.4, 0.7),
     }
 
-    def __init__(self, b=.1, c=.4, d=.7):
+    def __init__(self, b=0.1, c=0.4, d=0.7):
         self.b = b
         self.c = c
         self.d = d
@@ -443,7 +496,7 @@ class ZaeffererHierarchical(HierarchyProblemBase):
         return 1
 
     def _get_n_active_cont_mean(self) -> float:
-        return 2-self.c
+        return 2 - self.c
 
     def _get_n_correct_discrete(self) -> int:
         return 1
@@ -451,13 +504,21 @@ class ZaeffererHierarchical(HierarchyProblemBase):
     def _get_n_active_cont_mean_correct(self) -> Optional[float]:
         return 2
 
-    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
-                       h_out: np.ndarray, *args, **kwargs):
+    def _arch_evaluate(
+        self,
+        x: np.ndarray,
+        is_active_out: np.ndarray,
+        f_out: np.ndarray,
+        g_out: np.ndarray,
+        h_out: np.ndarray,
+        *args,
+        **kwargs,
+    ):
         self._correct_x_impute(x, is_active_out)
-        f1 = (x[:, 0] - self.d)**2
-        f2 = (x[:, 1] - .5)**2 + self.b
-        f2[x[:, 0] <= self.c] = 0.
-        f_out[:, 0] = f1+f2
+        f1 = (x[:, 0] - self.d) ** 2
+        f2 = (x[:, 1] - 0.5) ** 2 + self.b
+        f2[x[:, 0] <= self.c] = 0.0
+        f_out[:, 0] = f1 + f2
 
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
         is_active[:, 1] = x[:, 0] > self.c  # x2 is active if x1 > c
@@ -473,19 +534,19 @@ class ZaeffererHierarchical(HierarchyProblemBase):
         xx, yy = np.meshgrid(np.linspace(0, 1, 100), np.linspace(0, 1, 100))
         zz = self.evaluate(np.column_stack([xx.ravel(), yy.ravel()])).reshape(xx.shape)
 
-        plt.figure(), plt.title(f'b = {self.b:.1f}, c = {self.c:.1f}, d = {self.d:.1f}')
-        plt.colorbar(plt.contourf(xx, yy, zz, 50, cmap='viridis')).set_label('$f$')
-        plt.contour(xx, yy, zz, 5, colors='k')
-        plt.xlabel('$x_1$'), plt.ylabel('$x_2$')
+        plt.figure(), plt.title(f"b = {self.b:.1f}, c = {self.c:.1f}, d = {self.d:.1f}")
+        plt.colorbar(plt.contourf(xx, yy, zz, 50, cmap="viridis")).set_label("$f$")
+        plt.contour(xx, yy, zz, 5, colors="k")
+        plt.xlabel("$x_1$"), plt.ylabel("$x_2$")
 
         if show:
             plt.show()
 
     def __repr__(self):
-        return f'{self.__class__.__name__}(b={self.b}, c={self.c}, d={self.d})'
+        return f"{self.__class__.__name__}(b={self.b}, c={self.c}, d={self.d})"
 
 
-@deprecated(reason='Not realistic (see docstring)')
+@deprecated(reason="Not realistic (see docstring)")
 class HierarchicalMetaProblemBase(HierarchyProblemBase):
     """
     Meta problem used for increasing the amount of design variables of an underlying mixed-integer/hierarchical problem.
@@ -503,7 +564,9 @@ class HierarchicalMetaProblemBase(HierarchyProblemBase):
     - The spread between option occurrence of design variables is not realistic
     """
 
-    def __init__(self, problem: ArchOptTestProblemBase, n_rep=2, n_maps=4, f_par_range=None):
+    def __init__(
+        self, problem: ArchOptTestProblemBase, n_rep=2, n_maps=4, f_par_range=None
+    ):
         self._problem = problem
 
         # Create design vector: 1 selection variables and n_rep repetitions of underlying design variables
@@ -511,7 +574,9 @@ class HierarchicalMetaProblemBase(HierarchyProblemBase):
         for i in range(n_rep):
             des_vars += problem.des_vars
 
-        super().__init__(des_vars, n_obj=problem.n_obj, n_ieq_constr=problem.n_ieq_constr)
+        super().__init__(
+            des_vars, n_obj=problem.n_obj, n_ieq_constr=problem.n_ieq_constr
+        )
 
         self.n_maps = n_maps
         self.n_rep = n_rep
@@ -520,26 +585,38 @@ class HierarchicalMetaProblemBase(HierarchyProblemBase):
         # repeated variables to use to replace the values of the original design variables
         # The mappings are semi-random: different for different problem configurations, but repeatable for same configs
         rng = np.random.RandomState(problem.n_var * problem.n_obj * n_rep * n_maps)
-        self.select_map = [rng.randint(0, n_rep, (problem.n_var,)) for _ in range(n_maps)]
+        self.select_map = [
+            rng.randint(0, n_rep, (problem.n_var,)) for _ in range(n_maps)
+        ]
 
         # Determine how to move the existing Pareto fronts: move them along the Pareto front dimensions to create a
         # composed Pareto front
         if f_par_range is None:
-            f_par_range = 1.
+            f_par_range = 1.0
         f_par_range = np.atleast_1d(f_par_range)
         if len(f_par_range) == 1:
-            f_par_range = np.array([f_par_range[0]]*problem.n_obj)
+            f_par_range = np.array([f_par_range[0]] * problem.n_obj)
         self.f_par_range = f_par_range
 
-        ref_dirs = get_reference_directions("uniform", problem.n_obj, n_partitions=n_maps-1)
-        i_rd = np.linspace(0, ref_dirs.shape[0]-1, n_maps).astype(int)
-        self.f_mod = (ref_dirs[i_rd, :]-.5)*f_par_range
+        ref_dirs = get_reference_directions(
+            "uniform", problem.n_obj, n_partitions=n_maps - 1
+        )
+        i_rd = np.linspace(0, ref_dirs.shape[0] - 1, n_maps).astype(int)
+        self.f_mod = (ref_dirs[i_rd, :] - 0.5) * f_par_range
 
     def _get_n_valid_discrete(self) -> int:
-        return self._problem.get_n_valid_discrete()*self.n_maps
+        return self._problem.get_n_valid_discrete() * self.n_maps
 
-    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
-                       h_out: np.ndarray, *args, **kwargs):
+    def _arch_evaluate(
+        self,
+        x: np.ndarray,
+        is_active_out: np.ndarray,
+        f_out: np.ndarray,
+        g_out: np.ndarray,
+        h_out: np.ndarray,
+        *args,
+        **kwargs,
+    ):
         self._correct_x_impute(x, is_active_out)
 
         xp, _ = self._get_xp_idx(x)
@@ -547,8 +624,8 @@ class HierarchicalMetaProblemBase(HierarchyProblemBase):
         for i in range(x.shape[0]):
             f_mod[i, :] = self.f_mod[int(x[i, 0]), :]
 
-        fp, g = self._problem.evaluate(xp, return_values_of=['F', 'G'])
-        f_out[:, :] = fp+f_mod
+        fp, g = self._problem.evaluate(xp, return_values_of=["F", "G"])
+        f_out[:, :] = fp + f_mod
         if self.n_ieq_constr > 0:
             g_out[:, :] = g
 
@@ -567,7 +644,9 @@ class HierarchicalMetaProblemBase(HierarchyProblemBase):
         for i in range(x.shape[0]):
             idx = int(x[i, 0])
             select_map = self.select_map[idx]
-            i_x_u[i, :] = i_x_underlying = 1+select_map*len(select_map)+np.arange(0, len(select_map))
+            i_x_u[i, :] = i_x_underlying = (
+                1 + select_map * len(select_map) + np.arange(0, len(select_map))
+            )
             xp[i, :] = x[i, i_x_underlying]
 
         return xp, i_x_u
@@ -576,15 +655,21 @@ class HierarchicalMetaProblemBase(HierarchyProblemBase):
         from pymoo.optimize import minimize
         from pymoo.algorithms.moo.nsga2 import NSGA2
 
-        print(f'Running hierarchical metaproblem: {self.n_var} vars ({self.n_rep} rep, {self.n_maps} maps), '
-              f'{self.n_obj} obj, {self.n_ieq_constr} constr')
-        res = minimize(self, NSGA2(pop_size=200), termination=('n_gen', 200))
+        print(
+            f"Running hierarchical metaproblem: {self.n_var} vars ({self.n_rep} rep, {self.n_maps} maps), "
+            f"{self.n_obj} obj, {self.n_ieq_constr} constr"
+        )
+        res = minimize(self, NSGA2(pop_size=200), termination=("n_gen", 200))
 
         idx_rep = res.X[:, 0]
         xp, _ = self._get_xp_idx(res.X)
-        w_idx = xp[:, 11]*2 + xp[:, 12]
+        w_idx = xp[:, 11] * 2 + xp[:, 12]
         sp_idx = idx_rep * self.n_rep + w_idx
-        sp_labels = ['Rep. %d, SP %d' % (i_rep+1, i+1) for i_rep in range(self.n_rep) for i in range(4)]
+        sp_labels = [
+            "Rep. %d, SP %d" % (i_rep + 1, i + 1)
+            for i_rep in range(self.n_rep)
+            for i in range(4)
+        ]
 
         self.plot_sub_problems(sp_idx, res.F, sp_labels=sp_labels, show=show)
 
@@ -593,32 +678,42 @@ class HierarchicalMetaProblemBase(HierarchyProblemBase):
         import matplotlib.pyplot as plt
 
         if f.shape[1] != 2:
-            raise RuntimeError('Only for bi-objective optimization!')
+            raise RuntimeError("Only for bi-objective optimization!")
 
         plt.figure(figsize=(4, 2))
-        colors = plt.get_cmap('tab10')
+        colors = plt.get_cmap("tab10")
         for sp_val in np.unique(sp_idx):
             sp_val = int(sp_val)
             sp_idx_mask = sp_idx == sp_val
-            label = ('SP %d' % (sp_val+1,)) if sp_labels is None else sp_labels[sp_val]
-            plt.scatter(f[sp_idx_mask, 0], f[sp_idx_mask, 1], color=colors.colors[sp_val], s=10, label=label)
+            label = (
+                ("SP %d" % (sp_val + 1,)) if sp_labels is None else sp_labels[sp_val]
+            )
+            plt.scatter(
+                f[sp_idx_mask, 0],
+                f[sp_idx_mask, 1],
+                color=colors.colors[sp_val],
+                s=10,
+                label=label,
+            )
 
         ax = plt.gca()
-        ax.spines['right'].set_visible(False)
-        ax.spines['top'].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.spines["top"].set_visible(False)
 
         plt.legend(frameon=False)
-        plt.xlabel('$f_1$'), plt.ylabel('$f_2$')
+        plt.xlabel("$f_1$"), plt.ylabel("$f_2$")
 
         if show:
             plt.show()
 
     def __repr__(self):
-        return f'{self.__class__.__name__}({self._problem}, n_rep={self.n_rep}, n_maps={self.n_maps}, ' \
-               f'f_par_range={self.f_par_range})'
+        return (
+            f"{self.__class__.__name__}({self._problem}, n_rep={self.n_rep}, n_maps={self.n_maps}, "
+            f"f_par_range={self.f_par_range})"
+        )
 
 
-@deprecated(reason='Not realistic (see HierarchicalMetaProblemBase docstring)')
+@deprecated(reason="Not realistic (see HierarchicalMetaProblemBase docstring)")
 class MOHierarchicalTestProblem(HierarchicalMetaProblemBase):
     """
     Multi-objective hierarchical test problem based on the hierarchical rosenbrock problem. Increased number of design
@@ -630,10 +725,12 @@ class MOHierarchicalTestProblem(HierarchicalMetaProblemBase):
     """
 
     def __init__(self):
-        super().__init__(MOHierarchicalRosenbrock(), n_rep=2, n_maps=2, f_par_range=[100, 100])
+        super().__init__(
+            MOHierarchicalRosenbrock(), n_rep=2, n_maps=2, f_par_range=[100, 100]
+        )
 
     def __repr__(self):
-        return f'{self.__class__.__name__}()'
+        return f"{self.__class__.__name__}()"
 
 
 class Jenatton(HierarchyProblemBase):
@@ -646,35 +743,36 @@ class Jenatton(HierarchyProblemBase):
     def __init__(self, explicit=True):
         self._explicit = explicit
         if explicit:
-            ds = ExplicitArchDesignSpace([
-                CategoricalParam('x1', [0, 1]),
-                CategoricalParam('x2', [0, 1]),
-                CategoricalParam('x3', [0, 1]),
-                ContinuousParam('x4', 0, 1),
-                ContinuousParam('x5', 0, 1),
-                ContinuousParam('x6', 0, 1),
-                ContinuousParam('x7', 0, 1),
-                ContinuousParam('r8', 0, 1),
-                ContinuousParam('r9', 0, 1),
-            ])
+            ds = ExplicitArchDesignSpace(
+                [
+                    CategoricalParam("x1", [0, 1]),
+                    CategoricalParam("x2", [0, 1]),
+                    CategoricalParam("x3", [0, 1]),
+                    ContinuousParam("x4", 0, 1),
+                    ContinuousParam("x5", 0, 1),
+                    ContinuousParam("x6", 0, 1),
+                    ContinuousParam("x7", 0, 1),
+                    ContinuousParam("r8", 0, 1),
+                    ContinuousParam("r9", 0, 1),
+                ]
+            )
 
-            ds.add_conditions([
-                # x1 == 0 activates x2, x4, x5, r8
-                EqualsCondition(ds['x2'], ds['x1'], 0),
-                EqualsCondition(ds['r8'], ds['x1'], 0),
-
-                # x4 and x5 are additionally only activated if x2 == 0 or 1, respectively
-                EqualsCondition(ds['x4'], ds['x2'], 0),
-                EqualsCondition(ds['x5'], ds['x2'], 1),
-
-                # x1 == 1 activates x3, x6, x7, r9
-                EqualsCondition(ds['x3'], ds['x1'], 1),
-                EqualsCondition(ds['r9'], ds['x1'], 1),
-
-                # x6 and x7 are additionally only activated if x3 == 0 or 1, respectively
-                EqualsCondition(ds['x6'], ds['x3'], 0),
-                EqualsCondition(ds['x7'], ds['x3'], 1),
-            ])
+            ds.add_conditions(
+                [
+                    # x1 == 0 activates x2, x4, x5, r8
+                    EqualsCondition(ds["x2"], ds["x1"], 0),
+                    EqualsCondition(ds["r8"], ds["x1"], 0),
+                    # x4 and x5 are additionally only activated if x2 == 0 or 1, respectively
+                    EqualsCondition(ds["x4"], ds["x2"], 0),
+                    EqualsCondition(ds["x5"], ds["x2"], 1),
+                    # x1 == 1 activates x3, x6, x7, r9
+                    EqualsCondition(ds["x3"], ds["x1"], 1),
+                    EqualsCondition(ds["r9"], ds["x1"], 1),
+                    # x6 and x7 are additionally only activated if x3 == 0 or 1, respectively
+                    EqualsCondition(ds["x6"], ds["x3"], 0),
+                    EqualsCondition(ds["x7"], ds["x3"], 1),
+                ]
+            )
 
             ds_or_dv = ds
         else:
@@ -694,8 +792,16 @@ class Jenatton(HierarchyProblemBase):
     def _get_n_valid_discrete(self) -> int:
         return 4
 
-    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
-                       h_out: np.ndarray, *args, **kwargs):
+    def _arch_evaluate(
+        self,
+        x: np.ndarray,
+        is_active_out: np.ndarray,
+        f_out: np.ndarray,
+        g_out: np.ndarray,
+        h_out: np.ndarray,
+        *args,
+        **kwargs,
+    ):
 
         if not self._explicit:
             self._correct_x_impute(x, is_active_out)
@@ -707,18 +813,18 @@ class Jenatton(HierarchyProblemBase):
                 is_active_i[1] = True
                 if xi[1] == 0:
                     is_active_i[[3, 7]] = True
-                    f_out[i, 0] = xi[3]**2 + .1 + xi[7]  # x4^2 + .1 + r8
+                    f_out[i, 0] = xi[3] ** 2 + 0.1 + xi[7]  # x4^2 + .1 + r8
                 else:
                     is_active_i[[4, 7]] = True
-                    f_out[i, 0] = xi[4]**2 + .1 + xi[7]  # x5^2 + .1 + r8
+                    f_out[i, 0] = xi[4] ** 2 + 0.1 + xi[7]  # x5^2 + .1 + r8
             else:
                 is_active_i[2] = True
                 if xi[2] == 0:
                     is_active_i[[5, 8]] = True
-                    f_out[i, 0] = xi[5]**2 + .1 + xi[8]  # x6^2 + .1 + r9
+                    f_out[i, 0] = xi[5] ** 2 + 0.1 + xi[8]  # x6^2 + .1 + r9
                 else:
                     is_active_i[[6, 8]] = True
-                    f_out[i, 0] = xi[6]**2 + .1 + xi[8]  # x7^2 + .1 + r9
+                    f_out[i, 0] = xi[6] ** 2 + 0.1 + xi[8]  # x7^2 + .1 + r9
 
             # Check if the design space is defined correctly
             assert np.all(is_active_i == is_active_out[i, :])
@@ -756,8 +862,16 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
     - Define how each subproblem modifies the underlying problem's objectives and constraints
     """
 
-    def __init__(self, problem_factory: Callable[[int], ArchOptTestProblemBase], imp_ratio: float, n_subproblem: int,
-                 diversity_range: float = .25, n_opts=3, cont_ratio=1., repr_str=None):
+    def __init__(
+        self,
+        problem_factory: Callable[[int], ArchOptTestProblemBase],
+        imp_ratio: float,
+        n_subproblem: int,
+        diversity_range: float = 0.25,
+        n_opts=3,
+        cont_ratio=1.0,
+        repr_str=None,
+    ):
         self._repr_str = repr_str
 
         self._imp_ratio = imp_ratio
@@ -772,12 +886,18 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
         # the smallest group where x**sep_power*(n_opts-.01) == n_opts-1 --> x_sml ~= (1-1/n_opts)**(1/sep_power)
         # Here, we solve for sep_power such that x_lrg-(1-x_sml) == diversity_range
         sep_power_try = np.linspace(1, 10, 1000)
-        div_ranges = (1/n_opts)**(1/sep_power_try) + (1-(1/n_opts))**(1/sep_power_try) - 1
-        i_power = np.argmin(np.abs(div_ranges-diversity_range))
+        div_ranges = (
+            (1 / n_opts) ** (1 / sep_power_try)
+            + (1 - (1 / n_opts)) ** (1 / sep_power_try)
+            - 1
+        )
+        i_power = np.argmin(np.abs(div_ranges - diversity_range))
         sep_power = sep_power_try[i_power]
 
         def _sep_group(n_values, sep_power_):
-            return np.round((np.linspace(0, 1, n_values)**sep_power_)*(n_opts-.01)-.5).astype(int)
+            return np.round(
+                (np.linspace(0, 1, n_values) ** sep_power_) * (n_opts - 0.01) - 0.5
+            ).astype(int)
 
         x_columns = []
         is_active_columns = []
@@ -794,7 +914,9 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
                 needed_separation = True
 
                 # Distribute values according to the desired diversity range
-                x_sep = _sep_group(len(i_in_group), sep_power if diverse_separation else 1.)
+                x_sep = _sep_group(
+                    len(i_in_group), sep_power if diverse_separation else 1.0
+                )
                 x_sep = np.unique(x_sep, return_inverse=True)[1]
                 x_column[i_in_group] = x_sep
                 is_active_column[i_in_group] = True
@@ -814,8 +936,12 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
             # Stop separating according to the desired diversity range if the imputation ratio would become too large
             if diverse_separation:
                 n_group_max = max(len(grp) for grp in next_x_groups)
-                n_dv_remain = np.ceil(np.log(n_group_max)/np.log(n_opts))+.5  # The .5 is a heuristic
-                min_imp_ratio = (n_opts**(len(x_columns) + n_dv_remain))/n_subproblem
+                n_dv_remain = (
+                    np.ceil(np.log(n_group_max) / np.log(n_opts)) + 0.5
+                )  # The .5 is a heuristic
+                min_imp_ratio = (
+                    n_opts ** (len(x_columns) + n_dv_remain)
+                ) / n_subproblem
                 if min_imp_ratio > imp_ratio:
                     diverse_separation = False
 
@@ -824,7 +950,7 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
 
         # Separate design variables until we meet the imputation ratio requirement
         def _imp_ratio(x_discrete_):
-            return np.prod(np.max(x_discrete_, axis=0)+1)/x_discrete_.shape[0]
+            return np.prod(np.max(x_discrete_, axis=0) + 1) / x_discrete_.shape[0]
 
         i_x_sep_at_min = x_discrete.shape[1]
         i_unique_blocked: List[Set[int]] = [set() for _ in range(x_discrete.shape[1])]
@@ -833,7 +959,9 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
             i_sep_sel = next_sep_mask = i_group_sep = None
             for i_sep in reversed(list(range(1, i_x_sep_at_min))):
                 # Get different groups by unique vectors to the left
-                x_sel_unique, idx_unique = np.unique(x_discrete[:, :i_sep], axis=0, return_inverse=True)
+                x_sel_unique, idx_unique = np.unique(
+                    x_discrete[:, :i_sep], axis=0, return_inverse=True
+                )
 
                 for i_unique in range(len(x_sel_unique)):
                     # Check if this subgroup is blocked from separating (because of too high imputation ratio)
@@ -864,7 +992,7 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
 
                 # Group to separate was found!
                 # Next time, start search from this same level
-                i_x_sep_at_min = i_sep+1
+                i_x_sep_at_min = i_sep + 1
                 i_sep_sel = i_sep
                 break
             if i_sep_sel is None:
@@ -872,18 +1000,30 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
 
             # Determine where to move from and where to move to
             i_move_from = np.arange(i_sep_sel, x_discrete.shape[1])
-            move_from_any_active = np.any(is_act_discrete[np.ix_(next_sep_mask, i_move_from)], axis=0)
+            move_from_any_active = np.any(
+                is_act_discrete[np.ix_(next_sep_mask, i_move_from)], axis=0
+            )
             i_move_from = i_move_from[move_from_any_active]
-            i_move_into = np.arange(x_discrete.shape[1]+1-len(i_move_from), x_discrete.shape[1]+1)
+            i_move_into = np.arange(
+                x_discrete.shape[1] + 1 - len(i_move_from), x_discrete.shape[1] + 1
+            )
 
             # Separate the selected design variable into a new variable at the end of the vector
-            x_discrete_sep = np.column_stack([x_discrete, np.zeros((x_discrete.shape[0],), dtype=int)])
+            x_discrete_sep = np.column_stack(
+                [x_discrete, np.zeros((x_discrete.shape[0],), dtype=int)]
+            )
             x_discrete_sep[next_sep_mask, i_sep_sel:] = 0
-            x_discrete_sep[np.ix_(next_sep_mask, i_move_into)] = x_discrete[np.ix_(next_sep_mask, i_move_from)]
+            x_discrete_sep[np.ix_(next_sep_mask, i_move_into)] = x_discrete[
+                np.ix_(next_sep_mask, i_move_from)
+            ]
 
-            is_act_sep = np.column_stack([is_act_discrete, np.zeros((x_discrete.shape[0],), dtype=bool)])
+            is_act_sep = np.column_stack(
+                [is_act_discrete, np.zeros((x_discrete.shape[0],), dtype=bool)]
+            )
             is_act_sep[next_sep_mask, i_sep_sel:] = False
-            is_act_sep[np.ix_(next_sep_mask, i_move_into)] = is_act_discrete[np.ix_(next_sep_mask, i_move_from)]
+            is_act_sep[np.ix_(next_sep_mask, i_move_into)] = is_act_discrete[
+                np.ix_(next_sep_mask, i_move_from)
+            ]
 
             # Remove newly created columns with no active variables
             has_active = np.any(is_act_sep, axis=0)
@@ -901,24 +1041,29 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
         self._is_act_sub = is_act_discrete
 
         # Initialize underlying problem
-        n_cont = max(0, int(x_discrete.shape[1]*cont_ratio))
+        n_cont = max(0, int(x_discrete.shape[1] * cont_ratio))
         self._problem = problem = problem_factory(max(2, n_cont))
         self._n_cont = n_cont = 0 if n_cont == 0 else problem.n_var
         pf: np.ndarray = problem.pareto_front()
         pf_min, pf_max = np.min(pf, axis=0), np.max(pf, axis=0)
-        is_same = np.abs(pf_max-pf_min) < 1e-10
-        pf_max[is_same] = pf_min[is_same]+1.
+        is_same = np.abs(pf_max - pf_min) < 1e-10
+        pf_max[is_same] = pf_min[is_same] + 1.0
         self._pf_min, self._pf_max = pf_min, pf_max
 
         # Define subproblem transformations
         n_sub = x_discrete.shape[0]
-        self._transform = transform = np.zeros((n_sub, problem.n_obj*2))
+        self._transform = transform = np.zeros((n_sub, problem.n_obj * 2))
         n_trans = transform.shape[1]
-        n_cycles = np.arange(n_trans)+1
-        offset = .25*np.linspace(1, 0, n_trans+1)[:n_trans]
+        n_cycles = np.arange(n_trans) + 1
+        offset = 0.25 * np.linspace(1, 0, n_trans + 1)[:n_trans]
         for i_trans in range(n_trans):
             func = np.sin if i_trans % 2 == 0 else np.cos
-            transform[:, i_trans] = func((np.linspace(0, 1, n_sub+1)[:n_sub]+offset[i_trans])*2*np.pi*n_cycles[i_trans])
+            transform[:, i_trans] = func(
+                (np.linspace(0, 1, n_sub + 1)[:n_sub] + offset[i_trans])
+                * 2
+                * np.pi
+                * n_cycles[i_trans]
+            )
 
         # mutual_distance = distance.cdist(transform, transform, metric='cityblock')
         # np.fill_diagonal(mutual_distance, np.nan)
@@ -927,7 +1072,7 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
 
         # Define design variables
         des_vars = []
-        for dv_opts in (np.max(x_discrete, axis=0)+1):
+        for dv_opts in np.max(x_discrete, axis=0) + 1:
             des_vars.append(Choice(options=list(range(int(dv_opts)))))
 
         for i_dv, des_var in enumerate(problem.des_vars[:n_cont]):
@@ -938,29 +1083,33 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
             elif isinstance(des_var, Choice):
                 des_vars.append(Choice(options=des_var.options))
             else:
-                raise RuntimeError(f'Design variable type not supported: {des_var!r}')
+                raise RuntimeError(f"Design variable type not supported: {des_var!r}")
 
-        super().__init__(des_vars, n_obj=problem.n_obj, n_ieq_constr=problem.n_ieq_constr,
-                         n_eq_constr=problem.n_eq_constr)
+        super().__init__(
+            des_vars,
+            n_obj=problem.n_obj,
+            n_ieq_constr=problem.n_ieq_constr,
+            n_eq_constr=problem.n_eq_constr,
+        )
 
         self.design_space.use_auto_corrector = False
         self._correct_output = {}
 
     def _get_n_valid_discrete(self) -> int:
         n_discrete_underlying = self._problem.get_n_valid_discrete()
-        return n_discrete_underlying*self._x_sub.shape[0]
+        return n_discrete_underlying * self._x_sub.shape[0]
 
     def _get_n_correct_discrete(self) -> int:
         n_correct_underlying = self._problem.get_n_correct_discrete()
 
         n_sub = self._x_sub.shape[1]
-        n_opts_sub = self.xu[:n_sub]-self.xl[:n_sub]+1
+        n_opts_sub = self.xu[:n_sub] - self.xl[:n_sub] + 1
         n_correct = np.ones(self._x_sub.shape)
         for j in range(n_sub):
             n_correct[~self._is_act_sub[:, j], j] = n_opts_sub[j]
 
         n_correct_sub = np.sum(np.prod(n_correct, axis=1))
-        return int(n_correct_underlying*n_correct_sub)
+        return int(n_correct_underlying * n_correct_sub)
 
     def might_have_hidden_constraints(self):
         return self._problem.might_have_hidden_constraints()
@@ -976,7 +1125,9 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
         if self._n_cont == 0:
             return x_sub, is_act_sub
 
-        x_problem, is_act_problem = HierarchicalExhaustiveSampling().get_all_x_discrete(self._problem)
+        x_problem, is_act_problem = HierarchicalExhaustiveSampling().get_all_x_discrete(
+            self._problem
+        )
 
         n_sub_select = x_sub.shape[0]
         x_sub = np.repeat(x_sub, x_problem.shape[0], axis=0)
@@ -988,40 +1139,48 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
         is_act_all = np.column_stack([is_act_sub, is_act_problem])
         return x_all, is_act_all
 
-    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
-                       h_out: np.ndarray, *args, **kwargs):
+    def _arch_evaluate(
+        self,
+        x: np.ndarray,
+        is_active_out: np.ndarray,
+        f_out: np.ndarray,
+        g_out: np.ndarray,
+        h_out: np.ndarray,
+        *args,
+        **kwargs,
+    ):
         # Correct and impute
         self._correct_x_impute(x, is_active_out)
-        i_sub_selected = self._correct_output['i_sub_sel']
+        i_sub_selected = self._correct_output["i_sub_sel"]
         n_sub = self._x_sub.shape[1]
 
         # Evaluate underlying problem
         x_underlying = self._get_x_underlying(x[:, n_sub:])
         out = self._problem.evaluate(x_underlying, return_as_dictionary=True)
-        if 'G' in out:
-            g_out[:, :] = out['G']
-        if 'H' in out:
-            h_out[:, :] = out['H']
+        if "G" in out:
+            g_out[:, :] = out["G"]
+        if "H" in out:
+            h_out[:, :] = out["H"]
 
         # Transform outputs
-        f_out[:, :] = self._transform_out(out['F'], i_sub_selected)
+        f_out[:, :] = self._transform_out(out["F"], i_sub_selected)
 
     def _transform_out(self, f: np.ndarray, i_sub_selected: np.ndarray) -> np.ndarray:
         pf_min, pf_max = self._pf_min, self._pf_max
         trans = self._transform
-        f_norm = (f-pf_min)/(pf_max-pf_min)
+        f_norm = (f - pf_min) / (pf_max - pf_min)
         for i_obj in range(f.shape[1]):
             f_other = f_norm.copy()
             f_other[:, i_obj] = 0
 
-            translate_shear = trans[i_sub_selected, i_obj::f.shape[1]]
+            translate_shear = trans[i_sub_selected, i_obj :: f.shape[1]]
             translate, scale = translate_shear.T
             fi_norm = f_norm[:, i_obj]
-            fi_norm += .2*translate
-            fi_norm = (fi_norm-.5)*(.5+.4*scale)+.5
+            fi_norm += 0.2 * translate
+            fi_norm = (fi_norm - 0.5) * (0.5 + 0.4 * scale) + 0.5
             f_norm[:, i_obj] = fi_norm
 
-        return f_norm*(pf_max-pf_min) + pf_min
+        return f_norm * (pf_max - pf_min) + pf_min
 
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
         # Match/correct sub-problem selection design variables
@@ -1039,7 +1198,7 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
         x[:, n_sub:] = x_problem[:, :n_cont]
         is_active[:, n_sub:] = is_act_problem[:, :n_cont]
 
-        self._correct_output = {'i_sub_sel': i_sub_selected}
+        self._correct_output = {"i_sub_sel": i_sub_selected}
 
     def _get_corrected_sub_sel_idx(self, x: np.ndarray):
         x_sub, is_active_sub = self._x_sub, self._is_act_sub
@@ -1055,7 +1214,9 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
 
                 # Match active valid x to value or inactive valid x
                 is_active_valid_i = is_active_valid_matched[:, i]
-                matched = (is_active_valid_i & (x_valid_matched[:, i] == xi[i])) | (~is_active_valid_i)
+                matched = (is_active_valid_i & (x_valid_matched[:, i] == xi[i])) | (
+                    ~is_active_valid_i
+                )
 
                 # If there are no matches, match the closest value
                 if not np.any(matched):
@@ -1075,41 +1236,55 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
 
     def _get_x_underlying(self, x_underlying):
         if self._n_cont == 0:
-            return np.ones((x_underlying.shape[0], self._problem.n_var))*.5*(self._problem.xl+self._problem.xu)
+            return (
+                np.ones((x_underlying.shape[0], self._problem.n_var))
+                * 0.5
+                * (self._problem.xl + self._problem.xu)
+            )
         return x_underlying
 
     def plot_i_sub_problem(self, x: np.ndarray = None, show=True):
         import matplotlib.pyplot as plt
+
         if x is None:
             x = self.pareto_set()
         x, _ = self.correct_x(x)
-        f = self.evaluate(x, return_as_dictionary=True)['F']
-        i_sub_selected = self._correct_output['i_sub_sel']
+        f = self.evaluate(x, return_as_dictionary=True)["F"]
+        i_sub_selected = self._correct_output["i_sub_sel"]
 
         plt.figure()
         f0 = f[:, 0]
         f1 = f[:, 1] if f.shape[1] > 1 else f0
         for i_sp in np.unique(i_sub_selected):
             mask = i_sub_selected == i_sp
-            plt.scatter(f0[mask], f1[mask], s=10, marker='o', label=f'#{i_sp+1}')
-        plt.legend(loc='upper left', bbox_to_anchor=(1, 1), frameon=False)
+            plt.scatter(f0[mask], f1[mask], s=10, marker="o", label=f"#{i_sp+1}")
+        plt.legend(loc="upper left", bbox_to_anchor=(1, 1), frameon=False)
         plt.tight_layout()
         if show:
             plt.show()
 
     def plot_transformation(self, show=True):
         import matplotlib.pyplot as plt
+
         plt.figure()
         if1 = 0 if self._problem.n_obj < 2 else 1
 
         pf = self._problem.pareto_front()
-        plt.scatter(pf[:, 0], pf[:, if1], s=10, marker='o', label='Orig')
+        plt.scatter(pf[:, 0], pf[:, if1], s=10, marker="o", label="Orig")
 
         for i_sub in range(self._x_sub.shape[0]):
-            pf_transformed = self._transform_out(pf, np.ones((pf.shape[0],), dtype=int)*i_sub)
-            plt.scatter(pf_transformed[:, 0], pf_transformed[:, if1], s=10, marker='o', label=f'#{i_sub+1}')
+            pf_transformed = self._transform_out(
+                pf, np.ones((pf.shape[0],), dtype=int) * i_sub
+            )
+            plt.scatter(
+                pf_transformed[:, 0],
+                pf_transformed[:, if1],
+                s=10,
+                marker="o",
+                label=f"#{i_sub+1}",
+            )
 
-        plt.legend(loc='upper left', bbox_to_anchor=(1, 1), frameon=False)
+        plt.legend(loc="upper left", bbox_to_anchor=(1, 1), frameon=False)
         plt.tight_layout()
         if show:
             plt.show()
@@ -1117,62 +1292,81 @@ class TunableHierarchicalMetaProblem(HierarchyProblemBase):
     def __repr__(self):
         if self._repr_str is not None:
             return self._repr_str
-        return f'{self.__class__.__name__}({self._problem!r}, imp_ratio={self._imp_ratio}, ' \
-               f'n_subproblem={self._n_subproblem}, n_opts={self._n_opts}, diversity_range={self._diversity_range}, ' \
-               f'cont_ratio={self._cont_ratio})'
+        return (
+            f"{self.__class__.__name__}({self._problem!r}, imp_ratio={self._imp_ratio}, "
+            f"n_subproblem={self._n_subproblem}, n_opts={self._n_opts}, diversity_range={self._diversity_range}, "
+            f"cont_ratio={self._cont_ratio})"
+        )
 
 
 class HierBranin(TunableHierarchicalMetaProblem):
 
     def __init__(self):
         factory = lambda n: MDBranin()
-        super().__init__(factory, imp_ratio=5., n_subproblem=50, diversity_range=.5, n_opts=3)
+        super().__init__(
+            factory, imp_ratio=5.0, n_subproblem=50, diversity_range=0.5, n_opts=3
+        )
 
 
 class TunableZDT1(TunableHierarchicalMetaProblem):
 
-    def __init__(self, imp_ratio=1., n_subproblem=100, diversity_range=.5, n_opts=3, cont_ratio=1.):
+    def __init__(
+        self,
+        imp_ratio=1.0,
+        n_subproblem=100,
+        diversity_range=0.5,
+        n_opts=3,
+        cont_ratio=1.0,
+    ):
         factory = lambda n: NoHierarchyWrappedProblem(ZDT1(n_var=n))
-        super().__init__(factory, imp_ratio=imp_ratio, n_subproblem=n_subproblem, diversity_range=diversity_range,
-                         n_opts=n_opts, cont_ratio=cont_ratio)
+        super().__init__(
+            factory,
+            imp_ratio=imp_ratio,
+            n_subproblem=n_subproblem,
+            diversity_range=diversity_range,
+            n_opts=n_opts,
+            cont_ratio=cont_ratio,
+        )
 
 
 class HierZDT1Small(TunableZDT1):
 
     def __init__(self):
-        super().__init__(imp_ratio=2., n_subproblem=10, diversity_range=.25, n_opts=3, cont_ratio=1)
+        super().__init__(
+            imp_ratio=2.0, n_subproblem=10, diversity_range=0.25, n_opts=3, cont_ratio=1
+        )
 
 
 class HierZDT1(TunableZDT1):
 
     def __init__(self):
-        super().__init__(imp_ratio=5., n_subproblem=200, n_opts=3, cont_ratio=.5)
+        super().__init__(imp_ratio=5.0, n_subproblem=200, n_opts=3, cont_ratio=0.5)
 
 
 class HierZDT1Large(TunableZDT1):
 
     def __init__(self):
-        super().__init__(imp_ratio=10., n_subproblem=2000, n_opts=4, cont_ratio=1.)
+        super().__init__(imp_ratio=10.0, n_subproblem=2000, n_opts=4, cont_ratio=1.0)
 
 
 class HierDiscreteZDT1(TunableZDT1):
 
     def __init__(self):
-        super().__init__(imp_ratio=5., n_subproblem=2000, n_opts=4, cont_ratio=0)
+        super().__init__(imp_ratio=5.0, n_subproblem=2000, n_opts=4, cont_ratio=0)
 
 
 class HierCantileveredBeam(TunableHierarchicalMetaProblem):
 
     def __init__(self):
         factory = lambda n: ArchCantileveredBeam()
-        super().__init__(factory, imp_ratio=6., n_subproblem=20, diversity_range=.5)
+        super().__init__(factory, imp_ratio=6.0, n_subproblem=20, diversity_range=0.5)
 
 
 class HierCarside(TunableHierarchicalMetaProblem):
 
     def __init__(self):
         factory = lambda n: ArchCarside()
-        super().__init__(factory, imp_ratio=7., n_subproblem=50, diversity_range=.5)
+        super().__init__(factory, imp_ratio=7.0, n_subproblem=50, diversity_range=0.5)
 
 
 class NeuralNetwork(HierarchyProblemBase):
@@ -1192,7 +1386,7 @@ class NeuralNetwork(HierarchyProblemBase):
             Real(bounds=(-5, -2)),
             Real(bounds=(-5, -1)),
             Integer(bounds=(3, 8)),
-            Choice(options=['ReLU', 'SELU', 'ISRLU']),
+            Choice(options=["ReLU", "SELU", "ISRLU"]),
             Integer(bounds=(0, 5)),
             Integer(bounds=(0, 5)),
             Integer(bounds=(0, 5)),
@@ -1200,35 +1394,51 @@ class NeuralNetwork(HierarchyProblemBase):
         super().__init__(des_vars)
 
     def _get_n_valid_discrete(self) -> int:
-        n_base = 6*3  # x3, x4
-        return sum([
-            n_base*6,  # x0 == 0
-            n_base*6**2,  # x0 == 1
-            n_base*6**3,  # x0 == 2
-        ])
+        n_base = 6 * 3  # x3, x4
+        return sum(
+            [
+                n_base * 6,  # x0 == 0
+                n_base * 6**2,  # x0 == 1
+                n_base * 6**3,  # x0 == 2
+            ]
+        )
 
-    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
-                       h_out: np.ndarray, *args, **kwargs):
+    def _arch_evaluate(
+        self,
+        x: np.ndarray,
+        is_active_out: np.ndarray,
+        f_out: np.ndarray,
+        g_out: np.ndarray,
+        h_out: np.ndarray,
+        *args,
+        **kwargs,
+    ):
         self._correct_x_impute(x, is_active_out)
 
         _f_factors = [
-            np.array([2,  1, -.5]),
-            np.array([-1, 2, -.5]),
-            np.array([-1, 1,  .5]),
+            np.array([2, 1, -0.5]),
+            np.array([-1, 2, -0.5]),
+            np.array([-1, 1, 0.5]),
         ]
 
         def f(x1, x2, x3, x4, x5, x6=None, x7=None):
-            f_value = np.sum(_f_factors[int(x4)]*np.array([x1, x2, 2**x3])) + x5**2
+            f_value = np.sum(_f_factors[int(x4)] * np.array([x1, x2, 2**x3])) + x5**2
             if x6 is not None:
-                f_value += .3*x6
+                f_value += 0.3 * x6
             if x7 is not None:
-                f_value -= .1*x7**3
+                f_value -= 0.1 * x7**3
             return f_value
 
         for i, xi in enumerate(x):
-            f_out[i, 0] = f(xi[1], xi[2], xi[3], xi[4], xi[5],
-                            x6=xi[6] if xi[0] in [2, 3] else None,
-                            x7=xi[7] if xi[0] == 3 else None)
+            f_out[i, 0] = f(
+                xi[1],
+                xi[2],
+                xi[3],
+                xi[4],
+                xi[5],
+                x6=xi[6] if xi[0] in [2, 3] else None,
+                x7=xi[7] if xi[0] == 3 else None,
+            )
 
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
         is_active[:, [6, 7]] = False
@@ -1240,15 +1450,15 @@ class NeuralNetwork(HierarchyProblemBase):
         """Compare to: https://smt.readthedocs.io/en/latest/_images/neuralnetwork_Test_test_hier_neural_network.png"""
         import matplotlib.pyplot as plt
 
-        x = HierarchicalSampling().do(self, n).get('X')
-        f = self.evaluate(x, return_as_dictionary=True)['F']
+        x = HierarchicalSampling().do(self, n).get("X")
+        f = self.evaluate(x, return_as_dictionary=True)["F"]
         plt.figure()
         plt.scatter(x[:, 0], f[:, 0], s=5)
-        plt.xlabel('x0'), plt.ylabel('y')
+        plt.xlabel("x0"), plt.ylabel("y")
         plt.show()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # HierarchicalGoldstein().print_stats()
     # MOHierarchicalGoldstein().print_stats()
     # # HierarchicalGoldstein().plot_pf()
@@ -1259,7 +1469,9 @@ if __name__ == '__main__':
     # # HierarchicalRosenbrock().plot_pf()
     # MOHierarchicalRosenbrock().plot_pf()
 
-    ZaeffererHierarchical.from_mode(ZaeffererProblemMode.A_OPT_INACT_IMP_PROF_UNI).print_stats()
+    ZaeffererHierarchical.from_mode(
+        ZaeffererProblemMode.A_OPT_INACT_IMP_PROF_UNI
+    ).print_stats()
     # ZaeffererHierarchical.from_mode(ZaeffererProblemMode.A_OPT_INACT_IMP_PROF_UNI).plot_pf()
     # ZaeffererHierarchical.from_mode(ZaeffererProblemMode.A_OPT_INACT_IMP_PROF_UNI).plot_design_space()
 

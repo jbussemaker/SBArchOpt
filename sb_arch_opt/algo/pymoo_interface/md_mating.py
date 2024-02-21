@@ -22,6 +22,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+
 import math
 import numpy as np
 
@@ -38,21 +39,23 @@ from pymoo.operators.mutation.rm import ChoiceRandomMutation
 from pymoo.operators.repair.rounding import RoundingRepair
 from pymoo.operators.selection.rnd import RandomSelection
 
-__all__ = ['MixedDiscreteMating']
+__all__ = ["MixedDiscreteMating"]
 
 
 class MixedDiscreteMating(InfillCriterion):
     """SBArchOpt implementation of mixed-discrete mating (crossover and mutation) operations. Similar functionality as
     `pymoo.core.mixed.MixedVariableMating`, however keeps x as a matrix."""
 
-    def __init__(self,
-                 selection=RandomSelection(),
-                 crossover=None,
-                 mutation=None,
-                 repair=None,
-                 eliminate_duplicates=True,
-                 n_max_iterations=100,
-                 **kwargs):
+    def __init__(
+        self,
+        selection=RandomSelection(),
+        crossover=None,
+        mutation=None,
+        repair=None,
+        eliminate_duplicates=True,
+        n_max_iterations=100,
+        **kwargs
+    ):
 
         super().__init__(repair, eliminate_duplicates, n_max_iterations, **kwargs)
 
@@ -114,9 +117,14 @@ class MixedDiscreteMating(InfillCriterion):
         for clazz, list_of_vars, x_idx in recomb:
 
             crossover = self.crossover[clazz]
-            assert crossover.n_parents == n_parents_crossover and crossover.n_offsprings == n_offspring_crossover
+            assert (
+                crossover.n_parents == n_parents_crossover
+                and crossover.n_offsprings == n_offspring_crossover
+            )
 
-            _parents = [[Individual(X=parent.X[x_idx]) for parent in parents] for parents in pop]
+            _parents = [
+                [Individual(X=parent.X[x_idx]) for parent in parents] for parents in pop
+            ]
 
             _vars = [var_defs[e] for e in list_of_vars]
             _xl, _xu = None, None
@@ -133,7 +141,7 @@ class MixedDiscreteMating(InfillCriterion):
                 _off = mutation(_problem, _off, **kwargs)
 
                 # Sometimes NaN's might sneak into the outputs, try again if this is the case
-                x_off = _off.get('X')[:n_offsprings, :]
+                x_off = _off.get("X")[:n_offsprings, :]
                 if np.any(np.isnan(x_off)):
                     continue
                 break

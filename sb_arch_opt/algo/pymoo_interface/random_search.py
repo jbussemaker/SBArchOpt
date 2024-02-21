@@ -22,6 +22,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+
 import logging
 from sb_arch_opt.problem import *
 from sb_arch_opt.algo.pymoo_interface.api import ArchOptEvaluator
@@ -35,13 +36,14 @@ from pymoo.core.initialization import Initialization
 
 try:
     from tpe.optimizer import TPEOptimizer
+
     HAS_TPE = True
 except ImportError:
     HAS_TPE = False
 
-__all__ = ['HAS_TPE', 'RandomSearchAlgorithm']
+__all__ = ["HAS_TPE", "RandomSearchAlgorithm"]
 
-log = logging.getLogger('sb_arch_opt.random')
+log = logging.getLogger("sb_arch_opt.random")
 
 
 class RandomSearchAlgorithm(Algorithm):
@@ -51,13 +53,15 @@ class RandomSearchAlgorithm(Algorithm):
 
     def __init__(self, n_init: int, **kwargs):
         super().__init__(
-            outputs=EHVMultiObjectiveOutput(),
-            evaluator=ArchOptEvaluator(),
-            **kwargs)
+            outputs=EHVMultiObjectiveOutput(), evaluator=ArchOptEvaluator(), **kwargs
+        )
         self.n_init = n_init
         self.sampling = HierarchicalSampling()
         self.initialization = Initialization(
-            self.sampling, repair=ArchOptRepair(), eliminate_duplicates=LargeDuplicateElimination())
+            self.sampling,
+            repair=ArchOptRepair(),
+            eliminate_duplicates=LargeDuplicateElimination(),
+        )
 
     def _initialize_infill(self):
         return self.initialization.do(self.problem, self.n_init)

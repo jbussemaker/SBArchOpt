@@ -23,34 +23,63 @@ Test problems are based on:
     Selva, Cameron & Crawley, "Patterns in System Architecture Decisions", 2017, DOI: 10.1002/sys.21370
 - GN&C problem: see GNCProblemBase in gnc.py for an overview
 """
+
 import numpy as np
 from typing import *
 from sb_arch_opt.problems.hierarchical import HierarchyProblemBase
 
 try:
-    from assign_pymoo.problem import AssignmentProblemBase, AssignmentProblem, MultiAssignmentProblem
+    from assign_pymoo.problem import (
+        AssignmentProblemBase,
+        AssignmentProblem,
+        MultiAssignmentProblem,
+    )
     from assign_experiments.problems.gnc import *
     from assign_experiments.problems.analytical import *
+
     HAS_ASSIGN_ENC = True
 except ImportError:
     HAS_ASSIGN_ENC = False
 
-__all__ = ['HAS_ASSIGN_ENC', 'AssignmentProblemWrapper',
-           'Assignment', 'AssignmentLarge', 'AssignmentInj', 'AssignmentInjLarge', 'AssignmentRepeat',
-           'AssignmentRepeatLarge',
-           'Partitioning', 'PartitioningLarge', 'PartitioningCovering', 'PartitioningCoveringLarge',
-           'Downselecting', 'DownselectingLarge', 'Connecting', 'ConnectingUndirected', 'Permuting', 'PermutingLarge',
-           'UnordNonReplComb', 'UnordNonReplCombLarge', 'UnorderedComb',
-           'AssignmentGNCNoActType', 'AssignmentGNCNoAct', 'AssignmentGNCNoType', 'AssignmentGNC']
+__all__ = [
+    "HAS_ASSIGN_ENC",
+    "AssignmentProblemWrapper",
+    "Assignment",
+    "AssignmentLarge",
+    "AssignmentInj",
+    "AssignmentInjLarge",
+    "AssignmentRepeat",
+    "AssignmentRepeatLarge",
+    "Partitioning",
+    "PartitioningLarge",
+    "PartitioningCovering",
+    "PartitioningCoveringLarge",
+    "Downselecting",
+    "DownselectingLarge",
+    "Connecting",
+    "ConnectingUndirected",
+    "Permuting",
+    "PermutingLarge",
+    "UnordNonReplComb",
+    "UnordNonReplCombLarge",
+    "UnorderedComb",
+    "AssignmentGNCNoActType",
+    "AssignmentGNCNoAct",
+    "AssignmentGNCNoType",
+    "AssignmentGNC",
+]
 
 
 def check_dependency():
     if not HAS_ASSIGN_ENC:
-        raise RuntimeError('assign_enc not installed: python setup.py install[assignment]')
+        raise RuntimeError(
+            "assign_enc not installed: python setup.py install[assignment]"
+        )
 
 
 class AssignmentProblemWrapper(HierarchyProblemBase):
     """Wrapper for the assignment problem definition in assign_enc"""
+
     _force_get_discrete_rates = False
 
     # Each assignment test problem has at least 1 constraint, which might be violated if a constraint-violation
@@ -59,7 +88,7 @@ class AssignmentProblemWrapper(HierarchyProblemBase):
     # method is very ineffective for optimizers. Therefore, we can ignore this constraint.
     supress_invalid_matrix_constraint = True
 
-    def __init__(self, problem: 'AssignmentProblemBase'):
+    def __init__(self, problem: "AssignmentProblemBase"):
         check_dependency()
         self._problem = problem
 
@@ -84,10 +113,15 @@ class AssignmentProblemWrapper(HierarchyProblemBase):
         if isinstance(self._problem, MultiAssignmentProblem):
             dv_cond = []
             for assignment_manager in self._problem.assignment_managers:
-                dv_cond += [dv.conditionally_active for dv in assignment_manager.design_vars]
+                dv_cond += [
+                    dv.conditionally_active for dv in assignment_manager.design_vars
+                ]
             return dv_cond
 
-        return [dv.conditionally_active for dv in self._problem.assignment_manager.design_vars]
+        return [
+            dv.conditionally_active
+            for dv in self._problem.assignment_manager.design_vars
+        ]
 
     def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
         if isinstance(self._problem, AnalyticalProblemBase):
@@ -108,28 +142,40 @@ class AssignmentProblemWrapper(HierarchyProblemBase):
             # - Manhattan distances between decoded assignment matrices
             # A higher correlation (100% is best) means that differences in design vectors better represent differences
             # in assignment matrices, which generally makes it easier for the optimizer to find an optimum
-            dist_corr = self._problem.assignment_manager.encoder.get_distance_correlation()
+            dist_corr = (
+                self._problem.assignment_manager.encoder.get_distance_correlation()
+            )
             if dist_corr is not None:
-                print(f'dist_corr    : {dist_corr*100:.0f}%')
+                print(f"dist_corr    : {dist_corr*100:.0f}%")
 
         elif isinstance(self._problem, MultiAssignmentProblem):
             for i, assignment_manager in enumerate(self._problem.assignment_managers):
                 dist_corr = assignment_manager.encoder.get_distance_correlation()
                 if dist_corr is not None:
                     imp_ratio = assignment_manager.encoder.get_imputation_ratio()
-                    print(f'dist_corr {i: 2d} : {dist_corr*100:.0f}%; '
-                          f'imp_ratio : {imp_ratio:.2f}; {assignment_manager.encoder!s}')
+                    print(
+                        f"dist_corr {i: 2d} : {dist_corr*100:.0f}%; "
+                        f"imp_ratio : {imp_ratio:.2f}; {assignment_manager.encoder!s}"
+                    )
 
         super()._print_extra_stats()
 
-    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
-                       h_out: np.ndarray, *args, **kwargs):
+    def _arch_evaluate(
+        self,
+        x: np.ndarray,
+        is_active_out: np.ndarray,
+        f_out: np.ndarray,
+        g_out: np.ndarray,
+        h_out: np.ndarray,
+        *args,
+        **kwargs,
+    ):
         out = self._problem.evaluate(x, return_as_dictionary=True)
-        x[:, :] = out['X']
-        is_active_out[:, :] = out['is_active']
-        f_out[:, :] = out['F']
+        x[:, :] = out["X"]
+        is_active_out[:, :] = out["is_active"]
+        f_out[:, :] = out["F"]
         if self.n_ieq_constr > 0:
-            g_eval = out['G']
+            g_eval = out["G"]
             if self.supress_invalid_matrix_constraint:
                 g_eval = g_eval[:, 1:]
             g_out[:, :] = g_eval
@@ -138,7 +184,7 @@ class AssignmentProblemWrapper(HierarchyProblemBase):
         x[:, :], is_active[:, :] = self._problem.correct_x(x)
 
     def __repr__(self):
-        return f'{self.__class__.__name__}()'
+        return f"{self.__class__.__name__}()"
 
 
 class Assignment(AssignmentProblemWrapper):
@@ -417,7 +463,9 @@ class UnordNonReplComb(AssignmentProblemWrapper):
 
     def __init__(self):
         check_dependency()
-        super().__init__(AnalyticalUnorderedNonReplaceCombiningProblem(n_take=7, n_tgt=15))
+        super().__init__(
+            AnalyticalUnorderedNonReplaceCombiningProblem(n_take=7, n_tgt=15)
+        )
 
 
 class UnordNonReplCombLarge(AssignmentProblemWrapper):
@@ -435,7 +483,9 @@ class UnordNonReplCombLarge(AssignmentProblemWrapper):
 
     def __init__(self):
         check_dependency()
-        super().__init__(AnalyticalUnorderedNonReplaceCombiningProblem(n_take=9, n_tgt=19))
+        super().__init__(
+            AnalyticalUnorderedNonReplaceCombiningProblem(n_take=9, n_tgt=19)
+        )
 
 
 class UnorderedComb(AssignmentProblemWrapper):
@@ -487,7 +537,7 @@ class AssignmentGNC(AssignmentProblemWrapper):
         super().__init__(GNCProblem(actuators=True))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # # Assignment().print_stats()
     # # AssignmentLarge().print_stats()
     # # AssignmentInj().print_stats()

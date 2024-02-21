@@ -6,7 +6,9 @@ from sb_arch_opt.algo.trieste_interface import *
 from sb_arch_opt.problems.constrained import ArchCantileveredBeam
 from sb_arch_opt.algo.trieste_interface.algo import ArchOptBayesianOptimizer
 
-check_dependency = lambda: pytest.mark.skipif(not HAS_TRIESTE, reason='Trieste dependencies not installed')
+check_dependency = lambda: pytest.mark.skipif(
+    not HAS_TRIESTE, reason="Trieste dependencies not installed"
+)
 
 
 @check_dependency()
@@ -27,27 +29,36 @@ def test_simple(problem: ArchOptProblemBase):
     assert len(pop) == 11
 
 
-@pytest.mark.skipif(int(os.getenv('RUN_SLOW_TESTS', 0)) != 1, reason='Set RUN_SLOW_TESTS=1 to run slow tests')
+@pytest.mark.skipif(
+    int(os.getenv("RUN_SLOW_TESTS", 0)) != 1,
+    reason="Set RUN_SLOW_TESTS=1 to run slow tests",
+)
 @check_dependency()
 def test_constrained():
     opt = get_trieste_optimizer(ArchCantileveredBeam(), n_init=10, n_infill=1)
     assert opt.run_optimization()
 
 
-@pytest.mark.skipif(int(os.getenv('RUN_SLOW_TESTS', 0)) != 1, reason='Set RUN_SLOW_TESTS=1 to run slow tests')
+@pytest.mark.skipif(
+    int(os.getenv("RUN_SLOW_TESTS", 0)) != 1,
+    reason="Set RUN_SLOW_TESTS=1 to run slow tests",
+)
 @check_dependency()
 def test_store_results_restart(problem: ArchOptProblemBase):
     with tempfile.TemporaryDirectory() as tmp_folder:
         for i in range(2):
-            opt = get_trieste_optimizer(problem, n_init=10, n_infill=1+i)
+            opt = get_trieste_optimizer(problem, n_init=10, n_infill=1 + i)
             opt.initialize_from_previous(tmp_folder)
             result = opt.run_optimization(results_folder=tmp_folder)
 
             pop = opt.to_population(result.datasets)
-            assert len(pop) == 11+i
+            assert len(pop) == 11 + i
 
 
-@pytest.mark.skipif(int(os.getenv('RUN_SLOW_TESTS', 0)) != 1, reason='Set RUN_SLOW_TESTS=1 to run slow tests')
+@pytest.mark.skipif(
+    int(os.getenv("RUN_SLOW_TESTS", 0)) != 1,
+    reason="Set RUN_SLOW_TESTS=1 to run slow tests",
+)
 @check_dependency()
 def test_simple_failing(failing_problem: ArchOptProblemBase):
     opt = get_trieste_optimizer(failing_problem, n_init=10, n_infill=1)

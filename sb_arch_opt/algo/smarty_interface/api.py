@@ -22,11 +22,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+
 from sb_arch_opt.problem import ArchOptProblemBase
 from sb_arch_opt.algo.smarty_interface.algo import *
 
 
-__all__ = ['get_smarty_optimizer', 'HAS_SMARTY']
+__all__ = ["get_smarty_optimizer", "HAS_SMARTY"]
 
 
 def get_smarty_optimizer(problem: ArchOptProblemBase, n_init: int, n_infill: int):

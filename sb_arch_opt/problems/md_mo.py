@@ -16,6 +16,7 @@ Contact: jasper.bussemaker@dlr.de
 
 This test suite contains a set of mixed-discrete multi-objective problems.
 """
+
 import numpy as np
 from pymoo.core.variable import Real
 from pymoo.problems.multi.zdt import ZDT1
@@ -23,8 +24,21 @@ from pymoo.problems.single.himmelblau import Himmelblau as HB
 from sb_arch_opt.problems.continuous import *
 from sb_arch_opt.problems.problems_base import *
 
-__all__ = ['MOHimmelblau', 'MDMOHimmelblau', 'DMOHimmelblau', 'MOGoldstein', 'MDMOGoldstein',
-           'DMOGoldstein', 'MOZDT1', 'MDZDT1', 'DZDT1', 'MDZDT1Small', 'MDZDT1Mid', 'MORosenbrock', 'MDMORosenbrock']
+__all__ = [
+    "MOHimmelblau",
+    "MDMOHimmelblau",
+    "DMOHimmelblau",
+    "MOGoldstein",
+    "MDMOGoldstein",
+    "DMOGoldstein",
+    "MOZDT1",
+    "MDZDT1",
+    "DZDT1",
+    "MDZDT1Small",
+    "MDZDT1Mid",
+    "MORosenbrock",
+    "MDMORosenbrock",
+]
 
 
 class MOHimmelblau(NoHierarchyProblemBase):
@@ -32,14 +46,26 @@ class MOHimmelblau(NoHierarchyProblemBase):
 
     def __init__(self):
         self._problem = problem = HB()
-        des_vars = [Real(bounds=(problem.xl[i], problem.xu[i])) for i in range(problem.n_var)]
+        des_vars = [
+            Real(bounds=(problem.xl[i], problem.xu[i])) for i in range(problem.n_var)
+        ]
         super().__init__(des_vars, n_obj=2)
 
-    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
-                       h_out: np.ndarray, *args, **kwargs):
+    def _arch_evaluate(
+        self,
+        x: np.ndarray,
+        is_active_out: np.ndarray,
+        f_out: np.ndarray,
+        g_out: np.ndarray,
+        h_out: np.ndarray,
+        *args,
+        **kwargs
+    ):
 
-        f_out[:, 0] = self._problem.evaluate(x, return_as_dictionary=True)['F'][:, 0]
-        f_out[:, 1] = self._problem.evaluate(x[:, ::-1], return_as_dictionary=True)['F'][:, 0]
+        f_out[:, 0] = self._problem.evaluate(x, return_as_dictionary=True)["F"][:, 0]
+        f_out[:, 1] = self._problem.evaluate(x[:, ::-1], return_as_dictionary=True)[
+            "F"
+        ][:, 0]
 
 
 class MDMOHimmelblau(MixedDiscretizerProblemBase):
@@ -63,10 +89,20 @@ class MOGoldstein(NoHierarchyProblemBase):
         self._problem = problem = Goldstein()
         super().__init__(problem.des_vars, n_obj=2)
 
-    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
-                       h_out: np.ndarray, *args, **kwargs):
-        f_out[:, 0] = self._problem.evaluate(x, return_as_dictionary=True)['F'][:, 0]
-        f_out[:, 1] = -self._problem.evaluate(x+.25, return_as_dictionary=True)['F'][:, 0]
+    def _arch_evaluate(
+        self,
+        x: np.ndarray,
+        is_active_out: np.ndarray,
+        f_out: np.ndarray,
+        g_out: np.ndarray,
+        h_out: np.ndarray,
+        *args,
+        **kwargs
+    ):
+        f_out[:, 0] = self._problem.evaluate(x, return_as_dictionary=True)["F"][:, 0]
+        f_out[:, 1] = -self._problem.evaluate(x + 0.25, return_as_dictionary=True)["F"][
+            :, 0
+        ]
 
 
 class MDMOGoldstein(MixedDiscretizerProblemBase):
@@ -91,11 +127,21 @@ class MORosenbrock(NoHierarchyProblemBase):
         des_vars = problem.des_vars
         super().__init__(des_vars, n_obj=2)
 
-    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
-                       h_out: np.ndarray, *args, **kwargs):
+    def _arch_evaluate(
+        self,
+        x: np.ndarray,
+        is_active_out: np.ndarray,
+        f_out: np.ndarray,
+        g_out: np.ndarray,
+        h_out: np.ndarray,
+        *args,
+        **kwargs
+    ):
         out = self._rosenbrock.evaluate(x, return_as_dictionary=True)
-        f_out[:, 0] = f1 = out['F'][:, 0]
-        f_out[:, 1] = .1*(np.abs((6000-f1)/40)**2 + np.sum((x[:, :4]+1)**2*2000, axis=1))
+        f_out[:, 0] = f1 = out["F"][:, 0]
+        f_out[:, 1] = 0.1 * (
+            np.abs((6000 - f1) / 40) ** 2 + np.sum((x[:, :4] + 1) ** 2 * 2000, axis=1)
+        )
 
 
 class MDMORosenbrock(MixedDiscretizerProblemBase):
@@ -140,7 +186,7 @@ class DZDT1(MixedDiscretizerProblemBase):
         super().__init__(ZDT1(), n_opts=5)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # MOHimmelblau().print_stats()
     # MDMOHimmelblau().print_stats()
     # MDMOHimmelblau().plot_design_space()

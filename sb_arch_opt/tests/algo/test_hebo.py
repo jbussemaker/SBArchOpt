@@ -5,7 +5,9 @@ from sb_arch_opt.problems.md_mo import MOZDT1
 from sb_arch_opt.problems.constrained import ArchCantileveredBeam
 from sb_arch_opt.algo.hebo_interface.algo import HEBOArchOptInterface
 
-check_dependency = lambda: pytest.mark.skipif(not HAS_HEBO, reason='HEBO dependencies not installed')
+check_dependency = lambda: pytest.mark.skipif(
+    not HAS_HEBO, reason="HEBO dependencies not installed"
+)
 
 
 @check_dependency()
@@ -24,7 +26,7 @@ def test_simple():
     hebo.optimize(n_infill=2)
 
     pop = hebo.pop
-    assert len(pop) == n_init+2
+    assert len(pop) == n_init + 2
 
 
 @check_dependency()

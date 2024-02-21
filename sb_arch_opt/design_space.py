@@ -22,6 +22,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+
 import itertools
 import numpy as np
 import pandas as pd
@@ -30,7 +31,12 @@ from cached_property import cached_property
 from pymoo.operators.sampling.lhs import LatinHypercubeSampling
 from pymoo.core.variable import Variable, Real, Integer, Binary, Choice
 
-__all__ = ['ArchDesignSpace', 'ImplicitArchDesignSpace', 'CorrectorInterface', 'CorrectorUnavailableError']
+__all__ = [
+    "ArchDesignSpace",
+    "ImplicitArchDesignSpace",
+    "CorrectorInterface",
+    "CorrectorUnavailableError",
+]
 
 
 class CorrectorInterface:
@@ -99,7 +105,7 @@ class ArchDesignSpace:
                 var_type = Choice(options=list(range(len(var_type.options))))
 
             elif not isinstance(var_type, (Real, Integer, Binary)):
-                raise RuntimeError(f'Unsupported variable type: {var_type!r}')
+                raise RuntimeError(f"Unsupported variable type: {var_type!r}")
 
             corr_des_vars.append(var_type)
 
@@ -121,23 +127,29 @@ class ArchDesignSpace:
             if is_act_all is not None:
                 return np.any(~is_act_all, axis=0)
 
-            raise RuntimeError('Could not deduce is_conditionally_active from all x, '
-                               'implement _is_conditionally_active!')
+            raise RuntimeError(
+                "Could not deduce is_conditionally_active from all x, "
+                "implement _is_conditionally_active!"
+            )
 
         is_cond_active = np.array(is_cond_active)
         if len(is_cond_active) != self.n_var:
-            raise ValueError(f'is_cont_active should be same length as x: {len(is_cond_active)} != {self.n_var}')
+            raise ValueError(
+                f"is_cont_active should be same length as x: {len(is_cond_active)} != {self.n_var}"
+            )
         if np.all(is_cond_active):
-            raise ValueError(f'At least one variable should be nonconditionally active: {is_cond_active}')
+            raise ValueError(
+                f"At least one variable should be nonconditionally active: {is_cond_active}"
+            )
 
         return is_cond_active
 
     def get_categorical_values(self, x: np.ndarray, i_dv) -> np.ndarray:
         """Gets the associated categorical variable values for some design variable"""
         if not self._is_initialized:
-            getattr(self, 'des_vars')
+            getattr(self, "des_vars")
         if i_dv not in self._choice_value_map:
-            raise ValueError(f'Design variable is not categorical: {i_dv}')
+            raise ValueError(f"Design variable is not categorical: {i_dv}")
 
         x_values = x[:, i_dv]
         values = x_values.astype(str)
@@ -157,7 +169,7 @@ class ArchDesignSpace:
     @cached_property
     def x_mid(self) -> np.ndarray:
         """Mid-bounds values"""
-        return .5*(self.xl+self.xu)
+        return 0.5 * (self.xl + self.xu)
 
     @cached_property
     def xu(self) -> np.ndarray:
@@ -169,18 +181,23 @@ class ArchDesignSpace:
             elif isinstance(des_var, Binary):
                 xu[i_var] = 1
             elif isinstance(des_var, Choice):
-                xu[i_var] = len(des_var.options)-1
+                xu[i_var] = len(des_var.options) - 1
         return xu
 
     @cached_property
     def is_int_mask(self) -> np.ndarray:
         """Boolean vector specifying whether each variable is an integer (ordinal) variable"""
-        return np.array([isinstance(des_var, (Integer, Binary)) for des_var in self.des_vars], dtype=bool)
+        return np.array(
+            [isinstance(des_var, (Integer, Binary)) for des_var in self.des_vars],
+            dtype=bool,
+        )
 
     @cached_property
     def is_cat_mask(self) -> np.ndarray:
         """Boolean vector specifying whether each variable is a categorical variable"""
-        return np.array([isinstance(des_var, Choice) for des_var in self.des_vars], dtype=bool)
+        return np.array(
+            [isinstance(des_var, Choice) for des_var in self.des_vars], dtype=bool
+        )
 
     @cached_property
     def is_discrete_mask(self) -> np.ndarray:
@@ -235,6 +252,7 @@ class ArchDesignSpace:
     def _get_corrector(self) -> Optional[CorrectorInterface]:
         """Get the default corrector algorithm"""
         from sb_arch_opt.correction import ClosestEagerCorrector
+
         return ClosestEagerCorrector(self)
 
     def round_x_discrete(self, x: np.ndarray):
@@ -254,14 +272,14 @@ class ArchDesignSpace:
         is_discrete_mask = self.is_discrete_mask
         x_discrete = x[:, is_discrete_mask].astype(float)
         xl, xu = self.xl[is_discrete_mask], self.xu[is_discrete_mask]
-        diff = xu-xl
+        diff = xu - xl
 
         for ix in range(x_discrete.shape[1]):
             x_discrete[x_discrete[:, ix] < xl[ix], ix] = xl[ix]
             x_discrete[x_discrete[:, ix] > xu[ix], ix] = xu[ix]
 
-        x_stretched = (x_discrete-xl)*((diff+.9999)/diff)-.5
-        x_rounded = (np.round(x_stretched)+xl).astype(int)
+        x_stretched = (x_discrete - xl) * ((diff + 0.9999) / diff) - 0.5
+        x_rounded = (np.round(x_stretched) + xl).astype(int)
 
         x[:, is_discrete_mask] = x_rounded
 
@@ -309,7 +327,7 @@ class ArchDesignSpace:
 
         # Get number of discrete options for each discrete design variable
         is_discrete_mask = self.is_discrete_mask
-        n_opts_discrete = self.xu[is_discrete_mask]-self.xl[is_discrete_mask]+1
+        n_opts_discrete = self.xu[is_discrete_mask] - self.xl[is_discrete_mask] + 1
         if len(n_opts_discrete) == 0:
             return 1
 
@@ -337,10 +355,10 @@ class ArchDesignSpace:
         if n_valid is None:
             return np.nan
         if n_valid == 0:
-            return 1.
+            return 1.0
 
         n_declared = self.get_n_declared_discrete()
-        discrete_imp_ratio = n_declared/n_valid
+        discrete_imp_ratio = n_declared / n_valid
         return discrete_imp_ratio
 
     @cached_property
@@ -355,7 +373,7 @@ class ArchDesignSpace:
         # Check if we have any continuous dimensions
         i_is_cont = np.where(self.is_cont_mask)[0]
         if len(i_is_cont) == 0:
-            return 1.
+            return 1.0
 
         # Check if mean active continuous dimensions is explicitly defined
         n_cont_active_mean = self._get_n_active_cont_mean()
@@ -395,10 +413,10 @@ class ArchDesignSpace:
         if n_correct is None:
             return np.nan
         if n_correct == 0:
-            return 1.
+            return 1.0
 
         n_declared = self.get_n_declared_discrete()
-        discrete_imp_ratio = n_declared/n_correct
+        discrete_imp_ratio = n_declared / n_correct
         return discrete_imp_ratio
 
     @cached_property
@@ -413,7 +431,7 @@ class ArchDesignSpace:
         # Check if we have any continuous dimensions
         i_is_cont = np.where(self.is_cont_mask)[0]
         if len(i_is_cont) == 0:
-            return 1.
+            return 1.0
 
         # Check if mean active continuous dimensions is explicitly defined
         n_cont_active_mean = self._get_n_active_cont_mean_correct()
@@ -425,7 +443,9 @@ class ArchDesignSpace:
             if x_all is None or n_correct is None:
                 return np.nan
 
-            is_active_weighted = is_active_all[:, i_is_cont].astype(float) * np.array([n_correct]).T
+            is_active_weighted = (
+                is_active_all[:, i_is_cont].astype(float) * np.array([n_correct]).T
+            )
             n_cont_active_mean = np.sum(is_active_weighted) / np.sum(n_correct)
 
         # Calculate imputation ratio from declared / mean_active
@@ -437,15 +457,16 @@ class ArchDesignSpace:
         """The fraction of design space hierarchy (quantified by the imputation ratio) that is due to the need for
         correction (i.e. value constraints)."""
         imputation_ratio = self.imputation_ratio
-        if imputation_ratio == 1.:
-            return 0.
+        if imputation_ratio == 1.0:
+            return 0.0
         return np.log10(self.correction_ratio) / np.log10(imputation_ratio)
 
     def get_discrete_rates(self, force=False, show=False) -> Optional[pd.DataFrame]:
         """Returns for each discrete value of the discrete design variables, how often the relatively occur over all
         possible design vectors. A value of -1 represents an inactive design variable. Results are returned in a
         pandas DataFrame with each column representing a design variable.
-        Also adds a measure of rate diversity: difference between lowest and highest occurring values."""
+        Also adds a measure of rate diversity: difference between lowest and highest occurring values.
+        """
 
         # Get all discrete design vectors
         x_all, is_act_all = self.all_discrete_x
@@ -454,33 +475,45 @@ class ArchDesignSpace:
                 return
             x_all, is_act_all = self.all_discrete_x_by_trial_and_imputation
 
-        df = self.calculate_discrete_rates(x_all-self.xl, is_act_all)
+        df = self.calculate_discrete_rates(x_all - self.xl, is_act_all)
 
         if show:
             is_discrete_mask = np.concatenate([self.is_discrete_mask, [True]])
-            with pd.option_context('display.max_rows', None, 'display.max_columns', None,
-                                   'display.expand_frame_repr', False, 'max_colwidth', None):
-                print(df.iloc[:, is_discrete_mask].replace(np.nan, ''))
+            with pd.option_context(
+                "display.max_rows",
+                None,
+                "display.max_columns",
+                None,
+                "display.expand_frame_repr",
+                False,
+                "max_colwidth",
+                None,
+            ):
+                print(df.iloc[:, is_discrete_mask].replace(np.nan, ""))
         return df
 
     @staticmethod
-    def calculate_discrete_rates_raw(x: np.ndarray, is_active: np.ndarray, is_discrete_mask: np.ndarray) \
-            -> Tuple[np.ndarray, np.ndarray, np.ndarray, set]:
+    def calculate_discrete_rates_raw(
+        x: np.ndarray, is_active: np.ndarray, is_discrete_mask: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, set]:
         # Ignore All-Nan slice warning
         import warnings
-        warnings.filterwarnings('ignore', 'All-NaN.*', RuntimeWarning)
+
+        warnings.filterwarnings("ignore", "All-NaN.*", RuntimeWarning)
 
         # x should be moved to 0!
-        x_merged = x.astype(int)+1
+        x_merged = x.astype(int) + 1
         x_merged[~is_active] = 0
         n = x_merged.shape[0]
 
         i_opts = set()
         if np.all(~is_discrete_mask):
-            counts = np.zeros((1, x.shape[1]))*np.nan
+            counts = np.zeros((1, x.shape[1])) * np.nan
         else:
             # Count the values
-            counts = np.zeros((int(np.max(x[:, is_discrete_mask]))+2, x.shape[1]))*np.nan
+            counts = (
+                np.zeros((int(np.max(x[:, is_discrete_mask])) + 2, x.shape[1])) * np.nan
+            )
             for ix in range(x.shape[1]):
                 if not is_discrete_mask[ix]:
                     continue
@@ -488,49 +521,70 @@ class ArchDesignSpace:
                 counts_i = np.bincount(x_merged[:, ix])
                 for iv, count in enumerate(counts_i):
                     if count > 0:
-                        counts[int(iv), ix] = count/n
-                        i_opts.add(iv-1)
+                        counts[int(iv), ix] = count / n
+                        i_opts.add(iv - 1)
 
         # Calculate diversity metric: the range between the lowest and highest occurring values
         diversity = np.nanmax(counts, axis=0) - np.nanmin(counts, axis=0)
         if -1 in i_opts:
             active_counts = counts[1:, :]
             active_counts /= np.nansum(active_counts, axis=0)
-            active_diversity = np.nanmax(active_counts, axis=0) - np.nanmin(active_counts, axis=0)
+            active_diversity = np.nanmax(active_counts, axis=0) - np.nanmin(
+                active_counts, axis=0
+            )
         else:
             active_diversity = diversity
 
         return counts, diversity, active_diversity, i_opts
 
-    def calculate_discrete_rates(self, x: np.ndarray, is_active: np.ndarray) -> pd.DataFrame:
+    def calculate_discrete_rates(
+        self, x: np.ndarray, is_active: np.ndarray
+    ) -> pd.DataFrame:
 
         is_discrete_mask = self.is_discrete_mask
-        counts, diversity, active_diversity, i_opts = self.calculate_discrete_rates_raw(x, is_active, is_discrete_mask)
+        counts, diversity, active_diversity, i_opts = self.calculate_discrete_rates_raw(
+            x, is_active, is_discrete_mask
+        )
 
         # Create dataframe
-        has_value = np.array([iv-1 in i_opts for iv in range(counts.shape[0])])
+        has_value = np.array([iv - 1 in i_opts for iv in range(counts.shape[0])])
         counts = counts[has_value, :]
 
-        columns = [f'x{ix}' for ix in range(x.shape[1])]
+        columns = [f"x{ix}" for ix in range(x.shape[1])]
         df = pd.DataFrame(index=sorted(list(i_opts)), columns=columns, data=counts)
-        df = df.rename(index={val: 'inactive' if val == -1 else f'opt {val}' for val in df.index})
+        df = df.rename(
+            index={val: "inactive" if val == -1 else f"opt {val}" for val in df.index}
+        )
 
         is_cat_mask = self.is_cat_mask
-        x_type = [('cat' if is_cat_mask[ix] else 'int') if is_discrete_mask[ix] else 'cont'
-                  for ix in range(x.shape[1])]
+        x_type = [
+            ("cat" if is_cat_mask[ix] else "int") if is_discrete_mask[ix] else "cont"
+            for ix in range(x.shape[1])
+        ]
 
-        df = pd.concat([
-            df,
-            pd.Series(index=columns, data=diversity, name='diversity').to_frame().T,
-            pd.Series(index=columns, data=active_diversity, name='active-diversity').to_frame().T,
-            pd.Series(index=columns, data=x_type, name='x_type').to_frame().T,
-            pd.Series(index=columns, data=self.is_conditionally_active, name='is_cond').to_frame().T,
-        ], axis=0)
+        df = pd.concat(
+            [
+                df,
+                pd.Series(index=columns, data=diversity, name="diversity").to_frame().T,
+                pd.Series(index=columns, data=active_diversity, name="active-diversity")
+                .to_frame()
+                .T,
+                pd.Series(index=columns, data=x_type, name="x_type").to_frame().T,
+                pd.Series(
+                    index=columns, data=self.is_conditionally_active, name="is_cond"
+                )
+                .to_frame()
+                .T,
+            ],
+            axis=0,
+        )
 
-        max_diversity = np.zeros((len(df),))*np.nan
+        max_diversity = np.zeros((len(df),)) * np.nan
         max_diversity[-4] = df.iloc[-4, :].max()
         max_diversity[-3] = df.iloc[-3, :].max()
-        df = pd.concat([df, pd.Series(index=df.index, data=max_diversity, name='max')], axis=1)
+        df = pd.concat(
+            [df, pd.Series(index=df.index, data=max_diversity, name="max")], axis=1
+        )
         return df
 
     def quick_sample_discrete_x(self, n: int) -> Tuple[np.ndarray, np.ndarray]:
@@ -538,7 +592,9 @@ class ArchDesignSpace:
 
         x, is_active = self._quick_sample_discrete_x(n)
         if x.shape[1] != self.n_var or is_active.shape[1] != self.n_var:
-            raise RuntimeError(f'Inconsistent design vector dimensions: {x.shape[1]} != {self.n_var}')
+            raise RuntimeError(
+                f"Inconsistent design vector dimensions: {x.shape[1]} != {self.n_var}"
+            )
         if x.shape[0] > n:
             x = x[:n, :]
             is_active = is_active[:n, :]
@@ -552,7 +608,8 @@ class ArchDesignSpace:
     @cached_property
     def all_discrete_x(self) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
         """Generate all possible discrete design vectors, if the problem provides this function. Returns both the design
-        vectors and activeness information. Active continuous variables may have any value within their bounds."""
+        vectors and activeness information. Active continuous variables may have any value within their bounds.
+        """
 
         # Check if this problem implements discrete design vector generation
         discrete_x = self._gen_all_discrete_x()
@@ -564,14 +621,20 @@ class ArchDesignSpace:
         if x is None or is_active is None:
             return None, None
         if x.shape[1] != self.n_var or is_active.shape[1] != self.n_var:
-            raise RuntimeError(f'Inconsistent design vector dimensions: {x.shape[1]} != {self.n_var}')
+            raise RuntimeError(
+                f"Inconsistent design vector dimensions: {x.shape[1]} != {self.n_var}"
+            )
         x = x.astype(float)  # Otherwise continuous variables cannot be imputed
         self.impute_x(x, is_active)
 
         # Cross-check with numerical estimate
         n_valid = self._get_n_valid_discrete()
-        if n_valid is not None and (n_valid != x.shape[0] or n_valid != is_active.shape[0]):
-            raise RuntimeError(f'Inconsistent estimation of nr of discrete design vectors: {n_valid} != {x.shape[0]}')
+        if n_valid is not None and (
+            n_valid != x.shape[0] or n_valid != is_active.shape[0]
+        ):
+            raise RuntimeError(
+                f"Inconsistent estimation of nr of discrete design vectors: {n_valid} != {x.shape[0]}"
+            )
 
         return x, is_active
 
@@ -588,7 +651,7 @@ class ArchDesignSpace:
         is_inactive_discrete = ~is_active[:, is_discrete_mask]
         if is_inactive_discrete.shape[0] == 0 or is_inactive_discrete.shape[1] == 0:
             return np.ones((is_inactive_discrete.shape[0],), dtype=int)
-        n_opts_discrete = self.xu[is_discrete_mask]-self.xl[is_discrete_mask]+1
+        n_opts_discrete = self.xu[is_discrete_mask] - self.xl[is_discrete_mask] + 1
 
         # For each valid discrete vector, get the number of correct versions
         n_correct = np.ones(is_inactive_discrete.shape)
@@ -642,7 +705,11 @@ class ArchDesignSpace:
                 x_repair, is_active = self.correct_x(x_repair)
 
                 # Remove repaired points
-                is_not_repaired = ~np.any(x_repair[:, is_discrete_mask] != x_repair_input[:, is_discrete_mask], axis=1)
+                is_not_repaired = ~np.any(
+                    x_repair[:, is_discrete_mask]
+                    != x_repair_input[:, is_discrete_mask],
+                    axis=1,
+                )
                 x_repair = x_repair[is_not_repaired, :]
                 is_active = is_active[is_not_repaired, :]
 
@@ -656,9 +723,9 @@ class ArchDesignSpace:
             self.use_auto_corrector = use_auto_corrector
 
         # Use these results for subsequent calls of all_discrete_x
-        all_discrete_x = self.__dict__.get('all_discrete_x')
+        all_discrete_x = self.__dict__.get("all_discrete_x")
         if all_discrete_x is None or all_discrete_x[0] is None:
-            self.__dict__['all_discrete_x'] = (x_discr, is_act_discr)
+            self.__dict__["all_discrete_x"] = (x_discr, is_act_discr)
 
         return x_discr, is_act_discr
 
@@ -668,14 +735,21 @@ class ArchDesignSpace:
         is_cont = self.is_cont_mask
 
         # Get values to be sampled for each design variable
-        return [np.linspace(xl[i], xu[i], n_cont) if is_cont[i] else np.arange(xl[i], xu[i]+1) for i in range(len(xl))]
+        return [
+            (
+                np.linspace(xl[i], xu[i], n_cont)
+                if is_cont[i]
+                else np.arange(xl[i], xu[i] + 1)
+            )
+            for i in range(len(xl))
+        ]
 
     def _quick_random_sample_discrete_x(self, n: int) -> Tuple[np.ndarray, np.ndarray]:
         """Fallback sampling if hierarchical sampling is not available"""
         from sb_arch_opt.problem import ArchOptProblemBase
 
         stub_problem = ArchOptProblemBase(self)
-        x = LatinHypercubeSampling().do(stub_problem, n).get('X')
+        x = LatinHypercubeSampling().do(stub_problem, n).get("X")
         self.round_x_discrete(x)
 
         is_active = np.ones(x.shape, dtype=bool)
@@ -684,7 +758,8 @@ class ArchDesignSpace:
 
     def is_explicit(self) -> bool:
         """Whether this design space is defined explicitly, that is: a model of the design space is available and
-        correct, and therefore the problem evaluation function never needs to correct any design vector"""
+        correct, and therefore the problem evaluation function never needs to correct any design vector
+        """
         raise NotImplementedError
 
     def _get_variables(self) -> List[Variable]:
@@ -762,12 +837,19 @@ class ArchDesignSpace:
 class ImplicitArchDesignSpace(ArchDesignSpace):
     """An implicit, problem-specific definition of the architecture design space"""
 
-    def __init__(self, des_vars: List[Variable], correct_x_func: Callable[[np.ndarray, np.ndarray], None],
-                 is_conditional_func: Callable[[], List[bool]],
-                 n_valid_discrete_func: Callable[[], int] = None, n_active_cont_mean: Callable[[], float] = None,
-                 gen_all_discrete_x_func: Callable[[], Optional[Tuple[np.ndarray, np.ndarray]]] = None,
-                 n_correct_discrete_func: Callable[[], int] = None,
-                 n_active_cont_mean_correct: Callable[[], float] = None):
+    def __init__(
+        self,
+        des_vars: List[Variable],
+        correct_x_func: Callable[[np.ndarray, np.ndarray], None],
+        is_conditional_func: Callable[[], List[bool]],
+        n_valid_discrete_func: Callable[[], int] = None,
+        n_active_cont_mean: Callable[[], float] = None,
+        gen_all_discrete_x_func: Callable[
+            [], Optional[Tuple[np.ndarray, np.ndarray]]
+        ] = None,
+        n_correct_discrete_func: Callable[[], int] = None,
+        n_active_cont_mean_correct: Callable[[], float] = None,
+    ):
         self._variables = des_vars
         self._correct_x_func = correct_x_func
         self._is_conditional_func = is_conditional_func

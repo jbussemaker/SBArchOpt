@@ -22,6 +22,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+
 import timeit
 import logging
 import numpy as np
@@ -32,24 +33,37 @@ from pymoo.util.normalization import Normalization, SimpleZeroToOneNormalization
 
 try:
     from smt.surrogate_models.surrogate_model import SurrogateModel
+
     assert HAS_ARCH_SBO
 except ImportError:
     assert not HAS_ARCH_SBO
 
 try:
     from sklearn.ensemble import RandomForestClassifier as RFC
+
     HAS_SKLEARN = True
 except ImportError:
     HAS_SKLEARN = False
 
-__all__ = ['get_hc_strategy', 'HiddenConstraintStrategy', 'PredictionHCStrategy', 'PredictorInterface',
-           'SKLearnClassifier', 'RandomForestClassifier', 'SMTPredictor', 'MDGPRegressor', 'HAS_SKLEARN',
-           'RejectionHCStrategy', 'ReplacementHCStrategyBase', 'GlobalWorstReplacement']
+__all__ = [
+    "get_hc_strategy",
+    "HiddenConstraintStrategy",
+    "PredictionHCStrategy",
+    "PredictorInterface",
+    "SKLearnClassifier",
+    "RandomForestClassifier",
+    "SMTPredictor",
+    "MDGPRegressor",
+    "HAS_SKLEARN",
+    "RejectionHCStrategy",
+    "ReplacementHCStrategyBase",
+    "GlobalWorstReplacement",
+]
 
-log = logging.getLogger('sb_arch_opt.sbo_hc')
+log = logging.getLogger("sb_arch_opt.sbo_hc")
 
 
-def get_hc_strategy(kpls_n_dim: Optional[int] = 10, min_pov: float = .25):
+def get_hc_strategy(kpls_n_dim: Optional[int] = 10, min_pov: float = 0.25):
     """
     Get a hidden constraints strategy that works well for most problems.
 
@@ -79,7 +93,9 @@ class HiddenConstraintStrategy:
     def initialize(self, problem: ArchOptProblemBase):
         pass
 
-    def mod_xy_train(self, x: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def mod_xy_train(
+        self, x: np.ndarray, y: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """Modify inputs and outputs for the surrogate model used for the main infill function"""
         return x, y
 
@@ -107,16 +123,18 @@ class HiddenConstraintStrategy:
 class RejectionHCStrategy(HiddenConstraintStrategy):
     """Strategy that simply rejects failed points before training the model"""
 
-    def mod_xy_train(self, x: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def mod_xy_train(
+        self, x: np.ndarray, y: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray]:
         # Remove failed points from the training set
         is_not_failed = ~self.is_failed(y)
         return x[is_not_failed, :], y[is_not_failed, :]
 
     def __str__(self):
-        return 'Rejection'
+        return "Rejection"
 
     def __repr__(self):
-        return f'{self.__class__.__name__}()'
+        return f"{self.__class__.__name__}()"
 
 
 class ReplacementHCStrategyBase(HiddenConstraintStrategy):
@@ -129,7 +147,9 @@ class ReplacementHCStrategyBase(HiddenConstraintStrategy):
     def initialize(self, problem: ArchOptProblemBase):
         self._normalization = SimpleZeroToOneNormalization(xl=problem.xl, xu=problem.xu)
 
-    def mod_xy_train(self, x: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def mod_xy_train(
+        self, x: np.ndarray, y: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray]:
         # Separate into failed and valid (non-failed) set
         is_failed = self.is_failed(y)
         x_valid = x[~is_failed, :]
@@ -152,8 +172,13 @@ class ReplacementHCStrategyBase(HiddenConstraintStrategy):
         y[is_failed, :] = y_failed_replace
         return x, y
 
-    def _replace_y(self, x_failed: np.ndarray, y_failed: np.ndarray, x_valid: np.ndarray, y_valid: np.ndarray) \
-            -> np.ndarray:
+    def _replace_y(
+        self,
+        x_failed: np.ndarray,
+        y_failed: np.ndarray,
+        x_valid: np.ndarray,
+        y_valid: np.ndarray,
+    ) -> np.ndarray:
         """Return values for replacing y_failed (x values are normalized)"""
         raise NotImplementedError
 
@@ -161,30 +186,36 @@ class ReplacementHCStrategyBase(HiddenConstraintStrategy):
         raise NotImplementedError
 
     def __str__(self):
-        return f'Replacement: {self.get_replacement_strategy_name()}'
+        return f"Replacement: {self.get_replacement_strategy_name()}"
 
     def __repr__(self):
-        return f'{self.__class__.__name__}()'
+        return f"{self.__class__.__name__}()"
 
 
 class GlobalWorstReplacement(ReplacementHCStrategyBase):
     """Replace failed values with the worst values known for these outputs"""
 
-    def _replace_y(self, x_failed: np.ndarray, y_failed: np.ndarray, x_valid: np.ndarray, y_valid: np.ndarray) \
-            -> np.ndarray:
+    def _replace_y(
+        self,
+        x_failed: np.ndarray,
+        y_failed: np.ndarray,
+        x_valid: np.ndarray,
+        y_valid: np.ndarray,
+    ) -> np.ndarray:
         # Get global worst values
         y_worst = np.max(y_valid, axis=0)
 
         # Replace
-        y_replace = np.zeros(y_failed.shape)+y_worst
+        y_replace = np.zeros(y_failed.shape) + y_worst
         return y_replace
 
     def get_replacement_strategy_name(self) -> str:
-        return 'Global Worst'
+        return "Global Worst"
 
 
 class PredictorInterface:
     """Interface class for some validity predictor"""
+
     _training_doe = {}
     _reset_pickle_keys = []
 
@@ -205,27 +236,35 @@ class PredictorInterface:
         self._initialize(problem)
 
     def _get_normalization(self, problem: ArchOptProblemBase) -> Normalization:
-        return SimpleZeroToOneNormalization(xl=problem.xl, xu=problem.xu, estimate_bounds=False)
+        return SimpleZeroToOneNormalization(
+            xl=problem.xl, xu=problem.xu, estimate_bounds=False
+        )
 
     def _initialize(self, problem: ArchOptProblemBase):
         pass
 
     def train(self, x: np.ndarray, y_is_valid: np.ndarray):
         # Check if we are training a classifier with only 1 class
-        self._trained_single_class = single_class = y_is_valid[0] if len(set(y_is_valid)) == 1 else None
+        self._trained_single_class = single_class = (
+            y_is_valid[0] if len(set(y_is_valid)) == 1 else None
+        )
 
         if single_class is None:
-            log.debug(f'Training hidden constraints predictor {self!s}; x size: {x.shape}')
+            log.debug(
+                f"Training hidden constraints predictor {self!s}; x size: {x.shape}"
+            )
             s = timeit.default_timer()
 
             self._train(x, y_is_valid)
 
-            train_time = timeit.default_timer()-s
-            log.debug(f'Trained hidden constraints predictor in {train_time:.2f} seconds')
+            train_time = timeit.default_timer() - s
+            log.debug(
+                f"Trained hidden constraints predictor in {train_time:.2f} seconds"
+            )
 
     def evaluate_probability_of_validity(self, x: np.ndarray) -> np.ndarray:
         if self._trained_single_class is not None:
-            return np.ones((x.shape[0],))*self._trained_single_class
+            return np.ones((x.shape[0],)) * self._trained_single_class
 
         return self._evaluate_probability_of_validity(x)
 
@@ -241,13 +280,13 @@ class PredictorInterface:
         raise NotImplementedError
 
     def __repr__(self):
-        return f'{self.__class__.__name__}()'
+        return f"{self.__class__.__name__}()"
 
 
 class PredictionHCStrategy(HiddenConstraintStrategy):
     """Base class for a strategy that predictions where failed regions occur"""
 
-    def __init__(self, predictor: PredictorInterface, constraint=True, min_pov=.5):
+    def __init__(self, predictor: PredictorInterface, constraint=True, min_pov=0.5):
         check_dependencies()
         self.predictor = predictor
         self.constraint = constraint
@@ -257,7 +296,9 @@ class PredictionHCStrategy(HiddenConstraintStrategy):
     def initialize(self, problem: ArchOptProblemBase):
         self.predictor.initialize(problem)
 
-    def mod_xy_train(self, x: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def mod_xy_train(
+        self, x: np.ndarray, y: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray]:
         # Remove failed points form the training set
         is_not_failed = ~self.is_failed(y)
         return x[is_not_failed, :], y[is_not_failed, :]
@@ -274,7 +315,7 @@ class PredictionHCStrategy(HiddenConstraintStrategy):
     def evaluate_infill_constraint(self, x: np.ndarray) -> np.ndarray:
         pov = self.predictor.evaluate_probability_of_validity(x)
         pov = np.clip(pov, 0, 1)
-        return self.min_pov-pov
+        return self.min_pov - pov
 
     def mod_infill_objectives(self, x: np.ndarray, f_infill: np.ndarray) -> np.ndarray:
         pov = self.predictor.evaluate_probability_of_validity(x)
@@ -283,20 +324,24 @@ class PredictionHCStrategy(HiddenConstraintStrategy):
         # The infill objectives are a minimization of some value between 0 and 1:
         # - The function-based infills (prediction mean), the underlying surrogates are trained on normalized y values
         # - The expected improvement is normalized between 0 and 1, where 1 corresponds to no expected improvement
-        return 1-((1-f_infill).T*pov).T
+        return 1 - ((1 - f_infill).T * pov).T
 
     def __str__(self):
-        type_str = 'G' if self.constraint else 'F'
-        type_str += f' min_pov={self.min_pov}' if self.constraint and self.min_pov != .5 else ''
-        return f'Prediction {type_str}: {self.predictor!s}'
+        type_str = "G" if self.constraint else "F"
+        type_str += (
+            f" min_pov={self.min_pov}"
+            if self.constraint and self.min_pov != 0.5
+            else ""
+        )
+        return f"Prediction {type_str}: {self.predictor!s}"
 
     def __repr__(self):
-        min_pov_str = f', min_pov={self.min_pov}' if self.constraint else ''
-        return f'{self.__class__.__name__}({self.predictor!r}, constraint={self.constraint}{min_pov_str})'
+        min_pov_str = f", min_pov={self.min_pov}" if self.constraint else ""
+        return f"{self.__class__.__name__}({self.predictor!r}, constraint={self.constraint}{min_pov_str})"
 
 
 class SKLearnClassifier(PredictorInterface):
-    _reset_pickle_keys = ['_predictor']
+    _reset_pickle_keys = ["_predictor"]
 
     def __init__(self):
         self._predictor = None
@@ -307,7 +352,9 @@ class SKLearnClassifier(PredictorInterface):
             return np.ones((x.shape[0],))
 
         x_norm = self._normalization.forward(x)
-        pov = self._predictor.predict_proba(x_norm)[:, 1]  # Probability of belonging to class 1 (valid points)
+        pov = self._predictor.predict_proba(x_norm)[
+            :, 1
+        ]  # Probability of belonging to class 1 (valid points)
         return pov[:, 0] if len(pov.shape) == 2 else pov
 
     def _train(self, x: np.ndarray, y_is_valid: np.ndarray):
@@ -332,24 +379,24 @@ class RandomForestClassifier(SKLearnClassifier):
 
         n_estimators = self.n
         if self.n_dim is not None:
-            n_estimators = max(int(self.n_dim*x_norm.shape[1]), n_estimators)
+            n_estimators = max(int(self.n_dim * x_norm.shape[1]), n_estimators)
 
         self._predictor = clf = RandomForestClassifier(n_estimators=n_estimators)
         clf.fit(x_norm, y_is_valid)
 
     def __str__(self):
-        n_dim_str = f' | x{self.n_dim}' if self.n_dim is not None else ''
-        return f'RFC ({self.n}{n_dim_str})'
+        n_dim_str = f" | x{self.n_dim}" if self.n_dim is not None else ""
+        return f"RFC ({self.n}{n_dim_str})"
 
     def __repr__(self):
-        return f'{self.__class__.__name__}(n={self.n})'
+        return f"{self.__class__.__name__}(n={self.n})"
 
 
 class SMTPredictor(PredictorInterface):
-    _reset_pickle_keys = ['_model']
+    _reset_pickle_keys = ["_model"]
 
     def __init__(self):
-        self._model: Optional['SurrogateModel'] = None
+        self._model: Optional["SurrogateModel"] = None
         super().__init__()
 
     def _evaluate_probability_of_validity(self, x: np.ndarray) -> np.ndarray:
@@ -382,13 +429,14 @@ class MDGPRegressor(SMTPredictor):
     def _do_train(self, x_norm: np.ndarray, y_is_valid: np.ndarray):
         kwargs = {}
         if self._kpls_n_dim is not None and x_norm.shape[1] > self._kpls_n_dim:
-            kwargs['kpls_n_comp'] = self._kpls_n_dim
+            kwargs["kpls_n_comp"] = self._kpls_n_dim
 
         model, _ = ModelFactory(self._problem).get_md_kriging_model(
-            corr='abs_exp', theta0=[1e-2], n_start=5, **kwargs)
+            corr="abs_exp", theta0=[1e-2], n_start=5, **kwargs
+        )
         self._model = model
         model.set_training_values(x_norm, y_is_valid)
         model.train()
 
     def __str__(self):
-        return 'MD-GP'
+        return "MD-GP"

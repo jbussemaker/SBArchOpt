@@ -14,7 +14,7 @@ def test_md_base():
     problem.print_stats()
 
     pop = HierarchicalExhaustiveSampling(n_cont=3).do(problem, 0)
-    assert len(pop) == (4**2)*(3**2)
+    assert len(pop) == (4**2) * (3**2)
     Evaluator().eval(problem, pop)
 
 
@@ -31,8 +31,13 @@ def run_test_no_hierarchy(problem, exh_n_cont=3):
             assert np.all(~LargeDuplicateElimination.eliminate(x_discrete))
 
     pop = None
-    if exh_n_cont != -1 and (HierarchicalExhaustiveSampling.get_n_sample_exhaustive(problem, n_cont=exh_n_cont) < 1e3
-                             or x_discrete is not None):
+    if exh_n_cont != -1 and (
+        HierarchicalExhaustiveSampling.get_n_sample_exhaustive(
+            problem, n_cont=exh_n_cont
+        )
+        < 1e3
+        or x_discrete is not None
+    ):
         try:
             pop = HierarchicalExhaustiveSampling(n_cont=exh_n_cont).do(problem, 0)
         except MemoryError:
@@ -51,12 +56,12 @@ def test_mo_himmelblau():
 
 def test_md_mo_himmelblau():
     pop = run_test_no_hierarchy(MDMOHimmelblau())
-    assert len(pop) == 10*3
+    assert len(pop) == 10 * 3
 
 
 def test_discrete_mo_himmelblau():
     pop = run_test_no_hierarchy(DMOHimmelblau())
-    assert len(pop) == 10*10
+    assert len(pop) == 10 * 10
 
 
 def test_mo_goldstein():

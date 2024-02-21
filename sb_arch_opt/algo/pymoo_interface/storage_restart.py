@@ -22,6 +22,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+
 import os
 import pickle
 import logging
@@ -40,14 +41,23 @@ from sb_arch_opt.util import capture_log
 from sb_arch_opt.problem import ArchOptProblemBase
 from sb_arch_opt.sampling import LargeDuplicateElimination
 
-__all__ = ['load_from_previous_results', 'initialize_from_previous_results', 'ResultsStorageCallback',
-           'ArchOptEvaluator', 'set_initial_population']
+__all__ = [
+    "load_from_previous_results",
+    "initialize_from_previous_results",
+    "ResultsStorageCallback",
+    "ArchOptEvaluator",
+    "set_initial_population",
+]
 
-log = logging.getLogger('sb_arch_opt.pymoo')
+log = logging.getLogger("sb_arch_opt.pymoo")
 
 
-def load_from_previous_results(problem: ArchOptProblemBase, result_folder: str, load_from_problem=True,
-                               cumulative=True) -> Optional[Population]:
+def load_from_previous_results(
+    problem: ArchOptProblemBase,
+    result_folder: str,
+    load_from_problem=True,
+    cumulative=True,
+) -> Optional[Population]:
     """Load a (cumulative) Population from previously-stored results"""
     capture_log()
 
@@ -56,20 +66,28 @@ def load_from_previous_results(problem: ArchOptProblemBase, result_folder: str, 
     if load_from_problem:
         population = problem.load_previous_results(result_folder)
         if population is not None and len(population) > 0:
-            log.info(f'Previous results loaded from problem results: {len(population)} design points')
+            log.info(
+                f"Previous results loaded from problem results: {len(population)} design points"
+            )
 
     # Additionally try to load from pymoo storage to merge with non-evaluated design points
     pymoo_population = ArchOptEvaluator.load_pop(result_folder, cumulative=cumulative)
     if pymoo_population is not None and len(pymoo_population) > 0:
 
         if population is None:
-            log.info(f'Previous results loaded from pymoo results: {len(pymoo_population)} design points')
+            log.info(
+                f"Previous results loaded from pymoo results: {len(pymoo_population)} design points"
+            )
             population = pymoo_population
 
         elif len(pymoo_population) > len(population):
-            unique_points = LargeDuplicateElimination().do(pymoo_population, population, to_itself=False)
+            unique_points = LargeDuplicateElimination().do(
+                pymoo_population, population, to_itself=False
+            )
             if len(unique_points) > 0:
-                log.info(f'Merged additional design points from pymoo results: {len(unique_points)} design points')
+                log.info(
+                    f"Merged additional design points from pymoo results: {len(unique_points)} design points"
+                )
                 population = Population.merge(population, unique_points)
 
     if population is None:
@@ -77,24 +95,29 @@ def load_from_previous_results(problem: ArchOptProblemBase, result_folder: str, 
 
     # Set evaluated flags
     n_evaluated = ArchOptEvaluator.pop_set_eval_flags(population)
-    log.info(f'Evaluation status: {n_evaluated} of {len(population)} ({(n_evaluated/len(population))*100:.1f}%) '
-             f'are already evaluated')
+    log.info(
+        f"Evaluation status: {n_evaluated} of {len(population)} ({(n_evaluated/len(population))*100:.1f}%) "
+        f"are already evaluated"
+    )
 
     return population
 
 
-def initialize_from_previous_results(algorithm: Algorithm, problem: ArchOptProblemBase, result_folder: str, **kwargs) \
-        -> bool:
+def initialize_from_previous_results(
+    algorithm: Algorithm, problem: ArchOptProblemBase, result_folder: str, **kwargs
+) -> bool:
     """Initialize an Algorithm from previously stored results"""
     capture_log()
 
-    if not hasattr(algorithm, 'initialization'):
-        raise RuntimeError(f'Algorithm has no initialization step, cannot set initial population: {algorithm!r}')
+    if not hasattr(algorithm, "initialization"):
+        raise RuntimeError(
+            f"Algorithm has no initialization step, cannot set initial population: {algorithm!r}"
+        )
 
     # Try to load from previous results
     population = load_from_previous_results(problem, result_folder, **kwargs)
     if population is None:
-        log.info(f'No previous population found, not changing initialization strategy')
+        log.info(f"No previous population found, not changing initialization strategy")
         return False
 
     # Set static initialization on the algorithm to start from the loaded population
@@ -145,14 +168,14 @@ class ResultsStorageCallback(Callback):
                 try:
                     self._store_results(result)
                 except MemoryError:
-                    log.info('Could not store pymoo result object: MemoryError')
+                    log.info("Could not store pymoo result object: MemoryError")
 
             return result
 
         algorithm.result = wrapped_result
 
     def _store_results(self, result: Result):
-        with open(os.path.join(self.results_folder, 'pymoo_results.pkl'), 'wb') as fp:
+        with open(os.path.join(self.results_folder, "pymoo_results.pkl"), "wb") as fp:
             pickle.dump(result, fp)
 
     def __call__(self, *args, **kwargs):
@@ -206,41 +229,74 @@ class ArchOptEvaluator(Evaluator):
         self._cumulative_pop = cumulative_pop
         self.n_eval = len(self._get_idx_evaluated(cumulative_pop))
 
-    def eval(self, problem, pop: Population, skip_already_evaluated: bool = None, evaluate_values_of: list = None,
-             count_evals: bool = True, **kwargs):
+    def eval(
+        self,
+        problem,
+        pop: Population,
+        skip_already_evaluated: bool = None,
+        evaluate_values_of: list = None,
+        count_evals: bool = True,
+        **kwargs,
+    ):
 
-        self.eval_pre(pop, skip_already_evaluated=skip_already_evaluated, evaluate_values_of=evaluate_values_of)
+        self.eval_pre(
+            pop,
+            skip_already_evaluated=skip_already_evaluated,
+            evaluate_values_of=evaluate_values_of,
+        )
 
-        results = super().eval(problem, pop, skip_already_evaluated=skip_already_evaluated,
-                               evaluate_values_of=evaluate_values_of, count_evals=count_evals, **kwargs)
+        results = super().eval(
+            problem,
+            pop,
+            skip_already_evaluated=skip_already_evaluated,
+            evaluate_values_of=evaluate_values_of,
+            count_evals=count_evals,
+            **kwargs,
+        )
 
         self.eval_post(problem, pop, advance_n_eval=False)
         return results
 
-    def eval_pre(self, pop: Population, skip_already_evaluated=None, evaluate_values_of: list = None):
+    def eval_pre(
+        self,
+        pop: Population,
+        skip_already_evaluated=None,
+        evaluate_values_of: list = None,
+    ):
         # Get pop being skipped in order to complete the intermediate storage
-        skip_already_evaluated = \
-            self.skip_already_evaluated if skip_already_evaluated is None else skip_already_evaluated
+        skip_already_evaluated = (
+            self.skip_already_evaluated
+            if skip_already_evaluated is None
+            else skip_already_evaluated
+        )
 
         self._evaluated_pop = None
         pop_to_evaluate = pop
         if skip_already_evaluated:
-            i_evaluated = self._get_idx_evaluated(pop, evaluate_values_of=evaluate_values_of)
+            i_evaluated = self._get_idx_evaluated(
+                pop, evaluate_values_of=evaluate_values_of
+            )
             self._evaluated_pop = pop[i_evaluated]
             pop_to_evaluate = np.delete(pop, i_evaluated)
 
         # Get portion of the cumulative population that is currently not under evaluation
         self._non_eval_cumulative_pop = None
         if self._cumulative_pop is not None:
-            is_duplicate = LargeDuplicateElimination.eliminate(self._cumulative_pop.get('X'), pop.get('X'))
+            is_duplicate = LargeDuplicateElimination.eliminate(
+                self._cumulative_pop.get("X"), pop.get("X")
+            )
             self._non_eval_cumulative_pop = self._cumulative_pop[~is_duplicate]
 
         return pop_to_evaluate
 
-    def eval_post(self, problem, pop, advance_n_eval=True, evaluate_values_of: list = None):
+    def eval_post(
+        self, problem, pop, advance_n_eval=True, evaluate_values_of: list = None
+    ):
         # Advance evaluation count
         if advance_n_eval:
-            i_evaluated = self._get_idx_evaluated(pop, evaluate_values_of=evaluate_values_of)
+            i_evaluated = self._get_idx_evaluated(
+                pop, evaluate_values_of=evaluate_values_of
+            )
             n_evaluated = len(i_evaluated) - len(self._evaluated_pop)
             if n_evaluated > 0:
                 self.n_eval += n_evaluated
@@ -254,8 +310,16 @@ class ArchOptEvaluator(Evaluator):
         self._non_eval_cumulative_pop = None
 
     def _get_idx_evaluated(self, pop: Population, evaluate_values_of: list = None):
-        evaluate_values_of = self.evaluate_values_of if evaluate_values_of is None else evaluate_values_of
-        return [i for i, ind in enumerate(pop) if all([e in ind.evaluated for e in evaluate_values_of])]
+        evaluate_values_of = (
+            self.evaluate_values_of
+            if evaluate_values_of is None
+            else evaluate_values_of
+        )
+        return [
+            i
+            for i, ind in enumerate(pop)
+            if all([e in ind.evaluated for e in evaluate_values_of])
+        ]
 
     def get_n_batch(self, problem):
         n_batch = self.n_batch
@@ -270,7 +334,7 @@ class ArchOptEvaluator(Evaluator):
             n_batch = self.get_n_batch(problem)
 
         for i_batch in range(0, len(pop), n_batch):
-            yield pop[i_batch:i_batch+n_batch]
+            yield pop[i_batch : i_batch + n_batch]
 
     def _eval(self, problem, pop, evaluate_values_of, **kwargs):
         if self.results_folder is None:
@@ -280,7 +344,9 @@ class ArchOptEvaluator(Evaluator):
             # Evaluate in batch and store intermediate results
             for batch_pop in self.iter_pop_batch(problem, pop):
                 super()._eval(problem, batch_pop, evaluate_values_of, **kwargs)
-                self.eval_batch_post(problem, pop, batch_pop, evaluate_values_of=evaluate_values_of)
+                self.eval_batch_post(
+                    problem, pop, batch_pop, evaluate_values_of=evaluate_values_of
+                )
 
         # Apply extreme barrier: replace NaN with Inf
         self._apply_extreme_barrier(pop)
@@ -297,12 +363,20 @@ class ArchOptEvaluator(Evaluator):
         # finally set all the attributes to be evaluated for all individuals
         pop.apply(lambda ind: ind.evaluated.update(out.keys()))
 
-    def eval_batch_post(self, problem, pop: Population, batch_pop: Population, evaluate_values_of: list = None):
+    def eval_batch_post(
+        self,
+        problem,
+        pop: Population,
+        batch_pop: Population,
+        evaluate_values_of: list = None,
+    ):
         if evaluate_values_of is None:
             evaluate_values_of = self.evaluate_values_of
 
         self._apply_extreme_barrier(batch_pop, evaluate_values_of=evaluate_values_of)
-        intermediate_pop = self._normalize_pop(pop, evaluate_values_of, evaluated_pop=self._evaluated_pop)
+        intermediate_pop = self._normalize_pop(
+            pop, evaluate_values_of, evaluated_pop=self._evaluated_pop
+        )
 
         if self.results_folder is not None:
             self._store_intermediate(problem, intermediate_pop)
@@ -321,18 +395,20 @@ class ArchOptEvaluator(Evaluator):
             ind.evaluated.update(evaluate_values_of)
 
     @staticmethod
-    def _normalize_pop(pop: Population, evaluate_values_of, evaluated_pop: Population = None) -> Population:
+    def _normalize_pop(
+        pop: Population, evaluate_values_of, evaluated_pop: Population = None
+    ) -> Population:
         """Ensure that the matrices in a Population are two-dimensional"""
         pop_data = {}
         is_evaluated = [False for _ in range(len(pop))]
-        for key in (['X']+evaluate_values_of):
+        for key in ["X"] + evaluate_values_of:
             data = pop.get(key, to_numpy=False)
 
-            partial_data = np.zeros((len(data), len(data[0])))*np.nan
+            partial_data = np.zeros((len(data), len(data[0]))) * np.nan
             for i, row in enumerate(data):
                 if row is not None and len(row) > 0:
                     partial_data[i, :] = row
-                    if key != 'X' and not np.any(np.isnan(row)):
+                    if key != "X" and not np.any(np.isnan(row)):
                         is_evaluated[i] = True
             data = partial_data
 
@@ -341,7 +417,7 @@ class ArchOptEvaluator(Evaluator):
         normalized_pop = Population.new(**pop_data)
         for i, is_eval in enumerate(is_evaluated):
             if is_eval:
-                normalized_pop[i].evaluated.add('X')
+                normalized_pop[i].evaluated.add("X")
                 normalized_pop[i].evaluated.update(evaluate_values_of)
 
         if evaluated_pop is not None:
@@ -354,7 +430,9 @@ class ArchOptEvaluator(Evaluator):
 
         # Store cumulative pymoo population
         if self._non_eval_cumulative_pop is not None:
-            unique_non_eval_pop = LargeDuplicateElimination().do(self._non_eval_cumulative_pop, pop, to_itself=False)
+            unique_non_eval_pop = LargeDuplicateElimination().do(
+                self._non_eval_cumulative_pop, pop, to_itself=False
+            )
             self._cumulative_pop = Population.merge(unique_non_eval_pop, pop)
         else:
             self._cumulative_pop = pop
@@ -364,24 +442,28 @@ class ArchOptEvaluator(Evaluator):
         self._store_intermediate_problem(problem)
 
     def store_pop(self, pop: Population, cumulative=False):
-        with open(self._get_pop_file_path(self.results_folder, cumulative=cumulative), 'wb') as fp:
+        with open(
+            self._get_pop_file_path(self.results_folder, cumulative=cumulative), "wb"
+        ) as fp:
             pickle.dump(pop, fp)
 
         if len(pop) > 0:
-            cumulative_str = '_cumulative' if cumulative else ''
-            csv_path = os.path.join(self.results_folder, f'pymoo_population{cumulative_str}.csv')
+            cumulative_str = "_cumulative" if cumulative else ""
+            csv_path = os.path.join(
+                self.results_folder, f"pymoo_population{cumulative_str}.csv"
+            )
             self.get_pop_as_df(pop).to_csv(csv_path)
 
     @classmethod
     def get_pop_as_df(cls, pop: Population) -> pd.DataFrame:
-        pop = cls._normalize_pop(pop, ['F', 'G', 'H'])
+        pop = cls._normalize_pop(pop, ["F", "G", "H"])
 
         cols = []
         all_data = []
-        for symbol in ['x', 'f', 'g', 'h']:
+        for symbol in ["x", "f", "g", "h"]:
             data = pop.get(symbol.upper())
             all_data.append(data)
-            cols += [f'{symbol}{i}' for i in range(data.shape[1])]
+            cols += [f"{symbol}{i}" for i in range(data.shape[1])]
 
         return pd.DataFrame(columns=cols, data=np.column_stack(all_data))
 
@@ -391,7 +473,7 @@ class ArchOptEvaluator(Evaluator):
 
         def _get_symbol_data(symbol):
             cols = [col for col in df.columns if col.startswith(symbol)]
-            symbol_data = np.zeros((len(df), len(cols)))*np.nan
+            symbol_data = np.zeros((len(df), len(cols))) * np.nan
             for col in cols:
                 i_col = int(col[1:])
                 symbol_data[:, i_col] = df[col]
@@ -408,9 +490,9 @@ class ArchOptEvaluator(Evaluator):
         def _set_eval(ind: Individual):
             nonlocal n_evaluated
             # Assume evaluated but failed points have Inf as output values
-            is_eval = ~np.all(np.isnan(ind.get('F')))
+            is_eval = ~np.all(np.isnan(ind.get("F")))
             if is_eval:
-                ind.evaluated.update({'X', 'F', 'G', 'H'})
+                ind.evaluated.update({"X", "F", "G", "H"})
                 n_evaluated += 1
 
         n_evaluated = 0
@@ -429,14 +511,16 @@ class ArchOptEvaluator(Evaluator):
         if not os.path.exists(pop_path):
             return
 
-        with open(pop_path, 'rb') as fp:
+        with open(pop_path, "rb") as fp:
             pop = pickle.load(fp)
 
         if not isinstance(pop, Population):
-            raise ValueError(f'Loaded population not of type Population ({pop_path}): {pop!r}')
+            raise ValueError(
+                f"Loaded population not of type Population ({pop_path}): {pop!r}"
+            )
         return pop
 
     @staticmethod
     def _get_pop_file_path(results_folder, cumulative=False) -> str:
-        cumulative_str = '_cumulative' if cumulative else ''
-        return os.path.join(results_folder, f'pymoo_population{cumulative_str}.pkl')
+        cumulative_str = "_cumulative" if cumulative else ""
+        return os.path.join(results_folder, f"pymoo_population{cumulative_str}.pkl")
