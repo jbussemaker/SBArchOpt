@@ -31,12 +31,12 @@ from sb_arch_opt.util import capture_log
 from pymoo.core.population import Population
 from sb_arch_opt.problem import ArchOptProblemBase
 from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
+from sb_arch_opt.algo.arch_sbo.models import ModelFactory
 
 try:
     from segomoe.sego import Sego
     from segomoe.constraint import Constraint
     from segomoe.sego_defs import get_sego_file_map, ExitStatus
-    from sb_arch_opt.algo.arch_sbo.models import ModelFactory
 
     HAS_SEGOMOE = True
 except ImportError:
