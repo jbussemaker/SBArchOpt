@@ -11,6 +11,7 @@ on:
 
 jobs:
   test:
+    name: Slow Tests
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
