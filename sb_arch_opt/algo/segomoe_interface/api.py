@@ -24,4 +24,4 @@ SOFTWARE.
 """
 from sb_arch_opt.algo.segomoe_interface.algo import *
 
-__all__ = ['HAS_SEGOMOE', 'SEGOMOEInterface']
+__all__ = ['HAS_SEGOMOE','HAS_SMT' ,'SEGOMOEInterface']
