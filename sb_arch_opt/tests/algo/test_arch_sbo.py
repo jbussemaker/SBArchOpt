@@ -38,7 +38,7 @@ def check_dependency():
     if not HAS_SMT :
         return pytest.mark.skipif(not HAS_SMT, reason='SMT dependency not installed')
     else :
-    return pytest.mark.skipif(not HAS_ARCH_SBO, reason='ArchSBO dependencies not installed')
+        return pytest.mark.skipif(not HAS_ARCH_SBO, reason='ArchSBO dependencies not installed')
 
 
 @check_dependency()
