@@ -14,7 +14,7 @@ def check_dependency():
     else : 
         return pytest.mark.skipif(not HAS_SEGOMOE, reason='SEGOMOE dependencies not installed')
 
-
+    
 @pytest.fixture
 def results_folder():
     with tempfile.TemporaryDirectory() as tmp_folder:

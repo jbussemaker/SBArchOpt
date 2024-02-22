@@ -254,7 +254,6 @@ class ModelFactory:
 
 class SBArchOptDesignSpace(BaseDesignSpace):
     """SMT design space implementation using SBArchOpt's design space logic"""
-
     def __init__(self, arch_design_space: ArchDesignSpace, md_normalize=False, cont_relax=False,
                  ignore_hierarchy=False):
         self._ds = arch_design_space
@@ -296,7 +295,7 @@ class SBArchOptDesignSpace(BaseDesignSpace):
                     smt_des_vars.append(ds.FloatVariable(0, len(dv.options)-1))
                 else:
                     # Conditional categorical variables are currently not supported
-                    if is_dv_cond[i] and not self._global_disable_hierarchical_cat_fix:
+                    if is_dv_cond[i] :
                         smt_des_vars.append(ds.IntegerVariable(0, len(dv.options)-1))
                     else:
                         smt_des_vars.append(ds.CategoricalVariable(values=dv.options))
