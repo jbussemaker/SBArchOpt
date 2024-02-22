@@ -255,8 +255,6 @@ class ModelFactory:
 class SBArchOptDesignSpace(BaseDesignSpace):
     """SMT design space implementation using SBArchOpt's design space logic"""
 
-    _global_disable_hierarchical_cat_fix = IS_SMT_22
-
     def __init__(self, arch_design_space: ArchDesignSpace, md_normalize=False, cont_relax=False,
                  ignore_hierarchy=False):
         self._ds = arch_design_space
