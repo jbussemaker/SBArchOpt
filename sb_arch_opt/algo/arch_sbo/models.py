@@ -185,17 +185,12 @@ class ModelFactory:
         # Disable KPLS if the nr of requested components is too high
         if kpls_n_comp is not None:
             n_dim_apply_pls = design_space.n_var
-
-            # PLS is not applied to categorical variables for EHH/HH kernels (see KrgBased._matrix_data_corr)
-            if IS_SMT_22 and kwargs['categorical_kernel'] not in [MixIntKernelType.CONT_RELAX, MixIntKernelType.GOWER]:
-                n_dim_apply_pls = design_space.n_var - np.sum(design_space.is_cat_mask)
-
+            
             if kpls_n_comp > n_dim_apply_pls:
                 kpls_n_comp = None
 
         if kpls_n_comp is not None:
-            if not IS_SMT_22:
-                kwargs['categorical_kernel'] = MixIntKernelType.CONT_RELAX
+            kwargs['categorical_kernel'] = MixIntKernelType.CONT_RELAX
 
             # Ignore hierarchy in the design space as KPLS does not support this
             non_hier_ds_spec = self.create_smt_design_space_spec(
