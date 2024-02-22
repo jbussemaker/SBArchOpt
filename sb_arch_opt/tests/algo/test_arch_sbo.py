@@ -466,9 +466,9 @@ def test_smt_krg_features():
 
         # Hierarchical (categorical conditional vars)
         _try_model(Jenatton(), cont_relax=True)
-        _try_model(Jenatton(), throws_error=not IS_SMT_22)
+        _try_model(Jenatton() )
         _try_model(Jenatton(), pls=True, cont_relax=True)
         _try_model(Jenatton(), pls=True, ignore_hierarchy=True)
-        _try_model(Jenatton(), pls=True, throws_error=not IS_SMT_22)
+        _try_model(Jenatton(), pls=True)
         _try_model(Jenatton(), pls=True, ignore_hierarchy=True, pls_cont=False)
-        _try_model(Jenatton(), pls=True, pls_cont=False, throws_error=not IS_SMT_22)
+        _try_model(Jenatton(), pls=True, pls_cont=False)

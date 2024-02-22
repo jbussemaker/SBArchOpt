@@ -48,7 +48,7 @@ try:
 except ImportError:
     HAS_SEGOMOE = False
 
-__all__ = ['HAS_SEGOMOE', 'check_dependencies', 'SEGOMOEInterface']
+__all__ = ['HAS_SEGOMOE','HAS_SMT', 'check_dependencies', 'SEGOMOEInterface']
 
 log = logging.getLogger('sb_arch_opt.segomoe')
 

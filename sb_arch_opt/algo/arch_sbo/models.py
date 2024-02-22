@@ -33,6 +33,8 @@ from sb_arch_opt.problem import ArchOptProblemBase
 from sb_arch_opt.design_space import ArchDesignSpace
 from sb_arch_opt.sampling import HierarchicalSampling
 from pymoo.util.normalization import Normalization, SimpleZeroToOneNormalization
+HAS_ARCH_SBO = True
+HAS_SMT = True
 
 try:
     os.environ['USE_NUMBA_JIT'] = '1'
@@ -46,12 +48,10 @@ try:
     import smt.utils.design_space as ds
 
     from smt import __version__
-    IS_SMT_22 = not __version__.startswith('2.0') and not __version__.startswith('2.1')
 
-    HAS_ARCH_SBO = True
 except ImportError:
     HAS_ARCH_SBO = False
-    IS_SMT_22 = False
+    HAS_SMT = False
 
     class BaseDesignSpace:
         pass
@@ -59,8 +59,8 @@ except ImportError:
     class SurrogateModel:
         pass
 
-__all__ = ['check_dependencies', 'HAS_ARCH_SBO', 'ModelFactory', 'MixedDiscreteNormalization', 'SBArchOptDesignSpace',
-           'MultiSurrogateModel', 'IS_SMT_22']
+__all__ = ['check_dependencies', 'HAS_ARCH_SBO', 'HAS_SMT','ModelFactory', 'MixedDiscreteNormalization', 'SBArchOptDesignSpace',
+           'MultiSurrogateModel']
 
 
 def check_dependencies():
