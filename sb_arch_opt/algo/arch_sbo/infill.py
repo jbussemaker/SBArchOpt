@@ -48,9 +48,9 @@ __all__ = ['SurrogateInfill', 'FunctionEstimateInfill', 'ConstrainedInfill', 'Fu
 try:
     from smt.surrogate_models.surrogate_model import SurrogateModel
     from smt.surrogate_models.krg_based import KrgBased
+    HAS_SMT = True
 except ImportError:
-    pass
-
+    HAS_SMT = False
 
 def get_default_infill(problem: ArchOptProblemBase, n_parallel: int = None, min_pof: float = None,
                        g_aggregation: 'ConstraintAggregation' = None) -> Tuple['ConstrainedInfill', int]:

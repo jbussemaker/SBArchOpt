@@ -30,10 +30,12 @@ try:
     from smt.surrogate_models.krg import KRG
     from smt.surrogate_models.kpls import KPLS
     from smt.surrogate_models.krg_based import MixIntKernelType, MixHrcKernelType
+    HAS_SMT=True
 except ImportError:
-    pass
+    HAS_SMT=False
 
 def check_dependency():
+    return pytest.mark.skipif(not HAS_SMT, reason='SMT dependency not installed')
     return pytest.mark.skipif(not HAS_ARCH_SBO, reason='ArchSBO dependencies not installed')
 
 

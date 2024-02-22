@@ -32,7 +32,13 @@ from pymoo.core.population import Population
 from sb_arch_opt.problem import ArchOptProblemBase
 from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
 from sb_arch_opt.algo.arch_sbo.models import ModelFactory
-from smt.surrogate_models.krg_based import MixIntKernelType
+
+try:
+    from smt.surrogate_models.krg_based import MixIntKernelType
+    HAS_SMT = True
+except ImportError:
+    HAS_SMT = False
+    
 try:
     from segomoe.sego import Sego
     from segomoe.constraint import Constraint
