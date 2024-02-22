@@ -23,5 +23,4 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 from sb_arch_opt.algo.segomoe_interface.algo import *
-
-__all__ = ['HAS_SEGOMOE', 'SEGOMOEInterface']
+__all__ = ['HAS_SEGOMOE','HAS_SMT' ,'SEGOMOEInterface']

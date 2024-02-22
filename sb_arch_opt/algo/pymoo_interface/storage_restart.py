@@ -94,7 +94,7 @@ def initialize_from_previous_results(algorithm: Algorithm, problem: ArchOptProbl
     # Try to load from previous results
     population = load_from_previous_results(problem, result_folder, **kwargs)
     if population is None:
-        log.info(f'No previous population found, not changing initialization strategy')
+        log.info('No previous population found, not changing initialization strategy')
         return False
 
     # Set static initialization on the algorithm to start from the loaded population

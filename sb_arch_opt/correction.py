@@ -147,7 +147,7 @@ class EagerCorrectorBase(CorrectorBase):
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
         x_valid, is_active_valid = self.x_valid_active
         if x_valid is None or is_active_valid is None:
-            raise CorrectorUnavailableError(f'Eager corrector unavailable because problem does not provide x_all')
+            raise CorrectorUnavailableError('Eager corrector unavailable because problem does not provide x_all')
 
         # Separate canonical design vectors
         correct_idx = self.get_canonical_idx(x) if self.correct_correct_x else self.get_correct_idx(x)

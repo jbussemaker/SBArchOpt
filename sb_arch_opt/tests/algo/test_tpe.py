@@ -6,7 +6,8 @@ from sb_arch_opt.algo.tpe_interface import *
 from sb_arch_opt.problems.discrete import MDBranin
 from sb_arch_opt.problems.hidden_constraints import Alimo
 
-check_dependency = lambda: pytest.mark.skipif(not HAS_TPE, reason='TPE dependencies not installed')
+def check_dependency():
+    return pytest.mark.skipif(not HAS_TPE, reason='TPE dependencies not installed')
 
 
 @pytest.mark.skipif(int(os.getenv('RUN_SLOW_TESTS', 0)) != 1, reason='Set RUN_SLOW_TESTS=1 to run slow tests')

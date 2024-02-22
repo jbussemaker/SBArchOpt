@@ -31,25 +31,31 @@ from sb_arch_opt.util import capture_log
 from pymoo.core.population import Population
 from sb_arch_opt.problem import ArchOptProblemBase
 from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
+from sb_arch_opt.algo.arch_sbo.models import ModelFactory
 
+try:
+    from smt.surrogate_models.krg_based import MixIntKernelType
+    HAS_SMT = True
+except ImportError:
+    HAS_SMT = False
+    
 try:
     from segomoe.sego import Sego
     from segomoe.constraint import Constraint
     from segomoe.sego_defs import get_sego_file_map, ExitStatus
-    from sb_arch_opt.algo.arch_sbo.models import ModelFactory
 
     HAS_SEGOMOE = True
 except ImportError:
     HAS_SEGOMOE = False
 
-__all__ = ['HAS_SEGOMOE', 'check_dependencies', 'SEGOMOEInterface']
+__all__ = ['HAS_SEGOMOE','HAS_SMT', 'check_dependencies', 'SEGOMOEInterface']
 
 log = logging.getLogger('sb_arch_opt.segomoe')
 
 
 def check_dependencies():
     if not HAS_SEGOMOE:
-        raise ImportError(f'SEGOMOE not installed!')
+        raise ImportError('SEGOMOE not installed!')
 
 
 class SEGOMOEInterface:
@@ -209,8 +215,35 @@ class SEGOMOEInterface:
 
     def _sample_doe(self, n: int) -> np.ndarray:
         return HierarchicalSampling().do(self._problem, n).get('X')
-
+    
     def run_infills(self, n_infills: int = None):
+        if n_infills is None:
+            n_infills = self.n_infill
+        i_eval = 0
+    
+        def _grouped_eval(x):
+             nonlocal i_eval
+             i_eval += 1
+             log.info(f"Evaluating: {i_eval}/{n_infills}")
+    
+             x, x_failed, y = self._get_xy(self._evaluate(np.array([x])))
+    
+             self._x = np.row_stack([self._x, x])
+             self._y = np.row_stack([self._y, y])
+             self._x_failed = np.row_stack([self._x_failed, x_failed])
+             self._save_results()
+    
+             if len(x_failed) > 0:
+                 return [], True
+             return y[0, :], False
+    
+        log.info(
+            f"Running SEGO for {n_infills} infills ({self._x.shape[0]} points in database)"
+        )
+        sego = self._get_sego(_grouped_eval)
+        sego.run_optim(n_iter=n_infills)   
+        
+    def run_infills_ask_tell(self, n_infills: int = None):
         if n_infills is None:
             n_infills = self.n_infill
 
@@ -251,21 +284,34 @@ class SEGOMOEInterface:
     def _get_sego(self, f_grouped):
         design_space_spec = self._get_design_space()
 
-        model_type = {
-            'type': 'MIXEDsmt' if design_space_spec.is_mixed_discrete else 'KRGsmt',
-            'regr': 'constant',
-            'corr': 'squar_exp',
-            'theta0': [1e-3],
-            'thetaL': [1e-6],
-            'thetaU': [10.],
-            'normalize': True,
-            **self.model_options,
-        }
         if design_space_spec.is_mixed_discrete:
-            raise RuntimeError('Mixed-discrete API currently not supported')
-            # model_type['xtypes'] = design_space_spec.var_types
-            # model_type['xlimits'] = design_space_spec.var_limits
-
+            model_type = {
+                "type": "MIXED",
+                "name": "KRG",
+                "regr": "constant",
+                "corr": "squar_exp",
+                "design_space": design_space_spec.design_space,
+                "categorical_kernel": MixIntKernelType.GOWER,
+                "theta0": [1e-3],
+                "thetaL": [1e-6],
+                "thetaU": [10.0],
+                "normalize": True,
+                **self.model_options,
+            }
+        else:
+            model_type = {
+                "name": "KRG",
+                "regr": "constant",
+                "corr": "squar_exp",
+                "design_space": design_space_spec.design_space,
+                "categorical_kernel": MixIntKernelType.GOWER,
+                "theta0": [1e-3],
+                "thetaL": [1e-6],
+                "thetaU": [10.0],
+                "normalize": True,
+                **self.model_options,
+            }
+       
         optim_settings = {
             'grouped_eval': True,
             'n_obj': self._problem.n_obj,

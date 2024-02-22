@@ -30,10 +30,11 @@ from sb_arch_opt.algo.arch_sbo.metrics import *
 from sb_arch_opt.algo.arch_sbo.hc_strategy import *
 
 if not HAS_ARCH_SBO:
-    get_sbo_termination = lambda *_, **__: None
+    def get_sbo_termination(*_, **__):
+        return None
 
 
-__all__ = ['get_arch_sbo_rbf', 'get_arch_sbo_gp', 'HAS_ARCH_SBO', 'get_sbo_termination', 'get_sbo',
+__all__ = ['get_arch_sbo_rbf', 'get_arch_sbo_gp', 'HAS_ARCH_SBO','HAS_SMT', 'get_sbo_termination', 'get_sbo',
            'ConstraintAggregation']
 
 

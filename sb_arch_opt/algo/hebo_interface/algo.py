@@ -48,7 +48,7 @@ log = logging.getLogger('sb_arch_opt.hebo')
 
 def check_dependencies():
     if not HAS_HEBO:
-        raise ImportError(f'HEBO dependencies not installed: python setup.py install[hebo]')
+        raise ImportError('HEBO dependencies not installed: python setup.py install[hebo]')
 
 
 class HEBOArchOptInterface:
