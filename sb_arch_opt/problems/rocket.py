@@ -150,6 +150,10 @@ class RocketArch(HierarchyProblemBase):
 
         return int(np.sum(n_stages))
 
+    def _get_n_active_cont_mean_correct(self) -> Optional[float]:
+        # Correction is applied, so we calculate it from all_discrete_x
+        return
+
     def _gen_all_discrete_x(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
         n_dv = self.n_var
         x_stages = []
