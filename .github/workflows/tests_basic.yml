@@ -35,5 +35,18 @@ jobs:
         pip install -r requirements-tests.txt
         pip install -e .
 
+    - name: List dependencies
+      run: |
+        pip freeze > requirements-all.txt
+    - name: Check dependency licenses
+      id: license_check_report
+      uses: pilosus/action-pip-license-checker@v2
+      with:
+        requirements: 'requirements-all.txt'
+        fail: 'StrongCopyleft'
+    - name: Print license report
+      if: ${{ always() }}
+      run: echo "${{ steps.license_check_report.outputs.report }}"
+
     - name: Test with pytest
       run: pytest sb_arch_opt --durations=0
