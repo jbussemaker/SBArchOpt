@@ -27,17 +27,16 @@ import logging
 import numpy as np
 from typing import Tuple
 from sb_arch_opt.sampling import *
+from sb_arch_opt.model import *
+
 from sb_arch_opt.util import capture_log
 from pymoo.core.population import Population
 from sb_arch_opt.problem import ArchOptProblemBase
 from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
 from sb_arch_opt.algo.arch_sbo.models import ModelFactory
 
-try:
+if HAS_SMT:
     from smt.surrogate_models.krg_based import MixIntKernelType
-    HAS_SMT = True
-except ImportError:
-    HAS_SMT = False
     
 try:
     from segomoe.sego import Sego
@@ -48,7 +47,7 @@ try:
 except ImportError:
     HAS_SEGOMOE = False
 
-__all__ = ['HAS_SEGOMOE','HAS_SMT', 'check_dependencies', 'SEGOMOEInterface']
+__all__ = ['HAS_SEGOMOE', 'HAS_SMT', 'check_dependencies', 'SEGOMOEInterface']
 
 log = logging.getLogger('sb_arch_opt.segomoe')
 
