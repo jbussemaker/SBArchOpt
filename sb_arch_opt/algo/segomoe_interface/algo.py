@@ -27,7 +27,7 @@ import logging
 import numpy as np
 from typing import Tuple
 from sb_arch_opt.sampling import *
-from sb_arch_opt.model import *
+from sb_arch_opt.algo.arch_sbo.models import *
 
 from sb_arch_opt.util import capture_log
 from pymoo.core.population import Population
