@@ -59,7 +59,7 @@ except ImportError:
     class SurrogateModel:
         pass
 
-__all__ = ['check_dependencies', 'HAS_ARCH_SBO', 'HAS_SMT','ModelFactory', 'MixedDiscreteNormalization', 'SBArchOptDesignSpace',
+__all__ = ['check_dependencies', 'HAS_ARCH_SBO', 'HAS_SMT', 'ModelFactory', 'MixedDiscreteNormalization', 'SBArchOptDesignSpace',
            'MultiSurrogateModel']
 
 

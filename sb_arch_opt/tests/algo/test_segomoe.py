@@ -9,9 +9,9 @@ from sb_arch_opt.problems.constrained import ArchCantileveredBeam, MDCantilevere
 from sb_arch_opt.problems.hidden_constraints import Mueller01, MOHierarchicalRosenbrockHC
 
 def check_dependency():
-    if not HAS_SMT :
+    if not HAS_SMT:
         return pytest.mark.skipif(not HAS_SMT, reason='SMT dependency not installed')
-    else : 
+    else: 
         return pytest.mark.skipif(not HAS_SEGOMOE, reason='SEGOMOE dependencies not installed')
 
     

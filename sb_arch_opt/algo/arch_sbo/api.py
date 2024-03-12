@@ -34,7 +34,7 @@ if not HAS_ARCH_SBO:
         return None
 
 
-__all__ = ['get_arch_sbo_rbf', 'get_arch_sbo_gp', 'HAS_ARCH_SBO','HAS_SMT', 'get_sbo_termination', 'get_sbo',
+__all__ = ['get_arch_sbo_rbf', 'get_arch_sbo_gp', 'HAS_ARCH_SBO', 'HAS_SMT', 'get_sbo_termination', 'get_sbo',
            'ConstraintAggregation']
 
 
