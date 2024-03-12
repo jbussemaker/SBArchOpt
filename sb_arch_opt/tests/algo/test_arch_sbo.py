@@ -26,13 +26,11 @@ from sb_arch_opt.algo.arch_sbo.infill import *
 from sb_arch_opt.algo.arch_sbo.models import *
 from sb_arch_opt.algo.arch_sbo.hc_strategy import *
 
-try:
+if HAS_SMT:
+    from smt.surrogate_models.rbf import RBF
     from smt.surrogate_models.krg import KRG
     from smt.surrogate_models.kpls import KPLS
     from smt.surrogate_models.krg_based import MixIntKernelType, MixHrcKernelType
-    HAS_SMT=True
-except ImportError:
-    HAS_SMT=False
 
 def check_dependency():
     if not HAS_SMT:
@@ -314,7 +312,7 @@ class FailedXYRemovingSBO(SBOInfill):
 
 @check_dependency()
 def test_invalid_training_set(problem: ArchOptProblemBase):
-    from smt.surrogate_models.rbf import RBF
+    assert HAS_SMT
     sbo = FailedXYRemovingSBO(RBF(print_global=False), FunctionEstimateInfill(), pop_size=100, termination=100,
                               repair=ArchOptRepair()).algorithm(infill_size=1, init_size=10)
     sbo.setup(problem)
@@ -364,6 +362,7 @@ def test_md_normalization():
 
 @check_dependency()
 def test_smt_krg_features():
+    assert HAS_SMT
     n_pls = 2
     kwargs = dict(
         categorical_kernel=MixIntKernelType.EXP_HOMO_HSPHERE,
