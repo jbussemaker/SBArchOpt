@@ -56,11 +56,9 @@ from sb_arch_opt.algo.arch_sbo.infill import *
 from sb_arch_opt.algo.arch_sbo.models import *
 from sb_arch_opt.algo.arch_sbo.hc_strategy import *
 
-try:
+if HAS_SMT:
     from smt.surrogate_models.surrogate_model import SurrogateModel
-    HAS_SMT = True
-except ImportError:
-    HAS_SMT = False
+   
 
 __all__ = ['InfillAlgorithm', 'SBOInfill', 'SurrogateInfillCallback', 'SurrogateInfillOptimizationProblem']
 
