@@ -1,0 +1,26 @@
+cff-version: "1.2.0"
+authors:
+- family-names: Bussemaker
+  given-names: Jasper H.
+  orcid: "https://orcid.org/0000-0002-5421-6419"
+doi: 10.5281/zenodo.8318765
+message: If you use this software, please cite our article in the
+  Journal of Open Source Software.
+preferred-citation:
+  authors:
+  - family-names: Bussemaker
+    given-names: Jasper H.
+    orcid: "https://orcid.org/0000-0002-5421-6419"
+  date-published: 2023-09-07
+  doi: 10.21105/joss.05564
+  issn: 2475-9066
+  issue: 89
+  journal: Journal of Open Source Software
+  publisher:
+    name: Open Journals
+  start: 5564
+  title: "SBArchOpt: Surrogate-Based Architecture Optimization"
+  type: article
+  url: "https://joss.theoj.org/papers/10.21105/joss.05564"
+  volume: 8
+title: "SBArchOpt: Surrogate-Based Architecture Optimization"
