@@ -35,9 +35,9 @@ except ImportError:
     HAS_SMT=False
 
 def check_dependency():
-    if not HAS_SMT :
+    if not HAS_SMT:
         return pytest.mark.skipif(not HAS_SMT, reason='SMT dependency not installed')
-    else :
+    else:
         return pytest.mark.skipif(not HAS_ARCH_SBO, reason='ArchSBO dependencies not installed')
 
 

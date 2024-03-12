@@ -294,11 +294,7 @@ class SBArchOptDesignSpace(BaseDesignSpace):
                 if cont_relax:
                     smt_des_vars.append(ds.FloatVariable(0, len(dv.options)-1))
                 else:
-                    # Conditional categorical variables are currently not supported
-                    if is_dv_cond[i] :
-                        smt_des_vars.append(ds.IntegerVariable(0, len(dv.options)-1))
-                    else:
-                        smt_des_vars.append(ds.CategoricalVariable(values=dv.options))
+                    smt_des_vars.append(ds.CategoricalVariable(values=dv.options))
 
             else:
                 raise ValueError(f'Unexpected variable type: {dv!r}')
