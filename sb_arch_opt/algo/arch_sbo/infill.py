@@ -31,6 +31,7 @@ from scipy.special import ndtr
 from scipy.optimize import minimize
 from sb_arch_opt.problem import ArchOptProblemBase
 from sb_arch_opt.algo.arch_sbo.hc_strategy import HiddenConstraintStrategy
+from sb_arch_opt.algo.arch_sbo.models import *
 
 from pymoo.core.problem import Problem
 from pymoo.core.population import Population
@@ -45,11 +46,9 @@ __all__ = ['SurrogateInfill', 'FunctionEstimateInfill', 'ConstrainedInfill', 'Fu
            'MinimumPoIInfill', 'EnsembleInfill', 'IgnoreConstraints', 'get_default_infill', 'HCInfill',
            'ConstraintAggregation']
 
-try:
+if HAS_SMT:
     from smt.surrogate_models.surrogate_model import SurrogateModel
     from smt.surrogate_models.krg_based import KrgBased
-except ImportError:
-    pass
 
 
 def get_default_infill(problem: ArchOptProblemBase, n_parallel: int = None, min_pof: float = None,

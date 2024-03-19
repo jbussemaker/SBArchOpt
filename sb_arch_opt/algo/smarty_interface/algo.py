@@ -44,7 +44,7 @@ log = logging.getLogger('sb_arch_opt.smarty')
 
 def check_dependencies():
     if not HAS_SMARTY:
-        raise ImportError(f'SMARTy not installed!')
+        raise ImportError('SMARTy not installed!')
 
 
 class SMARTyArchOptInterface:

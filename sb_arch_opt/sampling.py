@@ -38,7 +38,6 @@ from pymoo.operators.sampling.rnd import FloatRandomSampling
 from pymoo.core.duplicate import DefaultDuplicateElimination
 from pymoo.operators.sampling.lhs import sampling_lhs_unit
 
-from sb_arch_opt.design_space import ArchDesignSpace
 from sb_arch_opt.problem import ArchOptProblemBase, ArchOptRepair
 from sb_arch_opt.util import get_np_random_singleton
 

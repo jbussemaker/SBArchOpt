@@ -1,3 +1,4 @@
+import os
 import pytest
 from sb_arch_opt.problem import *
 from sb_arch_opt.algo.botorch_interface import *
@@ -8,7 +9,13 @@ try:
 except ImportError:
     pass
 
-check_dependency = lambda: pytest.mark.skipif(not HAS_BOTORCH, reason='BoTorch/Ax dependencies not installed')
+def check_dependency():
+    return pytest.mark.skipif(not HAS_BOTORCH, reason='BoTorch/Ax dependencies not installed')
+
+
+@pytest.mark.skipif(int(os.getenv('RUN_SLOW_TESTS', 0)) != 1, reason='Set RUN_SLOW_TESTS=1 to run slow tests')
+def test_slow_tests():
+    assert HAS_BOTORCH
 
 
 @check_dependency()

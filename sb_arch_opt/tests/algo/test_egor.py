@@ -1,3 +1,4 @@
+import os
 import pytest
 import tempfile
 from sb_arch_opt.problem import *
@@ -6,9 +7,13 @@ from sb_arch_opt.problems.discrete import MDBranin
 from sb_arch_opt.problems.constrained import ArchCantileveredBeam, MDCantileveredBeam
 from sb_arch_opt.algo.egor_interface.algo import EgorArchOptInterface
 
-check_dependency = lambda: pytest.mark.skipif(
-    not HAS_EGOBOX, reason="Egor dependencies not installed"
-)
+def check_dependency():
+    return pytest.mark.skipif(not HAS_EGOBOX, reason="Egor dependencies not installed")
+
+
+@pytest.mark.skipif(int(os.getenv('RUN_SLOW_TESTS', 0)) != 1, reason='Set RUN_SLOW_TESTS=1 to run slow tests')
+def test_slow_tests():
+    assert HAS_EGOBOX
 
 
 @check_dependency()

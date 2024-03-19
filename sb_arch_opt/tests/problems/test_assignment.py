@@ -1,9 +1,16 @@
+import os
 import pytest
 import numpy as np
 from sb_arch_opt.problems.assignment import *
 from sb_arch_opt.tests.problems.test_hierarchical import run_test_hierarchy
 
-check_dependency = lambda: pytest.mark.skipif(not HAS_ASSIGN_ENC, reason='assign_enc dependencies not installed')
+def check_dependency():
+    return pytest.mark.skipif(not HAS_ASSIGN_ENC, reason='assign_enc dependencies not installed')
+
+
+@pytest.mark.skipif(int(os.getenv('RUN_SLOW_TESTS', 0)) != 1, reason='Set RUN_SLOW_TESTS=1 to run slow tests')
+def test_slow_tests():
+    assert HAS_ASSIGN_ENC
 
 
 @check_dependency()

@@ -7,10 +7,11 @@ on:
   push:
     branches: [ "main" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "dev" ]
 
 jobs:
   test:
+    name: Slow Tests
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -34,9 +35,23 @@ jobs:
         pip install -r requirements-tests.txt
         pip install -r requirements-assignment.txt
         pip install -r requirements-hebo.txt
+        pip install -r requirements-ota.txt
         pip install -e .[arch_sbo,botorch,trieste,tpe,rocket,egor]
         pip install jupyter ipython ipykernel
         ipython kernel install --name "python3" --user
+
+    - name: List dependencies
+      run: |
+        pip freeze > requirements-all.txt
+    - name: Check dependency licenses
+      id: license_check_report
+      uses: pilosus/action-pip-license-checker@v2
+      with:
+        requirements: 'requirements-all.txt'
+        fail: 'StrongCopyleft'
+    - name: Print license report
+      if: ${{ always() }}
+      run: echo "${{ steps.license_check_report.outputs.report }}"
 
     - name: Test with pytest
       run: RUN_SLOW_TESTS=1 pytest sb_arch_opt --durations=0

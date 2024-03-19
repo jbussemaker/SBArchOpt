@@ -23,6 +23,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 import os
+import copy
 import logging
 import pathlib
 import numpy as np
@@ -75,7 +76,7 @@ FAILED = 'FAILED'
 
 def check_dependencies():
     if not HAS_TRIESTE:
-        raise ImportError(f'Trieste dependencies not installed: python setup.py install[trieste]')
+        raise ImportError('Trieste dependencies not installed: python setup.py install[trieste]')
 
 
 class ArchOptBayesianOptimizer(BayesianOptimizer):
@@ -84,12 +85,12 @@ class ArchOptBayesianOptimizer(BayesianOptimizer):
     Use the `run_optimization` function to run the DOE and infill loops.
     Use `initialize_from_previous` to initialize the optimization state from previously saved results.
 
-    Optimization loop: https://secondmind-labs.github.io/trieste/1.0.0/notebooks/expected_improvement.html
-    Restart: https://secondmind-labs.github.io/trieste/1.0.0/notebooks/recovering_from_errors.html
-    Constraints: https://secondmind-labs.github.io/trieste/1.0.0/notebooks/inequality_constraints.html
-    Multi-objective: https://secondmind-labs.github.io/trieste/1.0.0/notebooks/multi_objective_ehvi.html
-    Hidden constraints: https://secondmind-labs.github.io/trieste/1.0.0/notebooks/failure_ego.html
-    Ask-tell: https://secondmind-labs.github.io/trieste/1.0.0/notebooks/ask_tell_optimization.html
+    Optimization loop: https://secondmind-labs.github.io/trieste/2.0.0/notebooks/expected_improvement.html
+    Restart: https://secondmind-labs.github.io/trieste/2.0.0/notebooks/recovering_from_errors.html
+    Constraints: https://secondmind-labs.github.io/trieste/2.0.0/notebooks/inequality_constraints.html
+    Multi-objective: https://secondmind-labs.github.io/trieste/2.0.0/notebooks/multi_objective_ehvi.html
+    Hidden constraints: https://secondmind-labs.github.io/trieste/2.0.0/notebooks/failure_ego.html
+    Ask-tell: https://secondmind-labs.github.io/trieste/2.0.0/notebooks/ask_tell_optimization.html
     """
 
     def __init__(self, problem: ArchOptProblemBase, n_init: int, n_infill: int, pof=.5,
@@ -168,6 +169,10 @@ class ArchOptBayesianOptimizer(BayesianOptimizer):
 
     def run_optimization(self, results_folder=None) -> 'Record':
         """Runs a full optimization, including initial DOE"""
+        if results_folder is not None:
+            log.error('Currently not possible to pickle some TensorFlow models, disabling restart!')
+            results_folder = None
+
         capture_log()
         self._results_folder = results_folder
 
@@ -220,7 +225,8 @@ class ArchOptBayesianOptimizer(BayesianOptimizer):
         # Store intermediate results if requested
         if self._results_folder is not None:
             # Store optimizer state
-            Record(datasets, models, acquisition_state).save(self.get_state_path(self._results_folder))
+            Record(copy.deepcopy(datasets), copy.deepcopy(models), copy.deepcopy(acquisition_state))\
+                .save(self.get_state_path(self._results_folder))
 
             # Store problem state
             self._problem.store_results(self._results_folder)

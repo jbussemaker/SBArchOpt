@@ -26,14 +26,22 @@ from sb_arch_opt.algo.arch_sbo.infill import *
 from sb_arch_opt.algo.arch_sbo.models import *
 from sb_arch_opt.algo.arch_sbo.hc_strategy import *
 
-try:
+if HAS_SMT:
+    from smt.surrogate_models.rbf import RBF
     from smt.surrogate_models.krg import KRG
     from smt.surrogate_models.kpls import KPLS
     from smt.surrogate_models.krg_based import MixIntKernelType, MixHrcKernelType
-except ImportError:
-    pass
 
-check_dependency = lambda: pytest.mark.skipif(not HAS_ARCH_SBO, reason='ArchSBO dependencies not installed')
+def check_dependency():
+    if not HAS_SMT:
+        return pytest.mark.skipif(not HAS_SMT, reason='SMT dependency not installed')
+    else:
+        return pytest.mark.skipif(not HAS_ARCH_SBO, reason='ArchSBO dependencies not installed')
+
+
+@pytest.mark.skipif(int(os.getenv('RUN_SLOW_TESTS', 0)) != 1, reason='Set RUN_SLOW_TESTS=1 to run slow tests')
+def test_slow_tests():
+    assert HAS_ARCH_SBO
 
 
 @check_dependency()
@@ -304,7 +312,7 @@ class FailedXYRemovingSBO(SBOInfill):
 
 @check_dependency()
 def test_invalid_training_set(problem: ArchOptProblemBase):
-    from smt.surrogate_models.rbf import RBF
+    assert HAS_SMT
     sbo = FailedXYRemovingSBO(RBF(print_global=False), FunctionEstimateInfill(), pop_size=100, termination=100,
                               repair=ArchOptRepair()).algorithm(infill_size=1, init_size=10)
     sbo.setup(problem)
@@ -352,17 +360,9 @@ def test_md_normalization():
     x_abs = md_norm.backward(x_norm)
     assert np.all(x == x_abs)
 
-
-@contextlib.contextmanager
-def disable_int_fix():
-    global_disable = SBArchOptDesignSpace._global_disable_hierarchical_cat_fix
-    SBArchOptDesignSpace._global_disable_hierarchical_cat_fix = True
-    yield
-    SBArchOptDesignSpace._global_disable_hierarchical_cat_fix = global_disable
-
-
 @check_dependency()
 def test_smt_krg_features():
+    assert HAS_SMT
     n_pls = 2
     kwargs = dict(
         categorical_kernel=MixIntKernelType.EXP_HOMO_HSPHERE,
@@ -420,50 +420,48 @@ def test_smt_krg_features():
             return
 
         assert ModelFactory.get_n_theta(problem, model) == n_theta_multi
+    # Continuous
+    _try_model(Rosenbrock(), cont_relax=True)
+    _try_model(Rosenbrock())
+    _try_model(Rosenbrock(), pls=True, cont_relax=True)
+    _try_model(Rosenbrock(), pls=True, ignore_hierarchy=True)
+    _try_model(Rosenbrock(), pls=True)
 
-    with disable_int_fix():
-        # Continuous
-        _try_model(Rosenbrock(), cont_relax=True)
-        _try_model(Rosenbrock())
-        _try_model(Rosenbrock(), pls=True, cont_relax=True)
-        _try_model(Rosenbrock(), pls=True, ignore_hierarchy=True)
-        _try_model(Rosenbrock(), pls=True)
+    # Mixed-discrete (integer)
+    _try_model(MDMORosenbrock(), cont_relax=True)
+    _try_model(MDMORosenbrock())
+    _try_model(MDMORosenbrock(), pls=True, cont_relax=True)
+    _try_model(MDMORosenbrock(), pls=True, ignore_hierarchy=True)
+    _try_model(MDMORosenbrock(), pls=True)
 
-        # Mixed-discrete (integer)
-        _try_model(MDMORosenbrock(), cont_relax=True)
-        _try_model(MDMORosenbrock())
-        _try_model(MDMORosenbrock(), pls=True, cont_relax=True)
-        _try_model(MDMORosenbrock(), pls=True, ignore_hierarchy=True)
-        _try_model(MDMORosenbrock(), pls=True)
+    # Mixed-discrete (categorical)
+    _try_model(Halstrup04(), cont_relax=True)
+    _try_model(Halstrup04())
+    _try_model(Halstrup04(), pls=True, cont_relax=True)
+    _try_model(Halstrup04(), pls=True, ignore_hierarchy=True)
+    _try_model(Halstrup04(), pls=True)
+    _try_model(Halstrup04(), pls=True, pls_cont=False)
 
-        # Mixed-discrete (categorical)
-        _try_model(Halstrup04(), cont_relax=True)
-        _try_model(Halstrup04())
-        _try_model(Halstrup04(), pls=True, cont_relax=True)
-        _try_model(Halstrup04(), pls=True, ignore_hierarchy=True)
-        _try_model(Halstrup04(), pls=True)
-        _try_model(Halstrup04(), pls=True, pls_cont=False)
+    # Hierarchical (continuous conditional vars)
+    _try_model(ZaeffererHierarchical(), cont_relax=True)
+    _try_model(ZaeffererHierarchical())
+    _try_model(ZaeffererHierarchical(), pls=True, cont_relax=True)
+    _try_model(ZaeffererHierarchical(), pls=True, ignore_hierarchy=True)
+    _try_model(ZaeffererHierarchical(), pls=True)
 
-        # Hierarchical (continuous conditional vars)
-        _try_model(ZaeffererHierarchical(), cont_relax=True)
-        _try_model(ZaeffererHierarchical())
-        _try_model(ZaeffererHierarchical(), pls=True, cont_relax=True)
-        _try_model(ZaeffererHierarchical(), pls=True, ignore_hierarchy=True)
-        _try_model(ZaeffererHierarchical(), pls=True)
+    # Hierarchical (integer conditional vars)
+    _try_model(NeuralNetwork(), cont_relax=True)
+    _try_model(NeuralNetwork())
+    _try_model(NeuralNetwork(), pls=True, cont_relax=True)
+    _try_model(NeuralNetwork(), pls=True, ignore_hierarchy=True)
+    _try_model(NeuralNetwork(), pls=True)
+    _try_model(NeuralNetwork(), pls=True, pls_cont=False)
 
-        # Hierarchical (integer conditional vars)
-        _try_model(NeuralNetwork(), cont_relax=True)
-        _try_model(NeuralNetwork())
-        _try_model(NeuralNetwork(), pls=True, cont_relax=True)
-        _try_model(NeuralNetwork(), pls=True, ignore_hierarchy=True)
-        _try_model(NeuralNetwork(), pls=True)
-        _try_model(NeuralNetwork(), pls=True, pls_cont=False)
-
-        # Hierarchical (categorical conditional vars)
-        _try_model(Jenatton(), cont_relax=True)
-        _try_model(Jenatton(), throws_error=not IS_SMT_22)
-        _try_model(Jenatton(), pls=True, cont_relax=True)
-        _try_model(Jenatton(), pls=True, ignore_hierarchy=True)
-        _try_model(Jenatton(), pls=True, throws_error=not IS_SMT_22)
-        _try_model(Jenatton(), pls=True, ignore_hierarchy=True, pls_cont=False)
-        _try_model(Jenatton(), pls=True, pls_cont=False, throws_error=not IS_SMT_22)
+    # Hierarchical (categorical conditional vars)
+    _try_model(Jenatton(), cont_relax=True)
+    _try_model(Jenatton() )
+    _try_model(Jenatton(), pls=True, cont_relax=True)
+    _try_model(Jenatton(), pls=True, ignore_hierarchy=True)
+    _try_model(Jenatton(), pls=True)
+    _try_model(Jenatton(), pls=True, ignore_hierarchy=True, pls_cont=False)
+    _try_model(Jenatton(), pls=True, pls_cont=False)
