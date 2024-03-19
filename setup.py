@@ -63,7 +63,7 @@ if __name__ == '__main__':
         ],
         extras_require={
             'arch_sbo': [
-                'smt~=2.2',
+                'smt~=2.2,!=2.4',
                 'numba',
                 'scikit-learn',
             ],
