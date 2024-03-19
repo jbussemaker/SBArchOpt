@@ -6,7 +6,8 @@ from sb_arch_opt.algo.trieste_interface import *
 from sb_arch_opt.problems.constrained import ArchCantileveredBeam
 from sb_arch_opt.algo.trieste_interface.algo import ArchOptBayesianOptimizer
 
-check_dependency = lambda: pytest.mark.skipif(not HAS_TRIESTE, reason='Trieste dependencies not installed')
+def check_dependency():
+    return pytest.mark.skipif(not HAS_TRIESTE, reason='Trieste dependencies not installed')
 
 
 @pytest.mark.skipif(int(os.getenv('RUN_SLOW_TESTS', 0)) != 1, reason='Set RUN_SLOW_TESTS=1 to run slow tests')
