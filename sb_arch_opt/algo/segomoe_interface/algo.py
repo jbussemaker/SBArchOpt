@@ -25,7 +25,7 @@ SOFTWARE.
 import os
 import logging
 import numpy as np
-from typing import Tuple
+from typing import Tuple, Optional
 from sb_arch_opt.sampling import *
 from sb_arch_opt.algo.arch_sbo.models import *
 
@@ -136,12 +136,16 @@ class SEGOMOEInterface:
     @property
     def pop(self) -> Population:
         """Population of all evaluated points"""
-        return self.get_population(self.x, self.y)
+        return self.get_population(self.x, self.y, self.x_failed)
 
     @property
     def opt(self) -> Population:
         """Optimal points (Pareto front if multi-objective)"""
         return self._get_pareto_front(self.pop)
+
+    @property
+    def results_folder(self):
+        return self._results_folder
 
     def initialize_from_previous(self, results_folder: str = None):
         capture_log()
@@ -175,29 +179,65 @@ class SEGOMOEInterface:
 
         log.info('No previous results found')
 
+    def set_pop(self, pop: Population = None):
+        if pop is None:
+            self._x = self._x_failed = self._y = None
+        else:
+            self._x, self._x_failed, self._y = self._get_xy(pop)
+
     def run_optimization(self):
         capture_log()
 
-        # Automatically initialize from previous results if reusing the same storage folder
-        if self._x is None:
-            self.initialize_from_previous()
+        n_doe, n_infills = self._optimization_step()
+        if n_doe is not None:
+            log.info(f'Running DOE of {n_doe} points ({self.n_init} total)')
+            self.run_doe(n_doe)
 
-        # Run DOE if needed
-        n_available = self.n_tried
-        if n_available < self.n_init:
-            log.info(f'Running DOE of {self.n_init-n_available} points ({self.n_init} total)')
-            self.run_doe(self.n_init-n_available)
-
-        # Run optimization
-        n_available = self.n_tried
-        if n_available < self.n_init+self.n_infill:
-            n_infills = self.n_infill - (n_available-self.n_init)
+        if n_infills is not None:
             log.info(f'Running optimization: {n_infills} infill points (ok DOE points: {self.n})')
             self.run_infills(n_infills)
 
         # Save final results and return Pareto front
         self._save_results()
         return self.opt
+
+    def _optimization_step(self):
+        # Automatically initialize from previous results if reusing the same storage folder
+        if self._x is None:
+            self.initialize_from_previous()
+
+        # Run DOE if needed
+        n_available = self.n_tried
+        n_doe = None
+        if n_available < self.n_init:
+            n_doe = self.n_init-n_available
+
+        # Run optimization (infills)
+        n_available = self.n_tried + (n_doe or 0)
+        n_infills = None
+        if n_available < self.n_init+self.n_infill:
+            n_infills = self.n_infill - (n_available-self.n_init)
+
+        return n_doe, n_infills
+
+    def optimization_has_ask(self):
+        n_doe, n_infills = self._optimization_step()
+        return n_doe is not None or n_infills is not None
+
+    def optimization_ask(self) -> Optional[np.ndarray]:
+        n_doe, n_infills = self._optimization_step()
+
+        if n_doe is not None:
+            return self._sample_doe(n_doe)
+
+        if n_infills is not None:
+            return np.array([self._ask_infill()])
+
+    def optimization_tell_pop(self, pop: Population):
+        self._tell_infill(*self._get_xy(pop))
+
+    def optimization_tell(self, x, x_failed, y):
+        self._tell_infill(x, x_failed, y)
 
     def run_doe(self, n: int = None):
         if n is None:
@@ -227,10 +267,7 @@ class SEGOMOEInterface:
     
              x, x_failed, y = self._get_xy(self._evaluate(np.array([x])))
     
-             self._x = np.row_stack([self._x, x])
-             self._y = np.row_stack([self._y, y])
-             self._x_failed = np.row_stack([self._x_failed, x_failed])
-             self._save_results()
+             self._tell_infill(x, x_failed, y)
     
              if len(x_failed) > 0:
                  return [], True
@@ -256,10 +293,7 @@ class SEGOMOEInterface:
             x, x_failed, y = self._get_xy(self._evaluate(np.array([x])))
 
             # Update and save DOE
-            self._x = np.row_stack([self._x, x])
-            self._y = np.row_stack([self._y, y])
-            self._x_failed = np.row_stack([self._x_failed, x_failed])
-            self._save_results()
+            self._tell_infill(x, x_failed, y)
 
     def _ask_infill(self) -> np.ndarray:
         """
@@ -279,6 +313,12 @@ class SEGOMOEInterface:
 
         # Return latest point as suggested infill point
         return sego.get_x(i=-1)
+
+    def _tell_infill(self, x, x_failed, y):
+        self._x = np.row_stack([self._x, x]) if self._x is not None else x
+        self._y = np.row_stack([self._y, y]) if self._y is not None else y
+        self._x_failed = np.row_stack([self._x_failed, x_failed]) if self._x_failed is not None else x_failed
+        self._save_results()
 
     def _get_sego(self, f_grouped):
         design_space_spec = self._get_design_space()
@@ -419,9 +459,16 @@ class SEGOMOEInterface:
         g = -g
         return np.column_stack([f, g, h])
 
-    def get_population(self, x: np.ndarray, y: np.ndarray) -> Population:
+    def get_population(self, x: np.ndarray, y: np.ndarray, x_failed: np.ndarray = None) -> Population:
         # Inequality constraint values are flipped to correctly calculate constraint violation values in pymoo
         f, g, h = self._split_y(y)
+
+        if x_failed is not None and len(x_failed) > 0:
+            x = np.row_stack([x, x_failed])
+            f = np.row_stack([f, np.zeros((x_failed.shape[0], f.shape[1]))*np.inf])
+            g = np.row_stack([g, np.zeros((x_failed.shape[0], g.shape[1]))*np.inf])
+            h = np.row_stack([h, np.zeros((x_failed.shape[0], h.shape[1]))*np.inf])
+
         kwargs = {'X': x, 'F': f, 'G': g, 'H': h}
         pop = Population.new(**kwargs)
         return pop

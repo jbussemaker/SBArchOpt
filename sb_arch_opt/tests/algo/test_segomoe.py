@@ -1,6 +1,8 @@
 import pytest
 import tempfile
 import numpy as np
+from pymoo.optimize import minimize
+from pymoo.core.population import Population
 from sb_arch_opt.algo.segomoe_interface import *
 from sb_arch_opt.problems.continuous import Branin
 from sb_arch_opt.problems.discrete import MDBranin
@@ -116,12 +118,19 @@ def test_so_failing(results_folder):
     assert interface.n < 52
     assert interface.n_tried == 52
     assert interface.n + interface.n_failed == 52
+    assert len(interface.pop) == interface.n_tried
+
+    x, x_failed, y = interface._get_xy(interface.pop)
+    assert x.shape[0] == interface.n
+    assert x_failed.shape[0] == interface.n_failed
+    assert y.shape[0] == interface.n
 
     interface2 = SEGOMOEInterface(Mueller01(), results_folder, n_init=50, n_infill=2, use_moe=False)
     interface2.initialize_from_previous()
     assert interface2.n < 52
     assert interface2.n_tried == 52
     assert interface2.n + interface2.n_failed == 52
+    assert len(interface2.pop) == interface.n_tried
 
 
 @check_dependency()
@@ -183,3 +192,57 @@ def test_mo_failing(results_folder):
     assert interface.n < 21
     assert interface.n_tried == 21
     assert interface.n + interface.n_failed == 21
+    assert len(interface.pop) == interface.n_tried
+
+
+@check_dependency()
+def test_ask_tell(results_folder):
+    problem = Mueller01()
+    interface = SEGOMOEInterface(problem, results_folder, n_init=50, n_infill=2, use_moe=False)
+
+    while interface.optimization_has_ask():
+        x = interface.optimization_ask()
+        pop = Population.new(**problem.evaluate(x, return_as_dictionary=True))
+        interface.optimization_tell_pop(pop)
+
+    assert interface.n < 52
+    assert interface.n_tried == 52
+    assert interface.n + interface.n_failed == 52
+
+
+@check_dependency()
+def test_pymoo_algo(results_folder):
+    problem = Branin()
+    interface = SEGOMOEInterface(problem, results_folder, n_init=10, n_infill=1, use_moe=False)
+    algo = SEGOMOEAlgorithm(interface)
+
+    result = minimize(problem, algo)
+    assert len(result.pop) == 11
+    assert len(result.opt) == 1
+
+
+@check_dependency()
+def test_pymoo_algo_restart(results_folder):
+    for i in range(2):
+        problem = Branin()
+        algo = SEGOMOEAlgorithm(SEGOMOEInterface(problem, results_folder, n_init=10, n_infill=i+1, use_moe=False))
+        algo.initialize_from_previous_results(problem)
+
+        result = minimize(problem, algo)
+        assert len(result.pop) == 10+(i+1)
+
+
+@check_dependency()
+def test_pymoo_algo_ask_tell(results_folder):
+    problem = Branin()
+    algo = SEGOMOEAlgorithm(SEGOMOEInterface(problem, results_folder, n_init=10, n_infill=2, use_moe=False))
+
+    algo.setup(problem)
+    while algo.has_next():
+        infills = algo.ask()
+        pop = Population.new(**problem.evaluate(infills.get('X'), return_as_dictionary=True))
+        algo.tell(pop)
+
+    result = algo.result()
+    assert len(result.pop) == 12
+    assert len(result.opt) == 1
