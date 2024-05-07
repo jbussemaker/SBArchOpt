@@ -38,7 +38,14 @@ from pymoo.core.population import Population
 from pymoo.core.algorithm import filter_optimum
 from pymoo.util.normalization import Normalization
 from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
-from pymoo.algorithms.moo.nsga2 import RankAndCrowdingSurvival, calc_crowding_distance
+from pymoo.algorithms.moo.nsga2 import RankAndCrowdingSurvival
+
+try:
+    # pymoo < 0.6.1
+    from pymoo.algorithms.moo.nsga2 import calc_crowding_distance
+except ImportError:
+    # pymoo >= 0.6.1
+    from pymoo.operators.survival.rank_and_crowding.metrics import calc_crowding_distance
 
 __all__ = ['SurrogateInfill', 'FunctionEstimateInfill', 'ConstrainedInfill', 'FunctionEstimateConstrainedInfill',
            'ExpectedImprovementInfill', 'MinVariancePFInfill', 'ConstraintStrategy', 'MeanConstraintPrediction',
