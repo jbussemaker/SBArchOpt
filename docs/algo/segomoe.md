@@ -60,3 +60,40 @@ g = interface.g  # (n, ng)
 pop = interface.pop  # Population containing all design points
 opt = interface.opt  # Population containing optimal point(s)
 ```
+
+### pymoo API
+
+It is also possible to use the pymoo API to run an optimization:
+```python
+from pymoo.optimize import minimize
+from sb_arch_opt.algo.segomoe_interface import SEGOMOEInterface, SEGOMOEAlgorithm
+
+problem = ...  # Subclass of ArchOptProblemBase
+
+# Define folder to store results in
+results_folder = ...
+
+# Use Mixture of Experts: automatically identifies clusters in the design space
+# with different best surrogates ("experts"). Can be more accurate, however
+# also greatly increases the cost of finding new infill points.
+use_moe = True
+
+# Options passed to the Sego class and to model generation, respectively
+sego_options = {}
+model_options = {}
+
+# Get the interface (will be initialized if the results folder has results)
+interface = SEGOMOEInterface(problem, results_folder, n_init=100, n_infill=50,
+                             use_moe=use_moe, sego_options=sego_options,
+                             model_options=model_options)
+
+# Define the pymoo Algorithm
+algo = SEGOMOEAlgorithm(interface)
+
+# Initialize from other results if you want
+algo.initialize_from_previous_results(problem, results_folder='/optional/other/result/folder')
+
+# Run the optimization
+# Note: no need to give a termination, as that is already defined by the SEGOMOEInterface object (n_init + n_infill)
+result = minimize(problem, algo, seed=42)  # Remove seed in production
+```
