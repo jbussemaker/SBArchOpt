@@ -52,7 +52,7 @@ if __name__ == '__main__':
         license='MIT',
         install_requires=[
             'numpy',
-            'pymoo~=0.6.0.1',
+            'pymoo~=0.6.1',
             'scipy',
             'deprecated',
             'pandas',

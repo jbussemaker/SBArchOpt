@@ -116,13 +116,14 @@ class MixedDiscreteMating(InfillCriterion):
             crossover = self.crossover[clazz]
             assert crossover.n_parents == n_parents_crossover and crossover.n_offsprings == n_offspring_crossover
 
-            _parents = [[Individual(X=parent.X[x_idx]) for parent in parents] for parents in pop]
+            _parents = [Population.new(X=[parent.X[x_idx].astype(float) for parent in parents]) for parents in pop]
+            # _parents = [[Individual(X=parent.X[x_idx]) for parent in parents] for parents in pop]
 
-            _vars = [var_defs[e] for e in list_of_vars]
+            _vars = {i: var_defs[e] for i, e in enumerate(list_of_vars)}
             _xl, _xu = None, None
 
             if clazz in [Real, Integer]:
-                _xl, _xu = np.array([v.bounds for v in _vars]).T
+                _xl, _xu = np.array([v.bounds for v in _vars.values()]).T
 
             _problem = Problem(vars=_vars, xl=_xl, xu=_xu)
 
@@ -133,7 +134,7 @@ class MixedDiscreteMating(InfillCriterion):
                 _off = mutation(_problem, _off, **kwargs)
 
                 # Sometimes NaN's might sneak into the outputs, try again if this is the case
-                x_off = _off.get('X')[:n_offsprings, :]
+                x_off = _off.get('X')[:n_offsprings, :].astype(float)
                 if np.any(np.isnan(x_off)):
                     continue
                 break

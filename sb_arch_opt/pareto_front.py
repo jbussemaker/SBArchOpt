@@ -37,10 +37,16 @@ from pymoo.core.problem import Problem
 from pymoo.core.evaluator import Evaluator
 from pymoo.visualization.scatter import Scatter
 from pymoo.core.initialization import Initialization
-from pymoo.algorithms.moo.nsga2 import calc_crowding_distance
 from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
 from pymoo.termination.default import DefaultMultiObjectiveTermination, DefaultSingleObjectiveTermination
 from sb_arch_opt.sampling import HierarchicalExhaustiveSampling, HierarchicalSampling
+
+try:
+    # pymoo < 0.6.1
+    from pymoo.algorithms.moo.nsga2 import calc_crowding_distance
+except ImportError:
+    # pymoo >= 0.6.1
+    from pymoo.operators.survival.rank_and_crowding.metrics import calc_crowding_distance
 
 __all__ = ['CachedParetoFrontMixin']
 
