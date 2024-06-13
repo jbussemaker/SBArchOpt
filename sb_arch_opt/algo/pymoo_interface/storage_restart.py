@@ -206,6 +206,10 @@ class ArchOptEvaluator(Evaluator):
         self._cumulative_pop = cumulative_pop
         self.n_eval = len(self._get_idx_evaluated(cumulative_pop))
 
+    @property
+    def cumulative_pop(self) -> Optional[Population]:
+        return self._cumulative_pop
+
     def eval(self, problem, pop: Population, skip_already_evaluated: bool = None, evaluate_values_of: list = None,
              count_evals: bool = True, **kwargs):
 
