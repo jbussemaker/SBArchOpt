@@ -1,3 +1,5 @@
+![SBArchOpt Logo](logo.svg)
+
 # SBArchOpt: Surrogate-Based Architecture Optimization
 
 SBArchOpt (es-bee-ARK-opt) provides a set of classes and interfaces for applying Surrogate-Based Optimization (SBO)
