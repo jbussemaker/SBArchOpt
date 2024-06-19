@@ -51,7 +51,7 @@ if __name__ == '__main__':
         ],
         license='MIT',
         install_requires=[
-            'numpy',
+            'numpy<2.0',
             'pymoo~=0.6.1',
             'scipy',
             'deprecated',
