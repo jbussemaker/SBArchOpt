@@ -40,4 +40,4 @@ jobs:
         pip install -e .[arch_sbo,botorch,trieste,tpe,rocket,egor]
 
     - name: Test with pytest
-      run: pytest sb_arch_opt --durations=0
+      run: pytest -v sb_arch_opt --durations=10

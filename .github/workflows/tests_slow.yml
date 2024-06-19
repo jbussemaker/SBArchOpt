@@ -53,4 +53,4 @@ jobs:
       run: echo "${{ steps.license_check_report.outputs.report }}"
 
     - name: Test with pytest
-      run: RUN_SLOW_TESTS=1 pytest sb_arch_opt --durations=0
+      run: RUN_SLOW_TESTS=1 pytest -v sb_arch_opt --durations=20
