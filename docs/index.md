@@ -1,3 +1,5 @@
+![SBArchOpt Logo](logo.svg)
+
 # SBArchOpt: Surrogate-Based Architecture Optimization
 
 SBArchOpt (es-bee-ARK-opt) provides a set of classes and interfaces for applying Surrogate-Based Optimization (SBO)
@@ -24,6 +26,23 @@ The library provides:
   - Implementation of a basic SBO algorithm
   - Connectors to various external SBO libraries
 - Analytical and realistic test problems that exhibit one or more of the architecture optimization challenges
+
+## Installation
+
+First, create a conda environment (skip if you already have one):
+```
+conda create --name opt python=3.9
+conda activate opt
+```
+
+Then install the package:
+```
+conda install numpy
+pip install sb-arch-opt
+```
+
+Note: there are optional dependencies for the connected optimization frameworks and test problems.
+Refer to their documentation for dedicated installation instructions.
 
 ## Citing
 

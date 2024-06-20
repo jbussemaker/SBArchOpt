@@ -51,7 +51,7 @@ if __name__ == '__main__':
         ],
         license='MIT',
         install_requires=[
-            'numpy',
+            'numpy<2.0',
             'pymoo~=0.6.1',
             'scipy',
             'deprecated',
@@ -85,9 +85,9 @@ if __name__ == '__main__':
             'tpe': [
                 'tpe==0.0.8',
             ],
-            # 'hebo': [  # pip install -r requirements-hebo.txt
-            #     'HEBO',  # Disabled until commit f050865fd2f554b5ca94642667257b365c753f29 has been released on PyPI
-            # ],
+            'hebo': [
+                'HEBO',
+            ],
             'rocket': [
                 'ambiance',
             ],

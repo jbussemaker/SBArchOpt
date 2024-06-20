@@ -1,3 +1,5 @@
+![SBArchOpt Logo](https://github.com/jbussemaker/SBArchOpt/blob/main/docs/logo.svg)
+
 # SBArchOpt: Surrogate-Based Architecture Optimization
 
 [![Tests](https://github.com/jbussemaker/SBArchOpt/workflows/Tests/badge.svg)](https://github.com/jbussemaker/SBArchOpt/actions/workflows/tests.yml?query=workflow%3ATests)

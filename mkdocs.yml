@@ -2,10 +2,19 @@ site_name: SBArchOpt
 site_url: https://sbarchopt.readthedocs.io/
 repo_url: https://github.com/jbussemaker/SBArchOpt
 docs_dir: docs
+copyright: © 2024, Deutsches Zentrum für Luft- und Raumfahrt e.V.
 theme:
   name: material
+  logo: icon.png
+  favicon: icon.png
+  palette:
+    scheme: default
+    primary: custom
   features:
     - navigation.tabs
+  custom_dir: docs/overrides
+extra_css:
+  - style.css
 
 nav:
   - 'Overview': index.md

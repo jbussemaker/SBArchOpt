@@ -206,6 +206,10 @@ class ArchOptEvaluator(Evaluator):
         self._cumulative_pop = cumulative_pop
         self.n_eval = len(self._get_idx_evaluated(cumulative_pop))
 
+    @property
+    def cumulative_pop(self) -> Optional[Population]:
+        return self._cumulative_pop
+
     def eval(self, problem, pop: Population, skip_already_evaluated: bool = None, evaluate_values_of: list = None,
              count_evals: bool = True, **kwargs):
 
@@ -249,6 +253,7 @@ class ArchOptEvaluator(Evaluator):
         self._apply_extreme_barrier(pop, evaluate_values_of=evaluate_values_of)
 
         # Post-evaluation storage
+        self._update_cumulative_pop(pop)
         if self.results_folder is not None:
             self._store_intermediate(problem, pop)
         self._non_eval_cumulative_pop = None
@@ -304,6 +309,7 @@ class ArchOptEvaluator(Evaluator):
         self._apply_extreme_barrier(batch_pop, evaluate_values_of=evaluate_values_of)
         intermediate_pop = self._normalize_pop(pop, evaluate_values_of, evaluated_pop=self._evaluated_pop)
 
+        self._update_cumulative_pop(intermediate_pop)
         if self.results_folder is not None:
             self._store_intermediate(problem, intermediate_pop)
         return intermediate_pop
@@ -348,16 +354,18 @@ class ArchOptEvaluator(Evaluator):
             normalized_pop = Population.merge(evaluated_pop, normalized_pop)
         return normalized_pop
 
-    def _store_intermediate(self, problem, pop: Population):
-        # Store pymoo population
-        self.store_pop(pop)
-
-        # Store cumulative pymoo population
+    def _update_cumulative_pop(self, pop: Population):
         if self._non_eval_cumulative_pop is not None:
             unique_non_eval_pop = LargeDuplicateElimination().do(self._non_eval_cumulative_pop, pop, to_itself=False)
             self._cumulative_pop = Population.merge(unique_non_eval_pop, pop)
         else:
             self._cumulative_pop = pop
+
+    def _store_intermediate(self, problem, pop: Population):
+        # Store pymoo population
+        self.store_pop(pop)
+
+        # Store cumulative pymoo population
         self.store_pop(self._cumulative_pop, cumulative=True)
 
         # Store problem-specific results

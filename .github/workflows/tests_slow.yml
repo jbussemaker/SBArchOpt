@@ -34,7 +34,6 @@ jobs:
         python -m pip install --upgrade pip setuptools
         pip install -r requirements-tests.txt
         pip install -r requirements-assignment.txt
-        pip install -r requirements-hebo.txt
         pip install -r requirements-ota.txt
         pip install -e .[arch_sbo,botorch,trieste,tpe,rocket,egor]
         pip install jupyter ipython ipykernel
@@ -54,4 +53,4 @@ jobs:
       run: echo "${{ steps.license_check_report.outputs.report }}"
 
     - name: Test with pytest
-      run: RUN_SLOW_TESTS=1 pytest sb_arch_opt --durations=0
+      run: RUN_SLOW_TESTS=1 pytest -v sb_arch_opt --durations=20
