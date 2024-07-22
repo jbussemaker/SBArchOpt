@@ -78,9 +78,9 @@ if __name__ == '__main__':
                 'botorch~=0.8.2',
             ],
             'trieste': [
-                'trieste~=2.0.0',
-                # Until https://github.com/GPflow/GPflow/pull/2050 is merged and GPflow has been updated
-                # 'gpflow~=2.7.0', 'keras~=2.10.0', 'tensorflow-probability==0.18.0',
+                'trieste~=3.3',
+                # Until https://github.com/secondmind-labs/trieste/pull/858 is merged
+                'tensorflow<=2.16', 'tensorflow-probability<0.24',
             ],
             'tpe': [
                 'tpe==0.0.8',

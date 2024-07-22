@@ -6,6 +6,7 @@ from sb_arch_opt.algo.trieste_interface import *
 from sb_arch_opt.problems.constrained import ArchCantileveredBeam
 from sb_arch_opt.algo.trieste_interface.algo import ArchOptBayesianOptimizer
 
+
 def check_dependency():
     return pytest.mark.skipif(not HAS_TRIESTE, reason='Trieste dependencies not installed')
 
