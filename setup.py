@@ -79,8 +79,6 @@ if __name__ == '__main__':
             ],
             'trieste': [
                 'trieste~=3.3',
-                # Until https://github.com/secondmind-labs/trieste/pull/858 is merged
-                'tensorflow<=2.16', 'tensorflow-probability<0.24',
             ],
             'tpe': [
                 'tpe==0.0.8',
