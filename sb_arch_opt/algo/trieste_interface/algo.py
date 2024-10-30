@@ -237,19 +237,19 @@ class ArchOptBayesianOptimizer(BayesianOptimizer):
         return self.observer(self.search_space.sample(n))
 
     def get_models(self, datasets):
-        # https://secondmind-labs.github.io/trieste/1.0.0/notebooks/inequality_constraints.html#Modelling-the-two-functions
+        # https://secondmind-labs.github.io/trieste/3.3.4/notebooks/inequality_constraints.html#Modelling-the-two-functions
         search_space = self.search_space
 
         models = {}
         for tag, dataset in datasets.items():
-            # https://secondmind-labs.github.io/trieste/1.0.0/notebooks/failure_ego.html#Build-GPflow-models
+            # https://secondmind-labs.github.io/trieste/3.3.4/notebooks/failure_ego.html#Build-GPflow-models
             if tag == FAILED:
                 classifier = build_vgp_classifier(dataset, search_space, noise_free=True)
                 models[tag] = VariationalGaussianProcess(
                     classifier, BatchOptimizer(tf.optimizers.Adam(1e-3)), use_natgrads=True)
                 continue
 
-            # https://secondmind-labs.github.io/trieste/1.0.0/notebooks/expected_improvement.html#Model-the-objective-function
+            # https://secondmind-labs.github.io/trieste/3.3.4/notebooks/expected_improvement.html#Model-the-objective-function
             gpr = build_gpr(dataset, search_space, likelihood_variance=1e-7)
             models[tag] = GaussianProcessRegression(gpr, num_kernel_samples=100)
 
@@ -271,8 +271,8 @@ class ArchOptBayesianOptimizer(BayesianOptimizer):
     def get_acquisition_rule(self, pof=.5) -> 'AcquisitionRule':
         """
         Builds the acquisition rule based on whether the problem is single- or multi-objective and constrained or not:
-        https://secondmind-labs.github.io/trieste/1.0.0/notebooks/inequality_constraints.html#Define-the-acquisition-process
-        https://secondmind-labs.github.io/trieste/1.0.0/notebooks/multi_objective_ehvi.html#Define-the-acquisition-function
+        https://secondmind-labs.github.io/trieste/3.3.4/notebooks/inequality_constraints.html#Define-the-acquisition-process
+        https://secondmind-labs.github.io/trieste/3.3.4/notebooks/multi_objective_ehvi.html#Define-the-acquisition-function
         """
 
         if self._problem.n_eq_constr > 0:
@@ -280,7 +280,7 @@ class ArchOptBayesianOptimizer(BayesianOptimizer):
 
         if self.is_constrained:
             # Reduce the PoF rules into one
-            # https://secondmind-labs.github.io/trieste/1.0.0/notebooks/inequality_constraints.html#Constrained-optimization-with-more-than-one-constraint
+            # https://secondmind-labs.github.io/trieste/3.3.4/notebooks/inequality_constraints.html#Constrained-optimization-with-more-than-one-constraint
             pof_builders = [ProbabilityOfFeasibility(threshold=pof).using(f'{CONSTR_PREFIX}{ig}')
                             for ig in range(self._problem.n_ieq_constr)]
             pof_builder = pof_builders[0] if len(pof_builders) == 1 else Product(*pof_builders)
@@ -404,10 +404,10 @@ class ArchOptBayesianOptimizer(BayesianOptimizer):
 class ArchOptObserver:
     """
     The observer function that evaluates each architecture, according to the tagged observer pattern:
-    https://secondmind-labs.github.io/trieste/1.0.0/notebooks/inequality_constraints.html
+    https://secondmind-labs.github.io/trieste/3.3.4/notebooks/inequality_constraints.html
 
     Support for failed evaluations based on:
-    https://secondmind-labs.github.io/trieste/1.0.0/notebooks/failure_ego.html#Define-the-data-sets
+    https://secondmind-labs.github.io/trieste/3.3.4/notebooks/failure_ego.html#Define-the-data-sets
 
     Class needed to prevent overflow in BayesianOptimizer.__repr__
     """

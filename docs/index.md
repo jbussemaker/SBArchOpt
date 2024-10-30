@@ -51,6 +51,10 @@ If you use SBArchOpt in your work, please cite it:
 Bussemaker, J.H., (2023). SBArchOpt: Surrogate-Based Architecture Optimization. Journal of Open Source Software, 8(89),
 5564, DOI: [10.21105/joss.05564](https://doi.org/10.21105/joss.05564)
 
+Bussemaker, J.H., et al., (2024). Surrogate-Based Optimization of System Architectures Subject to Hidden Constraints.
+In AIAA AVIATION 2024 FORUM. Las Vegas, NV, USA.
+DOI: [10.2514/6.2024-4401](https://arc.aiaa.org/doi/10.2514/6.2024-4401)
+
 ## Usage
 
 See also the tutorial(s):

@@ -1,10 +1,11 @@
 # Architecture Surrogate-Based Optimization (SBO) Algorithm
 
 ArchSBO implements a Surrogate-Based Optimization (SBO) algorithm configured for solving most types of architecture
-optimization problems. It has been developed with experience from the following work:
+optimization problems. It is presented in the following work:
 
-J.H. Bussemaker et al., "Effectiveness of Surrogate-Based Optimization Algorithms for System Architecture Optimization",
-AIAA Aviation 2021, DOI: [10.2514/6.2021-3095](https://arc.aiaa.org/doi/10.2514/6.2021-3095)
+J.H. Bussemaker et al. "Surrogate-Based Optimization of System Architectures Subject to Hidden Constraints".
+In: AIAA AVIATION 2024 FORUM. Las Vegas, NV, USA, July 2024.
+DOI: [10.2514/6.2024-4401](https://arc.aiaa.org/doi/10.2514/6.2024-4401)
 
 The algorithm uses state-of-the-art mixed-discrete hierarchical Gaussian Process (Kriging) surrogate models and ensures
 that all evaluated and selected infill points are imputed (and therefore valid).
