@@ -19,9 +19,13 @@ This test suite contains the mixed-discrete, hierarchical, multi-objective turbo
 More information: https://github.com/jbussemaker/OpenTurbofanArchitecting
 """
 import pickle
+import shutil
 import logging
+import zipfile
+import tempfile
 import numpy as np
 from typing import *
+import urllib.request
 import concurrent.futures
 from cached_property import cached_property
 from pymoo.core.variable import Real, Integer, Choice
@@ -43,6 +47,8 @@ __all__ = ['HAS_OPEN_TURB_ARCH', 'SimpleTurbofanArch', 'RealisticTurbofanArch', 
 
 log = logging.getLogger('sb_arch_opt.turb')
 
+DATA_URL = 'https://github.com/jbussemaker/SBArchOpt_Data/archive/refs/heads/main.zip'
+
 
 def check_dependency():
     if not HAS_OPEN_TURB_ARCH:
@@ -63,7 +69,6 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
     default_enable_pf_calc = False
     _robust_correct_x = False  # Bug in the bleed offtake choice
 
-    _data_folder = 'turbofan_data'
     _sub_folder = None
 
     def __init__(self, open_turb_arch_problem: 'ArchitectingProblem', n_parallel=None):
@@ -406,7 +411,7 @@ class OpenTurbArchProblemWrapper(HierarchyProblemBase):
 
     @classmethod
     def _get_data_path(cls, sub_path: str) -> str:
-        path = os.path.join(os.path.dirname(__file__), cls._data_folder, cls._sub_folder)
+        path = os.path.join(get_data_folder(), cls._sub_folder)
         os.makedirs(path, exist_ok=True)
         if sub_path is not None:
             path = os.path.join(path, sub_path)
@@ -622,6 +627,29 @@ class SimpleTurbofanArchModel(SimpleTurbofanArch):
 #
 #     def _arch_evaluate_x(self, x: np.ndarray):
 #         return self._arch_evaluate_x_surrogate(x)
+
+
+def get_data_folder(force_download=False):
+    """Download problem data if needed, and return path to data"""
+    cache_folder = get_cache_path()
+    folder = os.path.join(cache_folder, 'turbofan_data')
+
+    if force_download or not os.path.exists(folder):
+        if os.path.exists(folder):
+            shutil.rmtree(folder)
+
+        log.info(f'Downloading turbofan problem data from: {DATA_URL}')
+        with tempfile.TemporaryDirectory() as tmp_folder:
+            zip_file_path = os.path.join(tmp_folder, 'data.zip')
+            urllib.request.urlretrieve(DATA_URL, zip_file_path)
+
+            with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
+                repo_root_folder = zip_ref.namelist()[0][:-1]
+                zip_ref.extractall(tmp_folder)
+            shutil.move(os.path.join(tmp_folder, repo_root_folder, 'turbofan_data'), folder)
+        log.info('Turbofan problem data downloaded and available!')
+
+    return folder
 
 
 if __name__ == '__main__':
