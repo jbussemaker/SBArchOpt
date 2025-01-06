@@ -313,7 +313,7 @@ class FailedXYRemovingSBO(SBOInfill):
 @check_dependency()
 def test_invalid_training_set(problem: ArchOptProblemBase):
     assert HAS_SMT
-    sbo = FailedXYRemovingSBO(RBF(print_global=False), FunctionEstimateInfill(), pop_size=100, termination=100,
+    sbo = FailedXYRemovingSBO(FixedRBF(print_global=False), FunctionEstimateInfill(), pop_size=100, termination=100,
                               repair=ArchOptRepair()).algorithm(infill_size=1, init_size=10)
     sbo.setup(problem)
 

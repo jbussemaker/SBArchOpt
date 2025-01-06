@@ -43,9 +43,14 @@ try:
     from smt.surrogate_models.krg import KRG, KrgBased
     from smt.surrogate_models.kpls import KPLS
     from smt.surrogate_models.krg_based import MixIntKernelType, MixHrcKernelType
+    from smt.surrogate_models.rbf import RBF
 
-    from smt.utils.design_space import BaseDesignSpace
-    import smt.utils.design_space as ds
+    try:
+        from smt.utils.design_space import BaseDesignSpace
+        import smt.utils.design_space as ds
+    except ModuleNotFoundError:  # Module moved from SMT 2.8
+        from smt.design_space import BaseDesignSpace
+        import smt.design_space as ds
 
     from smt import __version__
 
@@ -60,7 +65,7 @@ except ImportError:
         pass
 
 __all__ = ['check_dependencies', 'HAS_ARCH_SBO', 'HAS_SMT', 'ModelFactory', 'MixedDiscreteNormalization', 'SBArchOptDesignSpace',
-           'MultiSurrogateModel']
+           'MultiSurrogateModel', 'FixedRBF']
 
 
 def check_dependencies():
@@ -150,8 +155,7 @@ class ModelFactory:
     @staticmethod
     def get_rbf_model():
         check_dependencies()
-        from smt.surrogate_models.rbf import RBF
-        return RBF(print_global=False, d0=1., poly_degree=-1, reg=1e-10)
+        return FixedRBF(print_global=False, d0=1., poly_degree=-1, reg=1e-10)
 
     @staticmethod
     def get_kriging_model(multi=True, kpls_n_comp: int = None, **kwargs):
@@ -425,3 +429,11 @@ class MultiSurrogateModel(SurrogateModel):
 
     def _predict_values(self, x: np.ndarray, is_acting=None) -> np.ndarray:
         raise RuntimeError
+
+
+class FixedRBF(RBF):
+    """RBF model that can be deep-copied or pickled before initialization"""
+
+    def __setstate__(self, state):
+        """Override to remove the call to _setup"""
+        self.__dict__.update(state)
