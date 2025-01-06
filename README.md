@@ -37,13 +37,13 @@ The library provides:
 
 First, create a conda environment (skip if you already have one):
 ```
-conda create --name opt python=3.9
+conda create --name opt python=3.11
 conda activate opt
 ```
 
 Then install the package:
 ```
-conda install numpy
+conda install "numpy<2.0"
 pip install sb-arch-opt
 ```
 
