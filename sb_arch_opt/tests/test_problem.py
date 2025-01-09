@@ -498,3 +498,16 @@ def test_explicit_design_space():
     problem_try_mod = DummyExplicitDesignSpaceProblem(write_x_out=True)
     with pytest.raises(ValueError):
         problem_try_mod.evaluate(x_all)
+
+
+def test_ds_stub_problem():
+    problem = HierarchicalDummyProblem()
+    stub_problem = ArchOptProblemBase(problem.design_space)
+    x = HierarchicalSampling().do(stub_problem, 100).get('X')
+    assert x.shape[0] > 0
+
+    n = 12
+    problem = HierarchicalDummyProblem(n=n)
+    stub_problem = ArchOptProblemBase(problem.design_space)
+    x = HierarchicalSampling().do(stub_problem, 100).get('X')
+    assert x.shape[0] > 0
