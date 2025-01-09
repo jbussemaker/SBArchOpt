@@ -464,8 +464,9 @@ class ArchOptProblemBase(Problem):
         """
 
     def __repr__(self):
-        """repr() of the class, should be unique for unique Pareto fronts"""
-        raise NotImplementedError
+        """repr() of the class, should be unique for unique Pareto fronts. As fallback it returns a random repr."""
+        import random
+        return f'{self.__class__.__name__}{random.randint(1000000, 9999999)}()'
 
 
 class ArchOptRepair(Repair):
