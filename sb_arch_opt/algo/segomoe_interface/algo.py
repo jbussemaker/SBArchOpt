@@ -184,6 +184,7 @@ class SEGOMOEInterface:
             self._x = self._x_failed = self._y = None
         else:
             self._x, self._x_failed, self._y = self._get_xy(pop)
+        self._save_results()
 
     def run_optimization(self):
         capture_log()
