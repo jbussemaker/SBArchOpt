@@ -29,7 +29,9 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Python info
-      run: python --version
+      run: |
+        python --version
+        df -h
 
     - name: Install dependencies
       run: |
@@ -40,6 +42,7 @@ jobs:
         pip install -e .[arch_sbo,botorch,trieste,tpe,rocket,egor,hebo]
         pip install jupyter ipython ipykernel
         ipython kernel install --name "python3" --user
+        df -h
 
     - name: List dependencies
       run: |
