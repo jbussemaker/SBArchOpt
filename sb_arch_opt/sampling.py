@@ -39,7 +39,7 @@ from pymoo.core.duplicate import DefaultDuplicateElimination
 from pymoo.operators.sampling.lhs import sampling_lhs_unit
 
 from sb_arch_opt.problem import ArchOptProblemBase, ArchOptRepair
-from sb_arch_opt.util import get_np_random_singleton
+from sb_arch_opt.util import get_np_random_singleton, set_global_random_seed
 
 __all__ = ['HierarchicalExhaustiveSampling', 'HierarchicalSampling',
            'get_init_sampler', 'LargeDuplicateElimination', 'TrailRepairWarning']
@@ -202,7 +202,7 @@ class HierarchicalSampling(FloatRandomSampling):
 
         # Simply set the seed on the global numpy instance
         if seed is not None:
-            np.random.seed(seed)
+            set_global_random_seed(seed)
 
     def _do(self, problem, n_samples, **kwargs):
         x_sampled, _ = self.sample_get_x(problem, n_samples)
@@ -263,7 +263,7 @@ class HierarchicalSampling(FloatRandomSampling):
 
             nx_cont = len(np.where(is_cont_mask)[0])
             if lhs:
-                x_unit = sampling_lhs_unit(x.shape[0], nx_cont)
+                x_unit = sampling_lhs_unit(x.shape[0], nx_cont, random_state=get_np_random_singleton())
             elif sobol:
                 x_unit = self._sobol(x.shape[0], nx_cont)
             else:

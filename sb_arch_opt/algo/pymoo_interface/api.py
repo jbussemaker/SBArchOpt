@@ -29,7 +29,7 @@ from pymoo.algorithms.moo.nsga2 import NSGA2, RankAndCrowdingSurvival
 from pymoo.termination.max_eval import MaximumFunctionCallTermination
 
 from sb_arch_opt.sampling import *
-from sb_arch_opt.util import capture_log
+from sb_arch_opt.util import capture_log, set_global_random_seed
 from sb_arch_opt.problem import ArchOptRepair
 from sb_arch_opt.algo.pymoo_interface.metrics import *
 from sb_arch_opt.algo.pymoo_interface.md_mating import *
@@ -37,9 +37,18 @@ from sb_arch_opt.algo.pymoo_interface.storage_restart import *
 
 __all__ = ['provision_pymoo', 'ArchOptNSGA2', 'get_nsga2', 'initialize_from_previous_results', 'ResultsStorageCallback',
            'ArchOptEvaluator', 'get_default_termination', 'DeltaHVTermination', 'ArchOptEvaluator',
-           'load_from_previous_results', 'get_doe_algo', 'DOEAlgorithm']
+           'load_from_previous_results', 'get_doe_algo', 'DOEAlgorithm', 'plot']
 
 log = logging.getLogger('sb_arch_opt.pymoo')
+
+
+def plot(*args, **kwargs):
+    try:
+        from pymoo.util.plotting import plot
+    except ModuleNotFoundError:
+        from pymoo.visualization.util import plot  # pymoo >= 0.6.1.6
+
+    return plot(*args, **kwargs)
 
 
 def provision_pymoo(algorithm: Algorithm, set_init=True, results_folder=None):
@@ -86,6 +95,9 @@ class ArchOptNSGA2(NSGA2):
         super().__init__(pop_size=pop_size, sampling=sampling, repair=repair, mating=mating,
                          eliminate_duplicates=eliminate_duplicates, survival=survival, output=output,
                          evaluator=evaluator, callback=callback, **kwargs)
+
+    def _setup(self, problem, **kwargs):
+        set_global_random_seed(self.seed)
 
 
 def get_nsga2(pop_size: int, results_folder=None, **kwargs):

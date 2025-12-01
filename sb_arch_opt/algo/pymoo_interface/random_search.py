@@ -33,13 +33,7 @@ from pymoo.core.population import Population
 from pymoo.util.optimum import filter_optimum
 from pymoo.core.initialization import Initialization
 
-try:
-    from tpe.optimizer import TPEOptimizer
-    HAS_TPE = True
-except ImportError:
-    HAS_TPE = False
-
-__all__ = ['HAS_TPE', 'RandomSearchAlgorithm']
+__all__ = ['RandomSearchAlgorithm']
 
 log = logging.getLogger('sb_arch_opt.random')
 

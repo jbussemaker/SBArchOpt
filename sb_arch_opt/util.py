@@ -42,6 +42,14 @@ def capture_log(level='INFO'):
     })
 
 
+def set_global_random_seed(seed: int = None):
+    import random
+    random.seed(seed)
+
+    import numpy as np
+    np.random.seed(seed)
+
+
 def get_np_random_singleton():
     from scipy._lib._util import check_random_state
     return check_random_state(seed=None)

@@ -32,6 +32,7 @@ from scipy.optimize import minimize
 from sb_arch_opt.problem import ArchOptProblemBase
 from sb_arch_opt.algo.arch_sbo.hc_strategy import HiddenConstraintStrategy
 from sb_arch_opt.algo.arch_sbo.models import *
+from sb_arch_opt.util import get_np_random_singleton
 
 from pymoo.core.problem import Problem
 from pymoo.core.population import Population
@@ -183,7 +184,7 @@ class SurrogateInfill:
             return filter_optimum(population, least_infeasible=True)
 
         survival = RankAndCrowdingSurvival()
-        return survival.do(infill_problem, population, n_survive=n_infill)
+        return survival.do(infill_problem, population, n_survive=n_infill, random_state=get_np_random_singleton())
 
     def select_infill(self, population: Population, infill_problem: Problem, n_infill) -> Population:
         """Select infill points and improve the precision using a gradient-based algorithm."""
@@ -598,7 +599,8 @@ class MinVariancePFInfill(FunctionEstimateConstrainedInfill):
         f_std_obj = 1.-np.sqrt(f_var)
         survival = RankAndCrowdingSurvival()
         pop_var = Population.new(X=x_pf, F=f_std_obj, G=g_pf)
-        i_select = survival.do(infill_problem, pop_var, n_survive=n_infill, return_indices=True)
+        i_select = survival.do(infill_problem, pop_var, n_survive=n_infill, return_indices=True,
+                               random_state=get_np_random_singleton())
 
         return pop_pf[i_select]
 

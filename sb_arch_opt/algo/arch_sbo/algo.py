@@ -32,6 +32,7 @@ from sb_arch_opt.sampling import *
 from scipy.spatial import distance
 from sb_arch_opt.algo.pymoo_interface import *
 from sb_arch_opt.algo.pymoo_interface.metrics import EHVMultiObjectiveOutput
+from sb_arch_opt.util import set_global_random_seed
 
 from pymoo.core.repair import Repair
 from pymoo.core.result import Result
@@ -89,6 +90,14 @@ class InfillAlgorithm(Algorithm):
             from sb_arch_opt.algo.arch_sbo.metrics import SBOMultiObjectiveOutput
             self.output = SBOMultiObjectiveOutput()
 
+    def _setup(self, problem, **kwargs):
+        # Since pymoo 0.6.1.6, pymoo internally uses random generators instead of globally setting the random seed
+        # Our code still depends on the global seed though
+        set_global_random_seed(self.seed)
+
+        if hasattr(self.infill_obj, 'seed'):
+            self.infill_obj.seed = self.seed
+
     def _initialize_infill(self):
         return self.initialization.do(self.problem, self.init_size, algorithm=self)
 
@@ -137,7 +146,7 @@ class SBOInfill(InfillCriterion):
     def __init__(self, surrogate_model: 'SurrogateModel', infill: SurrogateInfill, pop_size=None,
                  termination: Union[Termination, int] = None, normalization: Normalization = None, verbose=False,
                  repair: Repair = None, eliminate_duplicates: DuplicateElimination = None,
-                 force_new_points: bool = True, hc_strategy: 'HiddenConstraintStrategy' = None, **kwargs):
+                 force_new_points: bool = True, hc_strategy: 'HiddenConstraintStrategy' = None, seed: int = None, **kwargs):
 
         if eliminate_duplicates is None:
             eliminate_duplicates = LargeDuplicateElimination()
@@ -170,6 +179,7 @@ class SBOInfill(InfillCriterion):
         self.termination = termination
         self.verbose = verbose
         self.force_new_points = force_new_points
+        self.seed = seed
 
         self.opt_results: Optional[List[Result]] = None
 
@@ -407,6 +417,7 @@ class SBOInfill(InfillCriterion):
             callback=SurrogateInfillCallback(n_gen_report=n_callback, verbose=self.verbose,
                                              n_points_outer=len(self.total_pop), n_eval_outer=n_eval_outer),
             copy_termination=False,
+            seed=self.seed,
             # verbose=True, progress=True,
         )
         if self.opt_results is None:
@@ -418,6 +429,9 @@ class SBOInfill(InfillCriterion):
         selected_pop = hc_infill.select_infill(result.pop, problem, n_infill)
         log.debug(f'Selected {len(selected_pop)} infill point(s)')
         result.opt = selected_pop
+
+        if self.seed is not None:
+            self.seed += 1
 
         x = selected_pop.get('X')
         return Population.new(X=x)

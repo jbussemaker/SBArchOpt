@@ -29,6 +29,7 @@ from typing import *
 from cached_property import cached_property
 from pymoo.operators.sampling.lhs import LatinHypercubeSampling
 from pymoo.core.variable import Variable, Real, Integer, Binary, Choice
+from sb_arch_opt.util import get_np_random_singleton
 
 __all__ = ['ArchDesignSpace', 'ImplicitArchDesignSpace', 'CorrectorInterface', 'CorrectorUnavailableError']
 
@@ -675,7 +676,7 @@ class ArchDesignSpace:
         from sb_arch_opt.problem import ArchOptProblemBase
 
         stub_problem = ArchOptProblemBase(self)
-        x = LatinHypercubeSampling().do(stub_problem, n).get('X')
+        x = LatinHypercubeSampling().do(stub_problem, n, random_state=get_np_random_singleton()).get('X')
         self.round_x_discrete(x)
 
         is_active = np.ones(x.shape, dtype=bool)
