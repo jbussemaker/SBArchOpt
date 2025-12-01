@@ -52,6 +52,7 @@ try:
         SingleModelAcquisitionBuilder
 
     import tensorflow as tf
+    from gpflow.keras import tf_keras
     from dill import UnpicklingError
 
     HAS_TRIESTE = True
@@ -246,7 +247,7 @@ class ArchOptBayesianOptimizer(BayesianOptimizer):
             if tag == FAILED:
                 classifier = build_vgp_classifier(dataset, search_space, noise_free=True)
                 models[tag] = VariationalGaussianProcess(
-                    classifier, BatchOptimizer(tf.optimizers.Adam(1e-3)), use_natgrads=True)
+                    classifier, BatchOptimizer(tf_keras.optimizers.Adam(1e-3)), use_natgrads=True)
                 continue
 
             # https://secondmind-labs.github.io/trieste/3.3.4/notebooks/expected_improvement.html#Model-the-objective-function
