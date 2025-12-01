@@ -57,7 +57,7 @@ if __name__ == '__main__':
             'deprecated',
             'pandas',
             'cached-property~=1.5',
-            'ConfigSpace~=0.6.1',
+            'ConfigSpace~=1.2.1',
             'more-itertools~=9.1',
             'appdirs',
         ],

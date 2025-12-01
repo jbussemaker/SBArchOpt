@@ -24,6 +24,10 @@ SOFTWARE.
 """
 import numpy as np
 from typing import *
+
+from ConfigSpace import InactiveHyperparameterSetError
+from cached_property import cached_property
+
 from sb_arch_opt.design_space import ArchDesignSpace
 from sb_arch_opt.util import get_np_random_singleton
 from pymoo.core.variable import Variable, Real, Integer, Choice
@@ -34,9 +38,9 @@ from ConfigSpace.configuration_space import ConfigurationSpace, Configuration
 from ConfigSpace.hyperparameters import UniformFloatHyperparameter, UniformIntegerHyperparameter, \
     CategoricalHyperparameter
 from ConfigSpace.conditions import EqualsCondition, NotEqualsCondition, GreaterThanCondition, LessThanCondition,\
-    InCondition, AndConjunction, OrConjunction, ConditionComponent
+    InCondition, AndConjunction, OrConjunction
 from ConfigSpace.forbidden import ForbiddenEqualsClause, ForbiddenInClause, ForbiddenEqualsRelation,\
-    ForbiddenGreaterThanRelation, ForbiddenLessThanRelation, ForbiddenAndConjunction, AbstractForbiddenComponent
+    ForbiddenGreaterThanRelation, ForbiddenLessThanRelation, ForbiddenAndConjunction
 
 __all__ = [
     'ArchDesignSpace', 'ExplicitArchDesignSpace', 'ContinuousParam', 'IntegerParam', 'CategoricalParam', 'ParamType',
@@ -50,35 +54,9 @@ __all__ = [
 class ContinuousParam(UniformFloatHyperparameter):
     """Specifies a continuous (float) design variable"""
 
-    def __init__(self, name: str, lower: float, upper: float):
-        super().__init__(name, lower=lower, upper=upper)
-
 
 class IntegerParam(UniformIntegerHyperparameter):
     """Specifies an integer design variable"""
-
-    def __init__(self, name: str, lower: int, upper: int):
-        super().__init__(name, lower=lower, upper=upper)
-
-    def get_neighbors(self, value: float, rs: np.random.RandomState, number: int = 4,
-                      transform: bool = False, std: float = .2) -> List[int]:
-        # Temporary fix until https://github.com/automl/ConfigSpace/pull/313 is merged
-        center = self._transform(value)
-        lower, upper = self.lower, self.upper
-        n_neighbors = upper - lower - 1
-
-        neighbors = []
-        if n_neighbors < number:
-            for v in range(lower, center):
-                neighbors.append(v)
-            for v in range(center+1, upper+1):  # Bugfix
-                neighbors.append(v)
-
-            if transform:
-                return neighbors
-            return self._inverse_transform(np.asarray(neighbors)).tolist()
-
-        return super().get_neighbors(value, rs, number=number, transform=transform, std=std)
 
 
 class CategoricalParam(CategoricalHyperparameter):
@@ -150,10 +128,15 @@ class ExplicitArchDesignSpace(ArchDesignSpace):
         return self._inv_cs_idx
 
     def _update_cs_idx(self):
-        cs_param_names = self._cs.get_hyperparameter_names()
+        cs_param_names = list(self._cs.keys())
         self._cs_idx = cs_idx = np.array([cs_param_names.index(name) for name in self._var_names])
         self._inv_cs_idx = inv_cs_idx = np.empty((len(cs_idx),), dtype=int)
         inv_cs_idx[cs_idx] = np.arange(len(cs_idx))
+
+    @cached_property
+    def is_cont_or_int_mask(self) -> np.ndarray:
+        """Boolean vector specifying whether each variable is an integer (ordinal) variable"""
+        return self.is_cont_mask | self.is_int_mask
 
     def __iter__(self):
         return iter(self._cs)
@@ -171,10 +154,10 @@ class ExplicitArchDesignSpace(ArchDesignSpace):
         return self._cs[item]
 
     def get_param(self, name: str) -> ParamType:
-        return self._cs.get_hyperparameter(name)
+        return self._cs[name]
 
     def get_params_dict(self) -> Dict[str, ParamType]:
-        cs_dict = list(self._cs.get_hyperparameters_dict().items())
+        cs_dict = list(dict(self._cs).items())
         if len(cs_dict) != len(self._cs_idx):
             raise RuntimeError('Inconsistent index mapping!')
 
@@ -187,10 +170,10 @@ class ExplicitArchDesignSpace(ArchDesignSpace):
         return list(self.get_params_dict().keys())
 
     def get_param_by_idx(self, idx: int) -> str:
-        return self._cs.get_hyperparameter_by_idx(self._cs_idx[idx])
+        return self._cs.at[self._cs_idx[idx]]
 
     def get_idx_by_param_name(self, name: str) -> int:
-        cs_idx = self._cs.get_idx_by_hyperparameter_name(name)
+        cs_idx = self._cs.index_of[name]
         return self._inv_cs_idx[cs_idx]
 
     def __str__(self):
@@ -214,22 +197,22 @@ class ExplicitArchDesignSpace(ArchDesignSpace):
                 raise ValueError('Parameters in the explicit design space are specified using '
                                  'FloatParam, IntParam or ChoiceParam')
 
-        self._cs.add_hyperparameters(params)
+        self._cs.add(params)
         self._var_names += [param.name for param in params]
         self._update_cs_idx()
 
-    def add_condition(self, condition: ConditionComponent):
+    def add_condition(self, condition):
         """Add a condition: https://automl.github.io/ConfigSpace/main/api/conditions.html"""
         self._block_after_init()
 
-        self._cs.add_condition(condition)
+        self._cs.add(condition)
         self._update_cs_idx()
 
     def add_conditions(self, conditions):
         """Add conditions: https://automl.github.io/ConfigSpace/main/api/conditions.html"""
         self._block_after_init()
 
-        self._cs.add_conditions(conditions)
+        self._cs.add(conditions)
         self._update_cs_idx()
 
     def add_value_constraint(self, target_param: ParamType, target_value: Union[list, Any],
@@ -244,18 +227,18 @@ class ExplicitArchDesignSpace(ArchDesignSpace):
 
         self.add_forbidden_clause(ForbiddenAndConjunction(target_clause, source_clause))
 
-    def add_forbidden_clause(self, clause: AbstractForbiddenComponent):
+    def add_forbidden_clause(self, clause):
         """Add a forbidden clause: https://automl.github.io/ConfigSpace/main/api/forbidden_clauses.html"""
         self._block_after_init()
 
-        self._cs.add_forbidden_clause(clause)
+        self._cs.add(clause)
         self._update_cs_idx()
 
-    def add_forbidden_clauses(self, clauses: List[AbstractForbiddenComponent]):
+    def add_forbidden_clauses(self, clauses: list):
         """Add forbidden clauses: https://automl.github.io/ConfigSpace/main/api/forbidden_clauses.html"""
         self._block_after_init()
 
-        self._cs.add_forbidden_clauses(clauses)
+        self._cs.add(clauses)
         self._update_cs_idx()
 
     def is_explicit(self) -> bool:
@@ -280,7 +263,7 @@ class ExplicitArchDesignSpace(ArchDesignSpace):
         return des_vars
 
     def _is_conditionally_active(self) -> List[bool]:
-        conditional_params = set(self._cs.get_all_conditional_hyperparameters())
+        conditional_params = set(self._cs.conditional_hyperparameters)
         return [name in conditional_params for name in self.get_param_names()]
 
     def _correct_x(self, x: np.ndarray, is_active: np.ndarray):
@@ -302,16 +285,18 @@ class ExplicitArchDesignSpace(ArchDesignSpace):
         config = Configuration(self._cs, vector=vector)
 
         # # Get active parameters and set values in the vector to NaN if they are inactive
-        # x_active = self._cs.get_active_hyperparameters(config)
+        # x_active = set(self._cs.get_active_hyperparameters(config))
         # vector = config.get_array().copy()
-        # is_inactive_mask = [name not in x_active for name in self._cs.get_hyperparameter_names()]
-        # vector[is_inactive_mask] = np.nan
+        # is_inactive = np.ones((len(vector),), dtype=bool)
+        # for x_act in x_active:
+        #     is_inactive[self._cs.index_of[x_act]] = False
+        # vector[is_inactive] = np.nan
         #
         # # Check if the configuration also satisfies all forbidden clauses
         # config = Configuration(self._cs, vector=vector)
         # try:
-        #     config.is_valid_configuration()
-        # except (ValueError, ForbiddenValueError):
+        #     config.check_valid_configuration()
+        # except ForbiddenValueError:
         #     # If not, create a random valid neighbor
         #     config = get_random_neighbor(config, seed=None)
         # return config
@@ -322,28 +307,19 @@ class ExplicitArchDesignSpace(ArchDesignSpace):
         # to find out which parameters should be inactive
         while True:
             try:
-                config.is_valid_configuration()
+                config.check_valid_configuration()
                 return config
 
-            except ValueError as e:
-                error_str = str(e)
-                if 'Inactive hyperparameter' in error_str:
-                    # Deduce which parameter is inactive
-                    inactive_param_name = error_str.split("'")[1]
-                    param_idx = self._cs.get_idx_by_hyperparameter_name(inactive_param_name)
+            except InactiveHyperparameterSetError as e:
+                param_idx = self._cs.index_of[e.hyperparameter.name]
 
-                    # Modify the vector and create a new Configuration
-                    vector = config.get_array().copy()
-                    vector[param_idx] = np.nan
-                    config = Configuration(self._cs, vector=vector)
+                # Modify the vector and create a new Configuration
+                vector = config.get_array().copy()
+                vector[param_idx] = np.nan
+                config = Configuration(self._cs, vector=vector)
 
-                # At this point, the parameter active statuses are set correctly, so we only need to correct the
-                # configuration to one that does not violate the forbidden clauses
-                elif isinstance(e, ForbiddenValueError):
-                    return get_random_neighbor(config, seed=None)
-
-                else:
-                    raise
+            except ForbiddenValueError:
+                return get_random_neighbor(config, seed=None)
 
     def _quick_sample_discrete_x(self, n: int) -> Tuple[np.ndarray, np.ndarray]:
         """Sample n design vectors (also return is_active) without generating all design vectors first"""
@@ -386,8 +362,8 @@ class ExplicitArchDesignSpace(ArchDesignSpace):
 
         # Unfortunately there is a bug: generate_grid does not handle forbidden clauses
         cs_no_forbidden = NoDefaultConfigurationSpace(name='no_forbidden')
-        cs_no_forbidden.add_hyperparameters(self._cs.get_hyperparameters())
-        cs_no_forbidden.add_conditions(self._cs.get_conditions())
+        cs_no_forbidden.add(list(self._cs.values()))
+        cs_no_forbidden.add(list(self._cs.conditions))
 
         configs_no_forbidden: List[Configuration] = generate_grid(cs_no_forbidden, num_steps)
 
@@ -395,7 +371,8 @@ class ExplicitArchDesignSpace(ArchDesignSpace):
         configs = []
         for config_no_forbidden in configs_no_forbidden:
             try:
-                config = Configuration(self._cs, values=config_no_forbidden.get_dictionary())
+                values = dict(config_no_forbidden)
+                config = Configuration(self._cs, values=values)
             except ForbiddenValueError:
                 continue
             configs.append(config)
@@ -424,19 +401,13 @@ class ExplicitArchDesignSpace(ArchDesignSpace):
         norm = xu-xl
         norm[norm == 0] = 1e-16
 
-        is_cont_mask, is_int_mask = self.is_cont_mask, self.is_int_mask
-        x[:, is_cont_mask] = np.clip((x[:, is_cont_mask]-xl[is_cont_mask])/norm[is_cont_mask], 0, 1)
-
-        # Integer values are normalized similarly to what we do in round_x_discrete
-        x[:, is_int_mask] = (x[:, is_int_mask]-xl[is_int_mask]+.49999)/(norm[is_int_mask]+.9999)
+        mask = self.is_cont_or_int_mask
+        x[:, mask] = np.clip((x[:, mask]-xl[mask])/norm[mask], 0, 1)
 
     def _cs_denormalize_x(self, x: np.ndarray):
         xl, xu = self.xl, self.xu
-        is_cont_mask, is_int_mask = self.is_cont_mask, self.is_int_mask
-        x[:, is_cont_mask] = x[:, is_cont_mask]*(xu[is_cont_mask]-xl[is_cont_mask])+xl[is_cont_mask]
-
-        # Integer values are normalized similarly to what we do in round_x_discrete
-        x[:, is_int_mask] = np.round(x[:, is_int_mask]*(xu[is_int_mask]-xl[is_int_mask]+.9999)+xl[is_int_mask]-.49999)
+        mask = self.is_cont_or_int_mask
+        x[:, mask] = x[:, mask]*(xu[mask]-xl[mask])+xl[mask]
 
 
 class NoDefaultConfigurationSpace(ConfigurationSpace):

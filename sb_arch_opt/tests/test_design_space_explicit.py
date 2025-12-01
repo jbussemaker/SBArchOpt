@@ -270,7 +270,7 @@ def test_forbidden():
     assert x.shape == (100, 4)
 
     x_, is_active_ = ds.correct_x(x)
-    assert np.all(x_ == x)
+    assert np.all(np.abs(x_ - x) < 1e-6)
     assert np.all(is_active_ == is_active)
 
     x, is_active = ds.all_discrete_x
@@ -308,7 +308,7 @@ def test_forbidden():
     assert not np.all(is_active)
 
     x_, is_active_ = ds.correct_x(x)
-    assert np.all(x_ == x)
+    assert np.all(np.abs(x_ - x) < 1e-6)
     assert np.all(is_active_ == is_active)
 
 
