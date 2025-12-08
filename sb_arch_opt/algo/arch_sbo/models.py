@@ -55,7 +55,6 @@ try:
     from smt import __version__
 
 except ImportError:
-    raise
     HAS_ARCH_SBO = False
     HAS_SMT = False
 
