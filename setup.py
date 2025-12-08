@@ -64,6 +64,7 @@ if __name__ == '__main__':
         extras_require={
             'arch_sbo': [
                 'smt~=2.2,!=2.4,!=2.10.0',
+                'jenn~=1.0'  # Until bug has been fixed: https://github.com/SMTorg/smt/issues/769
                 'numba',
                 'scikit-learn',
             ],
