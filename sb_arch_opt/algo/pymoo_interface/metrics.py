@@ -180,7 +180,7 @@ class EHVMultiObjectiveOutput(MultiObjectiveOutput):
         f, feas = algorithm.opt.get("F", "feas")
         f = f[feas]
 
-        self.ehv_col.set(self.estimate_hv.do(f) if len(f) > 0 else None)
+        self.ehv_col.set(self.estimate_hv.do(f) if len(f) > 0 and f.shape[1] > 0 else None)
 
         if len(self.pop_stat_cols) > 0:
             pop_stats = ArchOptProblemBase.get_population_statistics(
