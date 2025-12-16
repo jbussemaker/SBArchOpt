@@ -196,6 +196,25 @@ def test_arch_sbo_gp_failing():
     assert len(result.pop) == 12
 
 
+class AllFailingMueller(Mueller01):
+
+    def _arch_evaluate(self, x: np.ndarray, is_active_out: np.ndarray, f_out: np.ndarray, g_out: np.ndarray,
+                       h_out: np.ndarray, *args, **kwargs):
+        super()._arch_evaluate(x, is_active_out, f_out, g_out, h_out, *args, **kwargs)
+        f_out[:, :] = np.nan
+        g_out[:, :] = np.nan
+
+
+@check_dependency()
+def test_arch_sbo_gp_all_failing():
+    assert HAS_ARCH_SBO
+
+    problem = AllFailingMueller()
+    sbo = get_arch_sbo_gp(problem, init_size=10)
+    result = minimize(problem, sbo, termination=('n_eval', 11))
+    assert len(result.pop) == 11
+
+
 @check_dependency()
 def test_arch_sbo_gp_batch(problem: ArchOptProblemBase):
     _, n_batch = get_default_infill(problem, n_parallel=5)
