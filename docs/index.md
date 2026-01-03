@@ -353,3 +353,4 @@ Following Python SBO frameworks are not implemented, however deserve an acknowle
 - [Bayesian Optimization](https://github.com/fmfn/BayesianOptimization): only single-objective
 - [OpenBox](https://open-box.readthedocs.io/en/latest/)
 - [POT (Powerful Optimization Toolbox)](https://arc.aiaa.org/doi/10.2514/1.J056486): DLR-internal continuous, multi-objective, multi-fidelity SBO library that also supports hidden constraints
+- [BoFire](https://github.com/experimental-design/bofire): multi-objective, mixed-discrete (incl. categorical) BO (using BoTorch) with chemical encodings/kernels, various structural constraints (categorical exclusion, nonlinear/linear constraints, choose n of k constraint) and optimal DoE
