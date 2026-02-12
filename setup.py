@@ -51,20 +51,19 @@ if __name__ == '__main__':
         ],
         license='MIT',
         install_requires=[
-            'numpy<2.0',
-            'pymoo~=0.6.1',
+            'numpy',
+            'pymoo>=0.6.1',
             'scipy',
             'deprecated',
             'pandas',
-            'cached-property~=1.5',
-            'ConfigSpace~=1.2.1',
-            'more-itertools~=9.1',
+            'cached-property>=1.5',
+            'ConfigSpace>=1.2.1',
+            'more-itertools>=9.1',
             'appdirs',
         ],
         extras_require={
             'arch_sbo': [
                 'smt~=2.2,!=2.4,!=2.10.0',
-                'jenn~=1.0',  # Until bug has been fixed: https://github.com/SMTorg/smt/issues/769
                 'numba',
                 'scikit-learn',
             ],
@@ -75,11 +74,11 @@ if __name__ == '__main__':
             #     'assign_enc @ git+https://github.com/jbussemaker/AssignmentEncoding#egg=assign_enc',
             # ],
             'botorch': [
-                'ax-platform~=0.3.0',
-                'botorch~=0.8.2',
+                'ax-platform',
+                'botorch',
             ],
             'trieste': [
-                'trieste~=4.5',
+                'trieste',
             ],
             # 'tpe': [  # Not compatible with newer ConfigSpace
             #     'tpe==0.0.8',
@@ -91,9 +90,9 @@ if __name__ == '__main__':
                 'ambiance',
             ],
             'egor': [
-                'egobox~=0.14.0',
+                'egobox>=0.36.0',
             ],
         },
-        python_requires='>=3.7',
+        python_requires='>=3.9',
         packages=find_packages(include='sb_arch_opt*'),
     )

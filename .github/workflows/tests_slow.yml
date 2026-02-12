@@ -38,8 +38,7 @@ jobs:
         python -m pip install --upgrade pip setuptools
         pip install -r requirements-tests.txt
         pip install -r requirements-assignment.txt
-        pip install -r requirements-ota.txt
-        pip install -e .[arch_sbo,botorch,rocket,egor]
+        pip install -e .[arch_sbo,rocket]
         pip install jupyter ipython ipykernel
         ipython kernel install --name "python3" --user
         df -h

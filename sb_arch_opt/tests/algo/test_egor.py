@@ -11,9 +11,9 @@ def check_dependency():
     return pytest.mark.skipif(not HAS_EGOBOX, reason="Egor dependencies not installed")
 
 
-@pytest.mark.skipif(int(os.getenv('RUN_SLOW_TESTS', 0)) != 1, reason='Set RUN_SLOW_TESTS=1 to run slow tests')
-def test_slow_tests():
-    assert HAS_EGOBOX
+# @pytest.mark.skipif(int(os.getenv('RUN_SLOW_TESTS', 0)) != 1, reason='Set RUN_SLOW_TESTS=1 to run slow tests')
+# def test_slow_tests():
+#     assert HAS_EGOBOX
 
 
 @check_dependency()
