@@ -90,7 +90,7 @@ if __name__ == '__main__':
                 'ambiance',
             ],
             'egor': [
-                'egobox',
+                'egobox>=0.36.0',
             ],
         },
         python_requires='>=3.9',

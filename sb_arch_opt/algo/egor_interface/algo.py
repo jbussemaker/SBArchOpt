@@ -241,7 +241,9 @@ class EgorArchOptInterface:
 
             egor_kwargs = {
                 "n_cstr": self._get_constraints_nb(),
-                "kpls_dim": kpls_dim,
+                "gp_config": egx.GpConfig(
+                    kpls_dim=kpls_dim,
+                ),
             }
 
             egor_kwargs.update(self._egor_kwargs)
