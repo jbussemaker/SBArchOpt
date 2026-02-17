@@ -123,6 +123,9 @@ class EstimateHV(Hypervolume):
         if f.ndim == 1:
             f = f[None, :]
 
+        if len(f) <= 1:
+            return 0.
+
         if self.ref_point is None:
             f_invalid = np.any(np.isinf(f) | np.isnan(f), axis=1)
             f_valid = f[~f_invalid, :]
