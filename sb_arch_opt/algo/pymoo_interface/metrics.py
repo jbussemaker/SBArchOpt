@@ -123,7 +123,7 @@ class EstimateHV(Hypervolume):
         if f.ndim == 1:
             f = f[None, :]
 
-        if len(f) <= 1:
+        if f.shape[1] == 0:
             return 0.
 
         if self.ref_point is None:
@@ -137,6 +137,12 @@ class EstimateHV(Hypervolume):
 
             self.normalization = ZeroToOneNormalization(ideal, nadir)
             self.ref_point = self.normalization.forward(nadir)
+
+        if f.shape[1] == 1:
+            # Calculate HV here due to bug in moocore: https://github.com/multi-objective/moocore/issues/58
+            f = self.normalization.forward(f)
+            hv = self.ref_point[0] - np.min(f)
+            return hv if hv >= 0. else 0.
 
         return super().do(f, *args, **kwargs)
 

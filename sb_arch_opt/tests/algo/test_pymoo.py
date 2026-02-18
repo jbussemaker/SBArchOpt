@@ -7,6 +7,7 @@ import pandas as pd
 from typing import Optional
 from sb_arch_opt.problem import *
 from sb_arch_opt.sampling import *
+from sb_arch_opt.problems.discrete import MDBranin
 from sb_arch_opt.algo.pymoo_interface import *
 from sb_arch_opt.algo.pymoo_interface.random_search import RandomSearchAlgorithm
 
@@ -25,6 +26,16 @@ def test_provision():
 
 
 def test_nsga2(problem: ArchOptProblemBase):
+    nsga2 = get_nsga2(pop_size=100)
+    result = minimize(problem, nsga2, termination=('n_gen', 10), verbose=True, progress=True)
+    pop = result.pop
+
+    x_imp, _ = problem.correct_x(pop.get('X'))
+    assert np.all(pop.get('X') == x_imp)
+
+
+def test_nsga2_so():
+    problem = MDBranin()
     nsga2 = get_nsga2(pop_size=100)
     result = minimize(problem, nsga2, termination=('n_gen', 10), verbose=True, progress=True)
     pop = result.pop
