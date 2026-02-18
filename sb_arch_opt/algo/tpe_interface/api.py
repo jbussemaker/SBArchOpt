@@ -170,7 +170,7 @@ class TPEInitialization(Initialization):
         super().__init__(sampling=None)
 
     def do(self, problem, n_samples, **kwargs):
-        x_init = np.row_stack([self.interface.ask_init() for _ in range(n_samples)])
+        x_init = np.vstack([self.interface.ask_init() for _ in range(n_samples)])
         return Population.new(X=x_init)
 
 

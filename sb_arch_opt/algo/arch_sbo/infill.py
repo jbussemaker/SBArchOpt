@@ -283,7 +283,7 @@ class SurrogateInfill:
             else:
                 x_optimized.append(x_ref_i)
 
-        return Population.new(X=np.row_stack(x_optimized))
+        return Population.new(X=np.vstack(x_optimized))
 
     @staticmethod
     def get_pareto_front(f: np.ndarray) -> np.ndarray:

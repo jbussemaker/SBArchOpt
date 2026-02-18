@@ -316,9 +316,9 @@ class SEGOMOEInterface:
         return sego.get_x(i=-1)
 
     def _tell_infill(self, x, x_failed, y):
-        self._x = np.row_stack([self._x, x]) if self._x is not None else x
-        self._y = np.row_stack([self._y, y]) if self._y is not None else y
-        self._x_failed = np.row_stack([self._x_failed, x_failed]) if self._x_failed is not None else x_failed
+        self._x = np.vstack([self._x, x]) if self._x is not None else x
+        self._y = np.vstack([self._y, y]) if self._y is not None else y
+        self._x_failed = np.vstack([self._x_failed, x_failed]) if self._x_failed is not None else x_failed
         self._save_results()
 
     def _get_sego(self, f_grouped):
@@ -465,10 +465,10 @@ class SEGOMOEInterface:
         f, g, h = self._split_y(y)
 
         if x_failed is not None and len(x_failed) > 0:
-            x = np.row_stack([x, x_failed])
-            f = np.row_stack([f, np.zeros((x_failed.shape[0], f.shape[1]))*np.inf])
-            g = np.row_stack([g, np.zeros((x_failed.shape[0], g.shape[1]))*np.inf])
-            h = np.row_stack([h, np.zeros((x_failed.shape[0], h.shape[1]))*np.inf])
+            x = np.vstack([x, x_failed])
+            f = np.vstack([f, np.zeros((x_failed.shape[0], f.shape[1]))*np.inf])
+            g = np.vstack([g, np.zeros((x_failed.shape[0], g.shape[1]))*np.inf])
+            h = np.vstack([h, np.zeros((x_failed.shape[0], h.shape[1]))*np.inf])
 
         kwargs = {'X': x, 'F': f, 'G': g, 'H': h}
         pop = Population.new(**kwargs)
