@@ -495,6 +495,10 @@ class RocketEvaluator:
                 h_first += h.tolist()
                 v_first += v.tolist()
 
+            if len(pos) == 0:
+                # No second stage available
+                return v_first[-1], h_first, v_first
+
             # Second stage
             h_0 = h[pos[0]]
             v_0 = v[pos[0]]
@@ -562,6 +566,10 @@ class RocketEvaluator:
                 h_second += h.tolist()
                 v_second += v.tolist()
 
+            if len(pos2) == 0:
+                # No third stage available
+                return v_second[-1], h_first+h_second, v_first+v_second
+
             # Third stage
             v_0 = v[pos2[0]]
             t_0 = t[pos2[0]]
@@ -616,8 +624,8 @@ class RocketEvaluator:
 
         # Check if rocket could be feasible even without payload
         v_tgt_diff, _, _, _ = try_payload(0)
-        if v_tgt_diff < 0:
-            return 0, [], [], v_tgt_diff
+        # if v_tgt_diff < 0:
+        #     return 0, [], [], v_tgt_diff
 
         m_payload, res = opt.newton(
             lambda mp_: try_payload(mp_)[0], 100, tol=1., maxiter=50, full_output=True, disp=False)
