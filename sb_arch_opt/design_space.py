@@ -647,8 +647,8 @@ class ArchDesignSpace:
                 x_repair = x_repair[is_not_repaired, :]
                 is_active = is_active[is_not_repaired, :]
 
-                x_discr = np.row_stack([x_discr, x_repair])
-                is_act_discr = np.row_stack([is_act_discr, is_active.astype(bool)])
+                x_discr = np.vstack([x_discr, x_repair])
+                is_act_discr = np.vstack([is_act_discr, is_active.astype(bool)])
 
             # Impute continuous values
             self.impute_x(x_discr, is_act_discr)

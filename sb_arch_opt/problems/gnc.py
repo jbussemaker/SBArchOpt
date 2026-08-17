@@ -175,8 +175,8 @@ class GNCProblemBase(HierarchyProblemBase):
             x_rows.append(x_combs)
             is_active_rows.append(is_act_combs)
 
-        x_all = np.row_stack(x_rows)
-        is_active_all = np.row_stack(is_active_rows)
+        x_all = np.vstack(x_rows)
+        is_active_all = np.vstack(is_active_rows)
         return x_all, is_active_all
 
     def _get_discrete_x_combs_type(self, x_base, j, n_objs):
@@ -234,7 +234,7 @@ class GNCProblemBase(HierarchyProblemBase):
                     n_combinations += 1
 
             if return_conns:
-                n_combinations = np.row_stack(n_combinations)
+                n_combinations = np.vstack(n_combinations)
             n_comb_conn[n_src, n_tgt] = n_comb_conn[n_tgt, n_src] = n_combinations
 
             if return_conns:

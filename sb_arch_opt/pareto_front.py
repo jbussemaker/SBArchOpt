@@ -140,9 +140,9 @@ class CachedParetoFrontMixin(Problem):
                         ps = res.X
                         pf = res.F
                     else:
-                        pf_merged = np.row_stack([pf, res.F])
+                        pf_merged = np.vstack([pf, res.F])
                         i_non_dom = NonDominatedSorting().do(pf_merged, only_non_dominated_front=True)
-                        ps = np.row_stack([ps, res.X])[i_non_dom, :]
+                        ps = np.vstack([ps, res.X])[i_non_dom, :]
                         pf = pf_merged[i_non_dom, :]
 
         # Reduce size of Pareto front to a predetermined amount to ease Pareto-front-related calculations

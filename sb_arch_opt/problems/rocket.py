@@ -166,7 +166,7 @@ class RocketArch(HierarchyProblemBase):
             x_stage[:, 1:1+x_engines.shape[1]] = x_engines
             x_stages.append(x_stage)
 
-        x_stages = np.row_stack(x_stages)
+        x_stages = np.vstack(x_stages)
         x_all = np.repeat(x_stages, 3, axis=0)
         x_all[:, [11]] = np.tile(np.array([np.arange(3)]).T, (x_stages.shape[0], 1))  # Head shape
 

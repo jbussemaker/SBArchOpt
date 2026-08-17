@@ -217,9 +217,9 @@ class EgorArchOptInterface:
             x, x_failed, y = self._get_xy(pop)
 
             # Update
-            self._x = np.row_stack([self._x, x])
-            self._y = np.row_stack([self._y, y])
-            self._x_failed = np.row_stack([self._x_failed, x_failed])
+            self._x = np.vstack([self._x, x])
+            self._y = np.vstack([self._y, y])
+            self._x_failed = np.vstack([self._x_failed, x_failed])
 
             # Store results
             if self._results_folder is not None:

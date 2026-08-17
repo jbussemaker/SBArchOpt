@@ -339,8 +339,8 @@ class HierarchicalSampling(FloatRandomSampling):
             is_active.append(is_act_all[x_all_choose, :])
             i_x_sampled[x_all_choose] = True
 
-        x = np.row_stack(x)
-        is_active = np.row_stack(is_active)
+        x = np.vstack(x)
+        is_active = np.vstack(is_active)
 
         # Uniformly add discrete vectors if there are not enough (can happen if some groups are very small and there
         # are no continuous dimensions)
@@ -354,8 +354,8 @@ class HierarchicalSampling(FloatRandomSampling):
             else:
                 i_from_group = np.arange(x_available.shape[0])
 
-            x = np.row_stack([x, x_available[i_from_group, :]])
-            is_active = np.row_stack([is_active, is_act_available[i_from_group, :]])
+            x = np.vstack([x, x_available[i_from_group, :]])
+            is_active = np.vstack([is_active, is_act_available[i_from_group, :]])
 
         return x, is_active
 
@@ -489,7 +489,7 @@ class HierarchicalSampling(FloatRandomSampling):
                         i_opt_sampled = _choice(n_add, len(opt_values[i_dv]))
                         x_add[:, i_dv] = opt_values[i_dv][i_opt_sampled]
 
-            x = x_add if x is None else np.row_stack([x, x_add])
+            x = x_add if x is None else np.vstack([x, x_add])
 
             # Correct and remove duplicates
             x, is_active = self._correct(problem, repair, x)
@@ -509,8 +509,8 @@ class HierarchicalSampling(FloatRandomSampling):
         if x.shape[0] < n_samples and has_x_cont:
             n_add = n_samples-x.shape[0]
             i_select_dup = _choice(n_add, x.shape[0])
-            x = np.row_stack(x, x[i_select_dup, :])
-            is_active = np.row_stack(is_active, is_active[i_select_dup, :])
+            x = np.vstack(x, x[i_select_dup, :])
+            is_active = np.vstack(is_active, is_active[i_select_dup, :])
 
         return x, is_active
 
