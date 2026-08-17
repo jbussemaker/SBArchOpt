@@ -51,6 +51,8 @@ class RocketArch(HierarchyProblemBase):
     _head_shapes = [HeadShape.CONE, HeadShape.ELLIPTICAL, HeadShape.SPHERE]
 
     _less_constrained = False
+    normalized_constraints = True
+    fail_if_cannot_reach_orbit = False
 
     def __init__(self):
         check_dependency()
@@ -85,7 +87,13 @@ class RocketArch(HierarchyProblemBase):
         lc = self._less_constrained
         rockets = self._get_rockets(x)
         for i, rocket in enumerate(rockets):
-            perf = RocketEvaluator.evaluate(rocket)
+
+            perf = RocketEvaluator.evaluate(
+                rocket,
+                normalize_constraints=self.normalized_constraints,
+                fail_if_cannot_reach_orbit=self.fail_if_cannot_reach_orbit,
+            )
+
             f_out[i, :] = (np.log10(perf.cost), -np.log10(max(1., perf.payload_mass)))
             if lc:
                 g_out[i, :] = (perf.delta_structural, perf.delta_payload, perf.delta_delta_v)
@@ -166,7 +174,7 @@ class RocketArch(HierarchyProblemBase):
             x_stage[:, 1:1+x_engines.shape[1]] = x_engines
             x_stages.append(x_stage)
 
-        x_stages = np.row_stack(x_stages)
+        x_stages = np.vstack(x_stages)
         x_all = np.repeat(x_stages, 3, axis=0)
         x_all[:, [11]] = np.tile(np.array([np.arange(3)]).T, (x_stages.shape[0], 1))  # Head shape
 
@@ -221,15 +229,15 @@ if __name__ == '__main__':
     from pymoo.core.population import Population
     from sb_arch_opt.sampling import HierarchicalSampling
 
-    # problem = RocketArch()
+    problem = RocketArch()
     # x_pf = problem.pareto_set()
     # f_pf = problem.pareto_front()
     # problem = LCRocketArch()
     # problem = SOLCRocketArch(obj=RocketObj.OBJ_COST)
-    problem = SOLCRocketArch(obj=RocketObj.OBJ_PAYLOAD)
+    # problem = SOLCRocketArch(obj=RocketObj.OBJ_PAYLOAD)
     # problem = SOLCRocketArch(obj=RocketObj.OBJ_WEIGHTED)
 
-    problem.plot_pf()
+    # problem.plot_pf()
     # f_pf = problem.pareto_front()
     # f_so = f_pf[:, 0] + f_pf[:, 1]
 

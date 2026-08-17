@@ -93,7 +93,7 @@ class RocketEvaluator:
     _rho_interp = None
 
     @classmethod
-    def evaluate(cls, rocket: Rocket) -> RocketPerformance:
+    def evaluate(cls, rocket: Rocket, normalize_constraints=False, fail_if_cannot_reach_orbit=False) -> RocketPerformance:
         check_dependency()
 
         # Calculate geometrical data
@@ -164,7 +164,7 @@ class RocketEvaluator:
         length_ratio = rocket.ellipse_l_ratio if rocket.head_shape == HeadShape.ELLIPTICAL else 0
         payload_mass, h_vector, v_vector, delta_delta_v = cls.calculate_trajectory(
             cone_angle, length_ratio, diameter, stage_thrusts, stage_structural_masses, stage_prop_masses, stage_mdots,
-            rocket.orbit_altitude, m_payload_fix=rocket.payload_mass)
+            rocket.orbit_altitude, m_payload_fix=rocket.payload_mass, normalize_constraint=normalize_constraints)
 
         # Cost estimation
         cost = cls.calculate_cost(stage_n_engines, stage_engine_masses, stage_solid_prop_masses, stage_h2_masses,
@@ -173,6 +173,17 @@ class RocketEvaluator:
         # Constraints
         delta_structural = cls.calculate_max_q_constraint(rocket.max_q, h_vector, v_vector)
         delta_payload = cls.calculate_payload_constraint(volume_available, payload_mass, rocket.payload_density)
+
+        if normalize_constraints:
+            delta_structural /= rocket.max_q
+            delta_payload /= volume_available
+
+        if fail_if_cannot_reach_orbit and delta_delta_v < 0:
+            cost = math.nan
+            payload_mass = math.nan
+            delta_structural = math.nan
+            delta_payload = math.nan
+            delta_delta_v = math.nan
 
         return RocketPerformance(
             cost=cost, payload_mass=payload_mass,
@@ -390,12 +401,13 @@ class RocketEvaluator:
 
     @classmethod
     def calculate_trajectory(cls, cone_angle, length_ratio, diameter, T_stages, m_structural_stages, mp_stages,
-                             mdot_stages, h_orbit_target, m_payload_fix=None):
+                             mdot_stages, h_orbit_target, m_payload_fix=None, normalize_constraint=False):
         """Calculation of the launcher trajectory."""
         check_dependency()
 
         mu = 3.986004418e14
         r_earth = 6378e3
+        v_orbit = (mu / (r_earth + h_orbit_target)) ** 0.5
 
         # Drag coefficient calculation depending on head shape
         if cone_angle > 0:
@@ -483,6 +495,10 @@ class RocketEvaluator:
                 h_first += h.tolist()
                 v_first += v.tolist()
 
+            if len(pos) == 0:
+                # No second stage available
+                return v_first[-1], h_first, v_first
+
             # Second stage
             h_0 = h[pos[0]]
             v_0 = v[pos[0]]
@@ -550,6 +566,10 @@ class RocketEvaluator:
                 h_second += h.tolist()
                 v_second += v.tolist()
 
+            if len(pos2) == 0:
+                # No third stage available
+                return v_second[-1], h_first+h_second, v_first+v_second
+
             # Third stage
             v_0 = v[pos2[0]]
             t_0 = t[pos2[0]]
@@ -577,28 +597,35 @@ class RocketEvaluator:
             return v_orbit_final, h_vector_, v_vector_
 
         def try_payload(m_payload):
-            v_orbit = (mu / (r_earth + h_orbit_target)) ** 0.5
             try:
                 v_final_, h_vector_, v_vector_ = simulate_trajectory(m_payload)
 
                 # Orbit minimum speed
                 v_target_diff = v_final_ - v_orbit
 
+                if normalize_constraint:
+                    v_target_diff /= v_orbit
+
                 return v_target_diff, v_final_, h_vector_, v_vector_
             except (IndexError, ValueError):
-                return -v_orbit, 0, [], []
+
+                v_diff = -v_orbit
+                if normalize_constraint:
+                    v_diff /= v_orbit
+
+                return v_diff, 0, [], []
 
         # Evaluate for fixed payload mass
         if m_payload_fix:
             v_tgt_diff, _, h_vector, v_vector = try_payload(m_payload_fix)
             if v_tgt_diff < 0:
-                return 0, [], []
+                return 0, [], [], v_tgt_diff
             return m_payload_fix, h_vector, v_vector, v_tgt_diff
 
         # Check if rocket could be feasible even without payload
         v_tgt_diff, _, _, _ = try_payload(0)
-        if v_tgt_diff <= 0:
-            return 0, [], [], v_tgt_diff
+        # if v_tgt_diff < 0:
+        #     return 0, [], [], v_tgt_diff
 
         m_payload, res = opt.newton(
             lambda mp_: try_payload(mp_)[0], 100, tol=1., maxiter=50, full_output=True, disp=False)
