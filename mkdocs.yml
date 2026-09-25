@@ -26,11 +26,14 @@ nav:
     - 'HEBO': 'algo/hebo.md'
     - 'SEGOMOE': 'algo/segomoe.md'
     - 'SMARTy': 'algo/smarty.md'
+    - 'Stochastic Optimization': 'algo/stochastic.md'
   - Tutorials:
       - SBArchOpt: tutorial.ipynb
+      - Stochastic Optimization: tutorial_stochastic.ipynb
   - 'Test Problems': 'test_problems.md'
   - API Reference:
     - Problem Definition: 'api/problem.md'
+    - Stochastic Optimization: 'api/robust.md'
     - pymoo: 'api/pymoo.md'
     - ArchSBO: 'api/arch_sbo.md'
     - 'BoTorch (Ax)': 'api/botorch.md'
