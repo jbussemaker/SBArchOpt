@@ -7,5 +7,5 @@ dependencies:
   - scipy
   - pip
   - pip:
-    - sb-arch-opt[arch_sbo]
+    - sb-arch-opt[arch_sbo,uncertainty]
     - matplotlib
