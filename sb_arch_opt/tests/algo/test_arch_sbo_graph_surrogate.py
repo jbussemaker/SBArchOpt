@@ -1,5 +1,8 @@
 import networkx as nx
 import numpy as np
+import pytest
+
+pytest.importorskip("smt", reason="GraphKriging requires SMT.")
 
 try:
     from smt.design_space import DesignSpace, IntegerVariable
