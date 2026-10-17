@@ -26,11 +26,16 @@ SOFTWARE.
 from dataclasses import dataclass, field
 from typing import Any, Callable, Hashable, Literal, Mapping, Protocol, Sequence, runtime_checkable
 
-import networkx as nx
 import numpy as np
 
+try:
+    import networkx as nx
+    HAS_NETWORKX = True
+except ImportError:
+    HAS_NETWORKX = False
 
-__all__ = ["NodeLabeling", "SizingFeature", "GraphRepresentation", "GraphDecoder"]
+
+__all__ = ["HAS_NETWORKX", "NodeLabeling", "SizingFeature", "GraphRepresentation", "GraphDecoder"]
 
 
 @dataclass(frozen=True)
@@ -81,7 +86,7 @@ class GraphRepresentation:
     may reuse values computed from them.
     """
 
-    graph: nx.Graph
+    graph: "nx.Graph"
     node_labels: Mapping[NodeLabeling, Mapping[Hashable, Hashable]]
     sizing_values: np.ndarray = field(default_factory=_empty_float_array)
 

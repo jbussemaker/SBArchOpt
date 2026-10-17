@@ -1,10 +1,10 @@
 import copy
 
-import networkx as nx
 import numpy as np
 import pytest
 
 from sb_arch_opt.algo.arch_sbo.graph import (
+    HAS_NETWORKX,
     CompositeGraphKernel,
     EdgeMultiplicityKernel,
     GraphRepresentation,
@@ -13,6 +13,12 @@ from sb_arch_opt.algo.arch_sbo.graph import (
     SizingFeature,
     SizingKernel,
 )
+
+if HAS_NETWORKX:
+    import networkx as nx
+
+
+pytestmark = pytest.mark.skipif(not HAS_NETWORKX, reason="NetworkX dependency not installed")
 
 
 TYPE = NodeLabeling("type", lambda node: node)

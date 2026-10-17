@@ -1,24 +1,32 @@
-import networkx as nx
 import numpy as np
 import pytest
 
-pytest.importorskip("smt", reason="GraphKriging requires SMT.")
-
-try:
-    from smt.design_space import DesignSpace, IntegerVariable
-except ImportError:
-    from smt.utils.design_space import DesignSpace, IntegerVariable
-
 from sb_arch_opt.algo.arch_sbo.graph import (
+    HAS_NETWORKX,
     CompositeGraphKernel,
-    GraphKriging,
     GraphRepresentation,
     LdWloa,
     NodeLabeling,
     SizingFeature,
     SizingKernel,
 )
-from sb_arch_opt.algo.arch_sbo.models import MultiSurrogateModel
+from sb_arch_opt.algo.arch_sbo.models import HAS_SMT, MultiSurrogateModel
+
+if HAS_NETWORKX:
+    import networkx as nx
+
+if HAS_SMT:
+    from sb_arch_opt.algo.arch_sbo.graph import GraphKriging
+    try:
+        from smt.design_space import DesignSpace, IntegerVariable
+    except ImportError:
+        from smt.utils.design_space import DesignSpace, IntegerVariable
+
+
+pytestmark = pytest.mark.skipif(
+    not HAS_NETWORKX or not HAS_SMT,
+    reason="GraphKriging dependencies not installed",
+)
 
 
 LABELING = NodeLabeling("kind", lambda node: node)

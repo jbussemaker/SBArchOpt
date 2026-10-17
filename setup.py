@@ -60,13 +60,13 @@ if __name__ == '__main__':
             'ConfigSpace>=1.2.1',
             'more-itertools>=9.1',
             'appdirs',
-            'networkx',
         ],
         extras_require={
             'arch_sbo': [
                 'smt~=2.2,!=2.4,!=2.10.0',
                 'numba',
                 'scikit-learn',
+                'networkx',
             ],
             # 'ota': [  # pip install -r requirements-ota.txt
             #     'open_turb_arch @ git+https://github.com/jbussemaker/OpenTurbofanArchitecting@pymoo_optional#egg=open_turb_arch',
