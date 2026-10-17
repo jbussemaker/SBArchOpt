@@ -7,6 +7,23 @@ from sb_arch_opt.problems.problems_base import *
 from pymoo.core.variable import Real, Integer, Choice
 from pymoo.problems.multi.zdt import ZDT1
 
+try:
+    import openturns as ot
+    from sb_arch_opt.uncertainty import *
+    from sb_arch_opt.stochastic_problem import *
+    HAS_UNCERTAINTY = True
+except ImportError:
+    HAS_UNCERTAINTY = False
+
+    class StochasticArchOptProblem:
+        pass
+
+
+def check_dependency():
+    if not HAS_UNCERTAINTY:
+        raise ImportError(
+            'Looks like SBArchOpt uncertainty package is not installed! Run: pip install sb-arch-opt[uncertainty]')
+
 
 class DummyProblem(ArchOptTestProblemBase):
 
@@ -98,6 +115,124 @@ def discrete_problem():
 @pytest.fixture
 def failing_problem():
     return DummyProblem(fail=True)
+
+
+def make_space(*distributions) -> 'StochasticParameterSpace':
+    return StochasticParameterSpace([StochasticParameter(f'u{i}', dist) for i, dist in enumerate(distributions)])
+
+
+class VectorizedProblem(StochasticArchOptProblem):
+    """f = (u - x0)^2 + x1^2, evaluated for all design points at once"""
+
+    def __init__(self, n=100, seed=42, uq_method=None, fail=False, **kwargs):
+        check_dependency()
+        self.fail = fail
+        self.seen_parameters = []
+        super().__init__([Real(bounds=(-2., 2.)), Real(bounds=(-2., 2.))],
+                         param_space=make_space(ot.Normal(1., .05)),
+                         uq_method=uq_method if uq_method is not None else MonteCarlo(n, seed=seed),
+                         n_obj=1, **kwargs)
+
+    def _is_conditionally_active(self):
+        return [False, False]
+
+    def _correct_x(self, x, is_active):
+        pass
+
+    def _arch_evaluate_sample(self, x, is_active, f_out, g_out, h_out, parameters, *args, **kwargs):
+        self.seen_parameters.append(np.asarray(parameters).copy())
+        f_out[:, 0] = (parameters[0] - x[:, 0])**2 + x[:, 1]**2
+        if self.fail and parameters[0] > 1.02:  # some samples fail to evaluate
+            f_out[:, 0] = np.nan
+
+
+class HierarchicalProblem(StochasticArchOptProblem):
+    """Implicit (hierarchical) design space, a constraint, and the per-row evaluation pattern"""
+
+    def __init__(self, n=50, seed=1, **kwargs):
+        check_dependency()
+        super().__init__([Choice(options=['electric', 'hybrid']), Real(bounds=(.2, 1.)), Real(bounds=(.1, .4))],
+                         param_space=StochasticParameterSpace([
+                             StochasticParameter('payload', ot.Normal(2., .3)),
+                             StochasticParameter('bsfc', ot.Normal(.42, .075)),
+                         ]),
+                         uq_method=MonteCarlo(n, seed=seed), n_obj=1, n_ieq_constr=1, **kwargs)
+
+    def _is_conditionally_active(self):
+        return [False, False, True]
+
+    def _correct_x(self, x, is_active):
+        is_active[:, 2] = x[:, 0] == 1  # fuel fraction only active for the hybrid branch
+
+    def _arch_evaluate_sample(self, x, is_active, f_out, g_out, h_out, parameters, *args, **kwargs):
+        payload, bsfc = parameters
+        for i in range(x.shape[0]):
+            mass = .5 + x[i, 1] + payload
+            energy = x[i, 2]*130./(bsfc+.1) if x[i, 0] == 1 else x[i, 1]*40.
+            f_out[i, 0] = mass**1.5 / energy
+            g_out[i, 0] = mass - 3.5
+
+
+class AllResponseKindsProblem(StochasticArchOptProblem):
+    """One objective, one inequality and one equality constraint, each with its own scalar"""
+
+    def __init__(self, **kwargs):
+        check_dependency()
+        kwargs.setdefault('obj_scalar', [Mean()])
+        kwargs.setdefault('ieq_constr_scalar', [Mean()])
+        kwargs.setdefault('eq_constr_scalar', [Margin(k=3.)])
+        super().__init__([Real(bounds=(0., 1.))], param_space=make_space(ot.Normal(1., .2)),
+                         uq_method=MonteCarlo(200, seed=5),
+                         n_obj=1, n_ieq_constr=1, n_eq_constr=1, **kwargs)
+
+    def _is_conditionally_active(self):
+        return [False]
+
+    def _correct_x(self, x, is_active):
+        pass
+
+    def _arch_evaluate_sample(self, x, is_active, f_out, g_out, h_out, parameters, *args, **kwargs):
+        f_out[:, 0] = parameters[0] + x[:, 0]
+        g_out[:, 0] = parameters[0] - x[:, 0]
+        h_out[:, 0] = parameters[0] * x[:, 0]
+
+
+class DeterministicResponseProblem(StochasticArchOptProblem):
+    """Two objectives, of which the second does not depend on the stochastic parameters at all"""
+
+    def __init__(self, uq_method=None, **kwargs):
+        super().__init__([Real(bounds=(0., 1.))], param_space=make_space(ot.Normal(1., .2)),
+                         uq_method=uq_method or MonteCarlo(50, seed=3), n_obj=2, **kwargs)
+
+    def _is_conditionally_active(self):
+        return [False]
+
+    def _correct_x(self, x, is_active):
+        pass
+
+    def _arch_evaluate_sample(self, x, is_active, f_out, g_out, h_out, parameters, *args, **kwargs):
+        f_out[:, 0] = parameters[0] * x[:, 0]
+        f_out[:, 1] = 2. * x[:, 0]
+
+
+@pytest.fixture
+def stochastic_problem():
+    return VectorizedProblem()
+
+
+@pytest.fixture
+def hierarchical_problem():
+    return HierarchicalProblem()
+
+
+@pytest.fixture
+def all_response_kinds_problem():
+    return AllResponseKindsProblem()
+
+
+@pytest.fixture
+def deterministic_response_problem():
+    return DeterministicResponseProblem()
 
 
 def pytest_sessionstart(session):

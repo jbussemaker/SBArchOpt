@@ -64,6 +64,7 @@ DOI: [10.2514/6.2024-4401](https://arc.aiaa.org/doi/10.2514/6.2024-4401)
 See also the tutorial(s):
 
 - [SBArchOpt Tutorial](tutorial.ipynb): optimization, implementing new problems
+- [Stochastic Optimization Tutorial](tutorial_stochastic.ipynb): optimizing a problem with stochastic parameters
 
 ### Connecting to Optimization Frameworks
 
@@ -85,6 +86,11 @@ Following proprietary frameworks are also integrated:
 
 Optimization framework dependencies (except pymoo) are always optional! Therefore, when installing SBArchOpt, the
 interfaces to optimization frameworks are probably not working yet.
+
+### Stochastic Optimization
+
+Problems with uncertain parameters can be optimized for a statistic of the response distribution rather than for its
+nominal value, see: [Stochastic Optimization](algo/stochastic.md)
 
 ### Test Problems
 

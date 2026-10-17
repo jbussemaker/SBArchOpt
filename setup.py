@@ -68,6 +68,9 @@ if __name__ == '__main__':
                 'scikit-learn',
                 'networkx',
             ],
+            'uncertainty': [  # Stochastic (robust) problems: sb_arch_opt.uncertainty, sb_arch_opt.stochastic_problem
+                'openturns',
+            ],
             # 'ota': [  # pip install -r requirements-ota.txt
             #     'open_turb_arch @ git+https://github.com/jbussemaker/OpenTurbofanArchitecting@pymoo_optional#egg=open_turb_arch',
             # ],
