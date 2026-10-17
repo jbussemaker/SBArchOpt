@@ -66,6 +66,7 @@ if __name__ == '__main__':
                 'smt~=2.2,!=2.4,!=2.10.0',
                 'numba',
                 'scikit-learn',
+                'networkx',
             ],
             # 'ota': [  # pip install -r requirements-ota.txt
             #     'open_turb_arch @ git+https://github.com/jbussemaker/OpenTurbofanArchitecting@pymoo_optional#egg=open_turb_arch',

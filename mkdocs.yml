@@ -28,6 +28,7 @@ nav:
     - 'SMARTy': 'algo/smarty.md'
   - Tutorials:
       - SBArchOpt: tutorial.ipynb
+      - Graph-based Optimization: guide_graph_based_optimization.ipynb
   - 'Test Problems': 'test_problems.md'
   - API Reference:
     - Problem Definition: 'api/problem.md'

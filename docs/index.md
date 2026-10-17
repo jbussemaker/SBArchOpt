@@ -229,6 +229,16 @@ if __name__ == '__main__':
     DemoArchOptProblem().print_stats()
 ```
 
+A previously generated reference front can be stored as a NumPy array and loaded for use by experiment metrics:
+
+```python
+from sb_arch_opt.pareto_front import load_pareto_front
+
+reference_pf = load_pareto_front('reference_front/pf.npy')
+# Equivalently, pass the directory containing pf.npy:
+reference_pf = load_pareto_front('reference_front')
+```
+
 ### Architecture Optimization Problem with an Explicit Design Space Model
 
 If you are implementing an architecture optimization problem with design space hierarchy (i.e. some of your design
