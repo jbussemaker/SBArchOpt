@@ -66,6 +66,7 @@ if __name__ == '__main__':
                 'smt~=2.2,!=2.4,!=2.10.0',
                 'numba',
                 'scikit-learn',
+                'networkx',
             ],
             'uncertainty': [  # Stochastic (robust) problems: sb_arch_opt.uncertainty, sb_arch_opt.stochastic_problem
                 'openturns',

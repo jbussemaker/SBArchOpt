@@ -443,6 +443,17 @@ def test_cached_pareto_front_mixin(problem: ArchOptTestProblemBase, discrete_pro
         assert os.path.exists(discrete_problem._pf_cache_path())
 
 
+def test_load_pareto_front(tmp_path):
+    from sb_arch_opt.pareto_front import load_pareto_front
+
+    pf = np.array([[0., 1.], [.5, .5], [1., 0.]])
+    pf_path = tmp_path / 'pf.npy'
+    np.save(pf_path, pf)
+
+    assert np.array_equal(load_pareto_front(pf_path), pf)
+    assert np.array_equal(load_pareto_front(tmp_path), pf)
+
+
 def test_failing_evaluations(failing_problem: ArchOptTestProblemBase):
     out = failing_problem.evaluate(np.random.random((4, 5)), return_as_dictionary=True)
     is_failed = failing_problem.get_failed_points(out)

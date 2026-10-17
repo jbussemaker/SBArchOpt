@@ -27,6 +27,7 @@ import re
 import pickle
 import hashlib
 import numpy as np
+from pathlib import Path
 from typing import *
 import concurrent.futures
 import matplotlib.pyplot as plt
@@ -48,7 +49,19 @@ except ImportError:
     # pymoo >= 0.6.1
     from pymoo.operators.survival.rank_and_crowding.metrics import calc_crowding_distance
 
-__all__ = ['CachedParetoFrontMixin']
+__all__ = ['CachedParetoFrontMixin', 'load_pareto_front']
+
+
+def load_pareto_front(path: Union[str, os.PathLike]) -> np.ndarray:
+    """Load a reference Pareto front from a NumPy file or a directory containing ``pf.npy``."""
+    path = Path(path)
+    if path.is_dir():
+        path = path / 'pf.npy'
+
+    pareto_front = np.load(path, allow_pickle=False)
+    if pareto_front.ndim != 2:
+        raise ValueError(f'Expected a 2D Pareto front, got shape {pareto_front.shape}')
+    return pareto_front
 
 
 class CachedParetoFrontMixin(Problem):

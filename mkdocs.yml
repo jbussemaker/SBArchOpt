@@ -30,6 +30,7 @@ nav:
   - Tutorials:
       - SBArchOpt: tutorial.ipynb
       - Stochastic Optimization: tutorial_stochastic.ipynb
+      - Graph-based Optimization: guide_graph_based_optimization.ipynb
   - 'Test Problems': 'test_problems.md'
   - API Reference:
     - Problem Definition: 'api/problem.md'
