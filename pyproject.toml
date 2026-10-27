@@ -1,3 +1,75 @@
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "sb-arch-opt"
+dynamic = ["version"]
+description = "SBArchOpt: Surrogate-Based Architecture Optimization"
+author = "Jasper Bussemaker"
+author_email = "jasper.bussemaker@dlr.de"
+license = { file = "LICENSE" }
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+]
+
+dependencies = [
+    "numpy",
+    "pymoo>=0.6.1",
+    "scipy",
+    "deprecated",
+    "pandas",
+    "cached-property>=1.5",
+    "ConfigSpace>=1.2.1",
+    "more-itertools>=9.1",
+    "appdirs",
+]
+
+[project.optional-dependencies]
+arch_sbo = [
+    "smt~=2.14",
+    "numba",
+    "scikit-learn",
+    "networkx",
+]
+uncertainty = [  # Stochastic (robust) problems: sb_arch_opt.uncertainty, sb_arch_opt.stochastic_problem
+    "openturns",
+]
+ota = [
+    "open_turb_arch @ git+https://github.com/jbussemaker/OpenTurbofanArchitecting@pymoo_optional",
+    "scikit-learn",
+    "joblib",
+]
+assignment = [
+    "assign_enc @ git+https://github.com/jbussemaker/AssignmentEncoding",
+]
+botorch = [
+    "ax-platform",
+    "botorch",
+]
+trieste = [
+    "trieste",
+]
+# 'tpe': [  # Not compatible with newer ConfigSpace
+#     "tpe==0.0.8",
+# ]
+hebo = [
+    "HEBO",
+]
+rocket = [
+    "ambiance",
+]
+egor = [
+    "egobox>=0.36.0",
+]
+
+[tool.setuptools.dynamic]
+version = { attr = "sb_arch_opt.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["sb_arch_opt*"]

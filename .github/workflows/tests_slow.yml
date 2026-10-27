@@ -37,8 +37,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip setuptools
         pip install -r requirements-tests.txt
-        pip install -r requirements-assignment.txt
-        pip install -e .[arch_sbo,rocket]
+        pip install -e .[arch_sbo,rocket,assignment]
         pip install jupyter ipython ipykernel
         ipython kernel install --name "python3" --user
         df -h
