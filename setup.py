@@ -63,7 +63,7 @@ if __name__ == '__main__':
         ],
         extras_require={
             'arch_sbo': [
-                'smt~=2.2,!=2.4,!=2.10.0',
+                'smt~=2.14',
                 'numba',
                 'scikit-learn',
                 'networkx',
@@ -97,6 +97,6 @@ if __name__ == '__main__':
                 'egobox>=0.36.0',
             ],
         },
-        python_requires='>=3.9',
+        python_requires='>=3.10',
         packages=find_packages(include='sb_arch_opt*'),
     )
