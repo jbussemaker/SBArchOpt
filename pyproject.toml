@@ -6,9 +6,8 @@ build-backend = "setuptools.build_meta"
 name = "sb-arch-opt"
 dynamic = ["version"]
 description = "SBArchOpt: Surrogate-Based Architecture Optimization"
-author = "Jasper Bussemaker"
-author_email = "jasper.bussemaker@dlr.de"
-license = { file = "LICENSE" }
+authors = [{name = "Jasper Bussemaker", email = "jasper.bussemaker@dlr.de"}]
+license-files = ["LICENSE"]
 readme = "README.md"
 requires-python = ">=3.10"
 classifiers = [
