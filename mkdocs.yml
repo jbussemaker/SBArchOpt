@@ -64,3 +64,16 @@ plugins:
             show_bases: false
             show_signature_annotations: true
             merge_init_into_class: true
+  - llmstxt:
+      markdown_description: SBArchOpt (es-bee-ARK-opt) provides a set of classes and interfaces for applying Surrogate-Based Optimization (SBO) for system architecture optimization problems, which are expensive, black-box, mixed-discrete, hierarchical, multi-objective, (hidden) constrained problems.
+      sections:
+        User Documentation:
+          - index.md: General SBArchOpt introduction, installation instructions, main citation, example code
+          - theory.md: Detailed background theory, references
+          - tutorial.ipynb: Main SBArchOpt guide, example code
+          - tutorial_stochastic.ipynb: Usage guide for stochastic (robust) optimization
+          - guide_graph_based_optimization.ipynb: usage guide for graph-based optimization
+        Algorithms:
+          - algo/*.md
+        API Reference:
+          - api/*.md
